@@ -315,7 +315,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel aInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.0001f;
+    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.001f;
 }
 
 void kernel aForward(global const int* visibleCs, global float* hiddenActivations, global const float* weights,
@@ -352,28 +352,33 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
 }
 
-void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
+void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize, float epsilon, uint2 seed) {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
+
+    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
     int maxIndex = 0;
     float maxValue = -99999.0f;
-    
-    // Find max
+
     for (int c = 0; c < hiddenSize.z; c++) {
         float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
 
         if (value > maxValue) {
             maxValue = value;
+
             maxIndex = c;
         }
     }
+    
+    if (randFloat(&stateValue) < epsilon)
+        maxIndex = randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f;
 
     // Set states
     hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
 }
 
 void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
-    global const int* hiddenCs, global const int* targetCs,
+    global const int* hiddenCs, global const int* hiddenCsPrev,
     global float* weights, global float* traces,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
     float alpha, float gamma, float traceDecay, float tdErrorClip, float reward)
@@ -382,13 +387,13 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 	
     int hiddenColumnIndex = address2(hiddenPosition, hiddenSize.x);
 
-    int targetC = targetCs[hiddenColumnIndex];
+    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
     int hiddenC = hiddenCs[hiddenColumnIndex];
 
     float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
-    float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, targetC), hiddenSize.xy)];
+    float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy)];
 
-    float delta = alpha * fmin(tdErrorClip, fmax(-tdErrorClip, reward + gamma * qNext - qPrev));
+    float delta = alpha * (reward + gamma * qNext - qPrev);
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
@@ -415,7 +420,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
                         int wi = address4(wPos, hiddenSize);
 
                         if (vc == visibleC)
-                            traces[wi] = (hc == targetC ? 1.0f : 0.0f);
+                            traces[wi] = (hc == hiddenCPrev ? 1.0f : 0.0f);
                         else
                             traces[wi] *= traceDecay;
 
