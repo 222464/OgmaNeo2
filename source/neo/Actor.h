@@ -66,7 +66,7 @@ namespace ogmaneo {
         /*!
         \brief Buffers
         */
-        cl::Buffer _hiddenCs;
+        DoubleBuffer _hiddenCs;
 
         DoubleBuffer _hiddenActivations;
         //!@}
@@ -136,7 +136,7 @@ namespace ogmaneo {
         \param reward reinforcment signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &targetCs, float reward, bool learn);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, float reward, bool learn, std::mt19937 &rng);
 
         /*!
         \brief Write to stream.
@@ -172,7 +172,7 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden activations (predictions)
         */
-        const cl::Buffer &getHiddenCs() const {
+        const DoubleBuffer &getHiddenCs() const {
             return _hiddenCs;
         }
 

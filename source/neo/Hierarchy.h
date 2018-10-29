@@ -98,7 +98,7 @@ namespace ogmaneo {
         \param topFeedBack activations of top-level feed back state
         \param learn whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn = true, float reward = 0.0f);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, std::mt19937 &rng, bool learn = true, float reward = 0.0f);
 
         /*!
         \brief Write to stream.
@@ -130,7 +130,7 @@ namespace ogmaneo {
         \param i the index of the action to retrieve
         */
         const cl::Buffer &getActionCs(int i) const {
-            return _actors[i]->getHiddenCs();
+            return _actors[i]->getHiddenCs()[_front];
         }
 
         /*!

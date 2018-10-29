@@ -64,9 +64,9 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     }
 
     // Hidden Cs
-    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+    _hiddenCs = createDoubleBuffer(cs, numHiddenColumns * sizeof(cl_int));
 
-    cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
+    cs.getQueue().enqueueFillBuffer(_hiddenCs[_front], static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
  
     // Stimulus
     _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
@@ -79,11 +79,12 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &targetCs, float reward, bool learn) {
+void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, float reward, bool learn, std::mt19937 &rng) {
     int numColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numColumns * _hiddenSize.z;
 
     // Buffer swap
+    std::swap(_hiddenCs[_front], _hiddenCs[_back]);
     std::swap(_hiddenActivations[_front], _hiddenActivations[_back]);
 
     // Initialize stimulus to 0
@@ -109,11 +110,14 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
 
     // Activate
     {
+        std::uniform_int_distribution<int> seedDist(0, 99999);
+    
         int argIndex = 0;
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
-        _inhibitKernel.setArg(argIndex++, _hiddenCs);
+        _inhibitKernel.setArg(argIndex++, _hiddenCs[_front]);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
+        _inhibitKernel.setArg(argIndex++, cl_uint2{ static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng)) });
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -129,8 +133,8 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
             _learnKernel.setArg(argIndex++, vl._visibleCs);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _learnKernel.setArg(argIndex++, _hiddenCs);
-            _learnKernel.setArg(argIndex++, targetCs);
+            _learnKernel.setArg(argIndex++, _hiddenCs[_front]);
+            _learnKernel.setArg(argIndex++, _hiddenCs[_back]);
             _learnKernel.setArg(argIndex++, vl._weights);
             _learnKernel.setArg(argIndex++, vl._traces);
             _learnKernel.setArg(argIndex++, vld._size);
@@ -164,7 +168,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<char*>(&_tdErrorClip), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
-    cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+    cs.getQueue().enqueueReadBuffer(_hiddenCs[_front], CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
     os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
     std::vector<cl_float> hiddenActivations(numHidden);
@@ -219,8 +223,8 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
-    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-    cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+    _hiddenCs = createDoubleBuffer(cs, numHiddenColumns * sizeof(cl_int));
+    cs.getQueue().enqueueWriteBuffer(_hiddenCs[_front], CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
 
     std::vector<cl_float> hiddenActivations(numHidden);
     is.read(reinterpret_cast<char*>(hiddenActivations.data()), numHidden * sizeof(cl_float));
