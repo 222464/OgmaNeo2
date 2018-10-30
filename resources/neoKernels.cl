@@ -391,7 +391,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     global const int* hiddenCs, global const int* hiddenCsPrev,
     global float* weights, global float* traces,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float gamma, float traceDecay, float tdErrorClip, float reward)
+    float alpha, float gamma, float traceDecay, float reward)
 {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -429,8 +429,8 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                         int wi = address4(wPos, hiddenSize);
 
-                        if (vc == visibleC)
-                            traces[wi] = (hc == hiddenCPrev ? 1.0f : 0.0f);
+                        if (vc == visibleC && hc == hiddenCPrev)
+                            traces[wi] = 1.0f;
                         else
                             traces[wi] *= traceDecay;
 
