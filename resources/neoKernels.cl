@@ -203,9 +203,9 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float target = (c == visibleC ? 1.0f : 0.0f);
 
-                    float delta = target - weights[wi];
+                    float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
  
-                    weights[wi] += alpha * delta;
+                    weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
                 }
             }
         }
@@ -315,7 +315,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel aInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.001f;
+    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.01f;
 }
 
 void kernel aForward(global const int* visibleCs, global float* hiddenActivations, global const float* weights,
