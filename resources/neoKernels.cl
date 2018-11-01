@@ -397,8 +397,8 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 	
     int hiddenColumnIndex = address2(hiddenPosition, hiddenSize.x);
 
-    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
     int hiddenC = hiddenCs[hiddenColumnIndex];
+    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
     float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy)];
