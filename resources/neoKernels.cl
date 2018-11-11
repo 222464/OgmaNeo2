@@ -101,7 +101,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] * (1.0f - visibleActivations[visibleIndex]));
+                sum += weights[address4(wPos, hiddenSize)] * (1.0f - visibleActivations[visibleIndex]);
             }
         }
 
@@ -253,9 +253,9 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float target = (c == visibleC ? 1.0f : 0.0f);
 
-                    float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
+                    float delta = target - weights[wi];
  
-                    weights[wi] += alpha * delta;
+                    weights[wi] += alpha * fmin(0.0f, delta);
                 }
             }
         }
