@@ -86,6 +86,9 @@ void kernel scForward(global const int* visibleCs,
 
     float sum = 0.0f;
 
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -95,8 +98,6 @@ void kernel scForward(global const int* visibleCs,
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 sum += weights[address4(wPos, hiddenSize)];
@@ -154,14 +155,13 @@ void kernel scLearn(global const int* visibleCs, global const int* hiddenCs,
                 int2 offset = visiblePosition - fieldLowerBound;
 
                 for (int c = 0; c < visibleSize.z; c++) {
-                    if (c == visibleC)
-                        continue;
+                    if (c != visibleC) {
+                        wPos.w = offset.x + offset.y * diam + c * diam2;
 
-                    wPos.w = offset.x + offset.y * diam + c * diam2;
+                        int wi = address4(wPos, hiddenSize);
 
-                    int wi = address4(wPos, hiddenSize);
-
-                    weights[wi] = fmax(0.0f, weights[wi] - alpha * weights[wi]);
+                        weights[wi] = fmax(0.0f, weights[wi] - alpha * weights[wi]);
+                    }
                 }
             }
         }
@@ -292,6 +292,9 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
     float sum = 0.0f;
     float count = 0.0f;
 
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -301,8 +304,6 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 sum += weights[address4(wPos, hiddenSize)];
