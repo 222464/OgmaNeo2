@@ -84,7 +84,7 @@ void kernel scForward(global const int* visibleCs,
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
-    float sum = 0.0f;
+    float m = 0.0f;
 
     int4 wPos;
     wPos.xyz = hiddenPosition;
@@ -100,11 +100,13 @@ void kernel scForward(global const int* visibleCs,
 
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += weights[address4(wPos, hiddenSize)];
+                m = fmax(m, weights[address4(wPos, hiddenSize)]);
             }
         }
 
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+    int hiddenIndex = address3(hiddenPosition, hiddenSize.xy);
+
+    hiddenActivations[hiddenIndex] = fmax(hiddenActivations[hiddenIndex], m);
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
@@ -160,7 +162,7 @@ void kernel scLearn(global const int* visibleCs, global const int* hiddenCs,
 
                         int wi = address4(wPos, hiddenSize);
 
-                        weights[wi] = fmax(0.0f, weights[wi] - alpha * weights[wi]);
+                        weights[wi] = fmax(0.0f, weights[wi] - alpha);
                     }
                 }
             }
