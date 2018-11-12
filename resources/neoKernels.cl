@@ -162,7 +162,7 @@ void kernel scLearn(global const int* visibleCs, global const int* hiddenCs,
 
                         int wi = address4(wPos, hiddenSize);
 
-                        weights[wi] = fmax(0.0f, weights[wi] - alpha);
+                        weights[wi] = fmax(0.0f, weights[wi] - alpha * weights[wi]);
                     }
                 }
             }
