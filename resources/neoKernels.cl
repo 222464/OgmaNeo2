@@ -67,10 +67,10 @@ inline float sigmoid(float x) {
 void kernel scInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = 1.0f - randFloat(&stateValue) * 0.01f;
+    weights[get_global_id(0)] = randFloat(&stateValue) < 0.5f ? 1.0f - randFloat(&stateValue) * 0.001f : 0.0f;
 }
 
-void kernel scForward(global const int* visibleCs, global const float* visibleActivations,
+void kernel scForward(global const int* visibleCs,
     global float* hiddenActivations,
     global const float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
@@ -91,9 +91,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
 
             if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleIndex = address2(visiblePosition, visibleSize.x);
-
-                int visibleC = visibleCs[visibleIndex];
+                int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
@@ -101,103 +99,11 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += weights[address4(wPos, hiddenSize)] * (1.0f - visibleActivations[visibleIndex]);
+                sum += weights[address4(wPos, hiddenSize)];
             }
         }
 
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
-}
-
-void kernel scBackwardPartial(global const int* visibleCs, global const int* hiddenCs, global float* visibleActivations,
-    global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
-{
-    int2 visiblePosition = (int2)(get_global_id(0), get_global_id(1));
-
-    int visibleIndex = address2(visiblePosition, visibleSize.x);
-
-    int visibleC = visibleCs[visibleIndex];
-
-    int2 hiddenPositionCenter = project(visiblePosition, visibleToHidden);
-
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    float sum = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -reverseRadii.x; dx <= reverseRadii.x; dx++)
-        for (int dy = -reverseRadii.y; dy <= reverseRadii.y; dy++) {
-            int2 hiddenPosition = hiddenPositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(hiddenPosition, hiddenSize.xy)) {
-                // Next layer node's receptive field
-                int2 visibleFieldCenter = project(hiddenPosition, hiddenToVisible);
-
-                int2 fieldLowerBound = visibleFieldCenter - (int2)(radius);
-                int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
-
-                // Check for containment
-                if (inBounds(visiblePosition, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
-
-                    int2 offset = visiblePosition - fieldLowerBound;
-
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
-
-                    sum += weights[address4(wPos, hiddenSize)];
-                    count += 1.0f;
-                }
-            }
-        }
-
-    visibleActivations[visibleIndex] = sum / fmax(1.0f, count);
-}
-
-void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
-    global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
-{
-    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
-
-    int2 hiddenPositionCenter = project(visiblePosition.xy, visibleToHidden);
-
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    float sum = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -reverseRadii.x; dx <= reverseRadii.x; dx++)
-        for (int dy = -reverseRadii.y; dy <= reverseRadii.y; dy++) {
-            int2 hiddenPosition = hiddenPositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(hiddenPosition, hiddenSize.xy)) {
-                // Next layer node's receptive field
-                int2 visibleFieldCenter = project(hiddenPosition, hiddenToVisible);
-
-                int2 fieldLowerBound = visibleFieldCenter - (int2)(radius);
-                int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
-
-                // Check for containment
-                if (inBounds(visiblePosition.xy, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
-
-                    int2 offset = visiblePosition.xy - fieldLowerBound;
-
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                    wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
-
-                    sum += weights[address4(wPos, hiddenSize)];
-                    count += 1.0f;
-                }
-            }
-        }
-
-    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
@@ -220,7 +126,7 @@ void kernel scInhibit(global const float* hiddenActivations, global int* hiddenC
     hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
 }
 
-void kernel scLearn(global const int* visibleCs, global const float* visibleActivations, global const int* hiddenCs,
+void kernel scLearn(global const int* visibleCs, global const int* hiddenCs,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float alpha)
 {
@@ -235,6 +141,9 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -245,17 +154,14 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
                 int2 offset = visiblePosition - fieldLowerBound;
 
                 for (int c = 0; c < visibleSize.z; c++) {
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+                    if (c == visibleC)
+                        continue;
+
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
                     int wi = address4(wPos, hiddenSize);
 
-                    float target = (c == visibleC ? 1.0f : 0.0f);
-
-                    float delta = target - weights[wi];
- 
-                    weights[wi] += alpha * fmin(0.0f, delta);
+                    weights[wi] = fmax(0.0f, weights[wi] - alpha * weights[wi]);
                 }
             }
         }
@@ -343,6 +249,9 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -352,8 +261,6 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 weights[address4(wPos, hiddenSize)] += delta;
@@ -460,6 +367,9 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = (int3)(hiddenPosition, hiddenCPrev);
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -469,8 +379,6 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = (int3)(hiddenPosition, hiddenCPrev);
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 weights[address4(wPos, hiddenSize)] += delta;
