@@ -96,7 +96,7 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vis
         cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
     }
 
-        // Inhibit
+    // Inhibit
     {
         int argIndex = 0;
 

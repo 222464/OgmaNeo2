@@ -67,7 +67,7 @@ inline float sigmoid(float x) {
 void kernel scInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = 1.0f - randFloat(&stateValue) * 0.001f;
+    weights[get_global_id(0)] = randFloat(&stateValue);
 }
 
 void kernel scForward(global const int* visibleCs,
@@ -84,7 +84,7 @@ void kernel scForward(global const int* visibleCs,
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
-    float m = 0.0f;
+    float sum = 0.0f;
 
     int4 wPos;
     wPos.xyz = hiddenPosition;
@@ -100,13 +100,11 @@ void kernel scForward(global const int* visibleCs,
 
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                m = fmax(m, weights[address4(wPos, hiddenSize)]);
+                sum += weights[address4(wPos, hiddenSize)];
             }
         }
 
-    int hiddenIndex = address3(hiddenPosition, hiddenSize.xy);
-
-    hiddenActivations[hiddenIndex] = fmax(hiddenActivations[hiddenIndex], m);
+    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
@@ -157,13 +155,13 @@ void kernel scLearn(global const int* visibleCs, global const int* hiddenCs,
                 int2 offset = visiblePosition - fieldLowerBound;
 
                 for (int c = 0; c < visibleSize.z; c++) {
-                    if (c != visibleC) {
-                        wPos.w = offset.x + offset.y * diam + c * diam2;
+                    wPos.w = offset.x + offset.y * diam + c * diam2;
 
-                        int wi = address4(wPos, hiddenSize);
+                    int wi = address4(wPos, hiddenSize);
 
-                        weights[wi] = fmax(0.0f, weights[wi] - alpha * weights[wi]);
-                    }
+                    float target = (c == visibleC ? 1.0f : 0.0f);
+
+                    weights[wi] += alpha * fmin(0.0f, target - weights[wi]);
                 }
             }
         }
@@ -356,10 +354,8 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     int hiddenC = hiddenCs[hiddenColumnIndex];
     int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
-    int hiddenIndexPrev = address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy);
-
     float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
-    float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
+    float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy)];
 
     float delta = alpha * (qTarget + gamma * qNext - qPrev);
 

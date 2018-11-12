@@ -147,8 +147,6 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, std::mt19937 &rng, bool learn, float reward) {
     assert(inputCs.size() == _inputSizes.size());
 
-    _ticks[0] = 0;
-
     // Add to first history   
     {
         int temporalHorizon = _histories.front().size() / _inputSizes.size();
