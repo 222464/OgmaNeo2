@@ -67,7 +67,7 @@ inline float sigmoid(float x) {
 void kernel scInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = randFloat(&stateValue) < 0.5f ? 1.0f - randFloat(&stateValue) * 0.001f : 0.0f;
+    weights[get_global_id(0)] = 1.0f - randFloat(&stateValue) * 0.001f;
 }
 
 void kernel scForward(global const int* visibleCs,
