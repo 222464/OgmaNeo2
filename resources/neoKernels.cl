@@ -386,6 +386,9 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
+
     float sum = 0.0f;
     float count = 0.0f;
 
@@ -398,8 +401,6 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 sum += weights[address4(wPos, hiddenSize)];
