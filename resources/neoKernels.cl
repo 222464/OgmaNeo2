@@ -286,6 +286,9 @@ void kernel pForward(global const int* visibleCs, global float* hiddenActivation
 
     float sum = 0.0f;
     float count = 0.0f;
+
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
     
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
@@ -296,8 +299,6 @@ void kernel pForward(global const int* visibleCs, global float* hiddenActivation
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 sum += weights[address4(wPos, hiddenSize)];
@@ -345,6 +346,9 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -354,8 +358,6 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 weights[address4(wPos, hiddenSize)] += delta;
@@ -462,6 +464,9 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = (int3)(hiddenPosition, hiddenCPrev);
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -471,8 +476,6 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = (int3)(hiddenPosition, hiddenCPrev);
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 weights[address4(wPos, hiddenSize)] += delta;
