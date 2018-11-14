@@ -84,7 +84,7 @@ void kernel scForward(global const int* visibleCs,
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
-    float m = 0.0f;
+    float sum = 0.0f;
 
     int4 wPos;
     wPos.xyz = hiddenPosition;
@@ -100,13 +100,11 @@ void kernel scForward(global const int* visibleCs,
 
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                m = fmax(m, weights[address4(wPos, hiddenSize)]);
+                sum += weights[address4(wPos, hiddenSize)];
             }
         }
 
-    int hiddenIndex = address3(hiddenPosition, hiddenSize.xy);
-
-    hiddenActivations[hiddenIndex] = fmax(hiddenActivations[hiddenIndex], m);
+    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
