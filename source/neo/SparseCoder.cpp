@@ -85,7 +85,7 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vis
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     // Initialize stimulus to 0
-    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.5f), 0, numHidden * sizeof(cl_float));
 
     // Initialize visibleActivations to 0
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
