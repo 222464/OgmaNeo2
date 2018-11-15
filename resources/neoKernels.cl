@@ -102,7 +102,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
 
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += weights[address4(wPos, hiddenSize)] * (1.0f - visibleActivations[visibleIndex]);
+                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
             }
         }
 
@@ -154,7 +154,7 @@ void kernel scBackwardPartial(global const int* visibleCs, global const int* hid
             }
         }
 
-    visibleActivations[visibleIndex] = sigmoid(sum / fmax(1.0f, count));
+    visibleActivations[visibleIndex] = sum / fmax(1.0f, count);
 }
 
 void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
@@ -198,7 +198,7 @@ void kernel scBackward(global const int* hiddenCs, global float* visibleActivati
             }
         }
 
-    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sigmoid(sum / fmax(1.0f, count));
+    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
@@ -257,7 +257,7 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
  
-                    weights[wi] += alpha * delta;
+                    weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
                 }
             }
         }
@@ -490,7 +490,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel imInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.01f;
+    weights[get_global_id(0)] = randFloat(&stateValue) * 2.0f - 1.0f;
 }
 
 void kernel imForward(global const float* visibleAs, global const float* visibleAsPrev,
@@ -548,9 +548,9 @@ void kernel imForward(global const float* visibleAs, global const float* visible
                     wPos.xyz = hiddenPosition;
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
-                    float d = act - center - weights[address4(wPos, hiddenSize)];
+                    float d = act - center;
 
-                    sum += -d * d;
+                    sum += weights[address4(wPos, hiddenSize)] * d;
                 }
             }
         }
