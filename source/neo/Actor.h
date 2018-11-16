@@ -123,10 +123,15 @@ namespace ogmaneo {
         cl_float _epsilon;
 
         /*!
+        \brief History iterations
+        */
+        int _historyIters;
+
+        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _beta(0.1f), _gamma(0.98f), _epsilon(0.02f)
+        : _alpha(0.01f), _beta(0.1f), _gamma(0.98f), _epsilon(0.02f), _historyIters(4)
         {}
 
         /*!
