@@ -371,7 +371,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel aInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.0001f;
+    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.001f;
 }
 
 void kernel aForward(global const int* visibleCs, global float* hiddenActivations, global const float* weights,
@@ -411,26 +411,20 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum / fmax(1.0f, count);
 }
 
-void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize, float epsilon, uint2 seed) {
+void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
-
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
     int selectIndex = 0;
 
-    if (randFloat(&stateValue) < epsilon)
-        selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
-    else {
-        float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
-    
-        // Find max
-        for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
+    float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
 
-            if (value > maxValue) {
-                maxValue = value;
-                selectIndex = c;
-            }
+    // Find max
+    for (int c = 1; c < hiddenSize.z; c++) {
+        float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
+
+        if (value > maxValue) {
+            maxValue = value;
+            selectIndex = c;
         }
     }
 
@@ -439,24 +433,25 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 }
 
 void kernel aLearn(global const int* visibleCsPrev, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
-    global const int* hiddenCs, global const int* hiddenCsPrev,
+    global const int* hiddenCsPrev,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float gamma, float qTarget)
+    float alpha, float gamma, float reward)
 {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
-	
-    int hiddenColumnIndex = address2(hiddenPosition, hiddenSize.x);
 
-    int hiddenC = hiddenCs[hiddenColumnIndex];
-    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
+    int hiddenCPrev = hiddenCsPrev[address2(hiddenPosition, hiddenSize.x)];
 
     int hiddenIndexPrev = address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy);
 
-    float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
+    float qMax = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+    
+    for (int c = 1; c < hiddenSize.z; c++)
+        qMax = fmax(qMax, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+
     float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
 
-    float delta = alpha * (qTarget + gamma * qNext - qPrev);
+    float delta = alpha * (reward + gamma * qMax - qPrev);
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 

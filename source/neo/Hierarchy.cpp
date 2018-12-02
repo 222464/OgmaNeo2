@@ -234,7 +234,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
 
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 if (_aLayers[l][p] != nullptr)
-                    _aLayers[l][p]->step(cs, feedBack, rng, r, learn);
+                    _aLayers[l][p]->step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p], rng, r, learn);
             }
         }
     }

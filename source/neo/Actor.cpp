@@ -79,7 +79,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             _historySamples[i]._visibleCs[vli] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
         }
 
-        _historySamples[i]._hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+        _historySamples[i]._actionCsPrev = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
     }
 
     // Create kernels
@@ -88,7 +88,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learn) {
+void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &actionCs, std::mt19937 &rng, float reward, bool learn) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -115,15 +115,11 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
 
     // Activate
     {
-        std::uniform_int_distribution<int> seedDist(0, 99999);
-
         int argIndex = 0;
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
-        _inhibitKernel.setArg(argIndex++, _epsilon);
-        _inhibitKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -156,64 +152,80 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
                 0, 0, numVisibleColumns * sizeof(cl_int));
         }
 
-        cs.getQueue().enqueueCopyBuffer(_hiddenCs, s._hiddenCs, 0, 0, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueCopyBuffer(actionCs, s._actionCsPrev, 0, 0, numHiddenColumns * sizeof(cl_int));
 
         s._reward = reward;
     }
 
     // Learn
-    if (learn && _historySize > 1) {
-        const HistorySample &sPrev = _historySamples[0];
+    if (learn && _historySize > 2) {
+        std::uniform_int_distribution<int> sampleDist(1, _historySize - 1);
 
-        cl_float q = 0.0f;
+        for (int it = 0; it < _historyIters; it++) {
+            int t = sampleDist(rng);
 
-        for (int t = _historySize - 1; t >= 1; t--)
-            q += _historySamples[t]._reward * std::pow(_gamma, t - 1);
+            const HistorySample &s = _historySamples[t];
+            const HistorySample &sPrev = _historySamples[t - 1];
 
-        // Initialize stimulus to 0
-        cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+            // Initialize stimulus to 0
+            cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+            cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
-        // Compute feed stimulus
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+            // Compute feed stimulus
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            int argIndex = 0;
+                {
+                    int argIndex = 0;
 
-            _forwardKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
-            _forwardKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _forwardKernel.setArg(argIndex++, vl._weights);
-            _forwardKernel.setArg(argIndex++, vld._size);
-            _forwardKernel.setArg(argIndex++, _hiddenSize);
-            _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
-            _forwardKernel.setArg(argIndex++, vld._radius);
+                    _forwardKernel.setArg(argIndex++, s._visibleCs[vli]);
+                    _forwardKernel.setArg(argIndex++, _hiddenActivations[_front]);
+                    _forwardKernel.setArg(argIndex++, vl._weights);
+                    _forwardKernel.setArg(argIndex++, vld._size);
+                    _forwardKernel.setArg(argIndex++, _hiddenSize);
+                    _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
+                    _forwardKernel.setArg(argIndex++, vld._radius);
 
-            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
-        }
+                    cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+                }
 
-        cl_float g = std::pow(_gamma, _historySize - 1);
+                {
+                    int argIndex = 0;
 
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+                    _forwardKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
+                    _forwardKernel.setArg(argIndex++, _hiddenActivations[_back]);
+                    _forwardKernel.setArg(argIndex++, vl._weights);
+                    _forwardKernel.setArg(argIndex++, vld._size);
+                    _forwardKernel.setArg(argIndex++, _hiddenSize);
+                    _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
+                    _forwardKernel.setArg(argIndex++, vld._radius);
 
-            int argIndex = 0;
+                    cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+                }
+            }
 
-            _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
-            _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
-            _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _learnKernel.setArg(argIndex++, _hiddenCs);
-            _learnKernel.setArg(argIndex++, sPrev._hiddenCs);
-            _learnKernel.setArg(argIndex++, vl._weights);
-            _learnKernel.setArg(argIndex++, vld._size);
-            _learnKernel.setArg(argIndex++, _hiddenSize);
-            _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
-            _learnKernel.setArg(argIndex++, vld._radius);
-            _learnKernel.setArg(argIndex++, _alpha);
-            _learnKernel.setArg(argIndex++, g);
-            _learnKernel.setArg(argIndex++, q);
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+                int argIndex = 0;
+
+                _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
+                _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
+                _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
+                _learnKernel.setArg(argIndex++, s._actionCsPrev);
+                _learnKernel.setArg(argIndex++, vl._weights);
+                _learnKernel.setArg(argIndex++, vld._size);
+                _learnKernel.setArg(argIndex++, _hiddenSize);
+                _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
+                _learnKernel.setArg(argIndex++, vld._radius);
+                _learnKernel.setArg(argIndex++, _alpha);
+                _learnKernel.setArg(argIndex++, _gamma);
+                _learnKernel.setArg(argIndex++, s._reward);
+
+                cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            }
         }
     }
 }
@@ -226,7 +238,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
     os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
-    os.write(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
+    os.write(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
@@ -279,7 +291,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
         }
 
         std::vector<cl_int> hiddenCs(numHiddenColumns);
-        cs.getQueue().enqueueReadBuffer(s._hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+        cs.getQueue().enqueueReadBuffer(s._actionCsPrev, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
         os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
         os.write(reinterpret_cast<char*>(&s._reward), sizeof(cl_float));
@@ -294,7 +306,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
-    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
@@ -356,8 +368,8 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
         std::vector<cl_int> hiddenCs(numHiddenColumns);
         is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
-        _historySamples[i]._hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-        cs.getQueue().enqueueWriteBuffer(_historySamples[i]._hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+        _historySamples[i]._actionCsPrev = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueWriteBuffer(_historySamples[i]._actionCsPrev, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
 
         is.read(reinterpret_cast<char*>(&_historySamples[i]._reward), sizeof(cl_float));
     }
