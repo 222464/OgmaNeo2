@@ -67,7 +67,7 @@ inline float sigmoid(float x) {
 void kernel scInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = 1.0f - randFloat(&stateValue) * 0.01f;
+    weights[get_global_id(0)] = randFloat(&stateValue);
 }
 
 void kernel scForward(global const int* visibleCs, global const float* visibleActivations,
@@ -257,7 +257,7 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
  
-                    weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
+                    weights[wi] += alpha * delta;
                 }
             }
         }
@@ -414,8 +414,7 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
 void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    int selectIndex = 0;
-
+    int maxIndex = 0;
     float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
 
     // Find max
@@ -424,12 +423,12 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 
         if (value > maxValue) {
             maxValue = value;
-            selectIndex = c;
+            maxIndex = c;
         }
     }
 
     // Set states
-    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = selectIndex;
+    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
 }
 
 void kernel aLearn(global const int* visibleCsPrev, global const float* hiddenActivations, global const float* hiddenActivationsPrev,

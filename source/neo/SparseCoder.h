@@ -108,7 +108,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(1.0f), _explainIters(4)
+        : _alpha(0.5f), _explainIters(4)
         {}
 
         /*!
