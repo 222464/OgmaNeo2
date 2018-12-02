@@ -371,7 +371,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel aInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.001f;
+    weights[get_global_id(0)] = -randFloat(&stateValue) * 0.0001f;
 }
 
 void kernel aForward(global const int* visibleCs, global float* hiddenActivations, global const float* weights,
@@ -450,7 +450,7 @@ void kernel aLearn(global const int* visibleCsPrev, global const float* hiddenAc
 
     float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
 
-    float delta = alpha * (reward + gamma * qMax - qPrev);
+    float delta = alpha * ((1.0f - gamma) * reward + gamma * qMax - qPrev);
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
