@@ -514,7 +514,7 @@ void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            learnTransition(Int2(x, y), cs._rng, reward);
+            learnTransition(Int2(x, y), cs._rng);
 #else
     runKernel2(cs, std::bind(SparseCoder::learnTransitionKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
