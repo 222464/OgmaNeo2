@@ -205,7 +205,7 @@ void SparseCoder::pathfind(const Int2 &pos, std::mt19937 &rng, const IntBuffer* 
     int endIndex = (*goalCs)[hiddenIndex];
 
     int reconIndex = findNextIndex(startIndex, endIndex, _hiddenSize.z, hiddenIndex * _hiddenSize.z * _hiddenSize.z, _hiddenTransitionWeights);
-
+    
     // Output state
     _hiddenReconCs[hiddenIndex] = reconIndex;
 }
@@ -487,7 +487,7 @@ void SparseCoder::infer(ComputeSystem &cs, const IntBuffer* goalCs) {
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < vld._size.x; x++)
             for (int y = 0; y < vld._size.y; y++)
-                reconstruct(Int2(x, y), cs._rng, _hiddenReconCs, vli);
+                reconstruct(Int2(x, y), cs._rng, &_hiddenReconCs, vli);
 #else
         runKernel2(cs, std::bind(SparseCoder::reconstructKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenReconCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
