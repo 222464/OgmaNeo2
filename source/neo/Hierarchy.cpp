@@ -14,7 +14,7 @@
 using namespace ogmaneo;
 
 void Hierarchy::createRandom(ComputeSystem &cs,
-    const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs)
+    const std::vector<Int3> &inputSizes, const std::vector<LayerDesc> &layerDescs)
 {
     // Create layers
     _scLayers.resize(layerDescs.size());

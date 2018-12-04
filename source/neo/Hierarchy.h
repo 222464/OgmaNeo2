@@ -9,7 +9,6 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Actor.h"
 
 #include <memory>
 
@@ -85,12 +84,11 @@ namespace ogmaneo {
         /*!
         \brief Create a randomly initialized hierarchy
         \param cs is the ComputeSystem
-        \param inputSizes vector of input dimensions
         \param predictInputs flags for which inputs to generate predictions for
         \param layerDescs vector of LayerDesc structures, describing each layer in sequence
         */
         void createRandom(ComputeSystem &cs,
-            const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs);
+            const std::vector<Int3> &inputSizes, const std::vector<LayerDesc> &layerDescs);
 
         /*!
         \brief Simulation step/tick
@@ -114,7 +112,7 @@ namespace ogmaneo {
         const IntBuffer &getPredictionCs(int i) const {
             int temporalHorizon = _histories.front().size() / _inputSizes.size();
 
-            return _scLayers.front().getVisibleLayer(0 + i * temporalHorizon)->_visibleReconCs;
+            return _scLayers.front().getVisibleLayer(0 + i * temporalHorizon)._visibleReconCs;
         }
 
         /*!
