@@ -12,6 +12,11 @@
 
 namespace ogmaneo {
     /*!
+    \brief Pathfinding
+    */
+    int findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights);
+
+    /*!
     \brief Sparse Coder
     A 2D sparse coding layer, using Columnar Binary Sparse Coding (computes CSDR -> compressed CSDR)
     */
@@ -52,6 +57,8 @@ namespace ogmaneo {
 
             FloatBuffer _visibleActivations;
 
+            IntBuffer _visibleReconCs;
+
             Float2 _visibleToHidden; // For projection
             Float2 _hiddenToVisible; // For projection
 
@@ -70,8 +77,13 @@ namespace ogmaneo {
         \brief Buffers for hidden state
         */
         IntBuffer _hiddenCs;
+        IntBuffer _hiddenCsPrev;
 
         FloatBuffer _hiddenActivations;
+
+        FloatBuffer _hiddenTransitionWeights;
+
+        IntBuffer _hiddenReconCs;
         //!@}
 
         //!@{
@@ -89,7 +101,10 @@ namespace ogmaneo {
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, bool firstIter);
         void backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli);
+        void pathfind(const Int2 &pos, std::mt19937 &rng, const IntBuffer* goalCs);
+        void reconstruct(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenReconCs, int vli);
+        void learnFeed(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli);
+        void learnTransition(const Int2 &pos, std::mt19937 &rng, float reward);
 
         static void initKernel(int pos, std::mt19937 &rng, SparseCoder* sc, int vli) {
             sc->init(pos, rng, vli);
@@ -103,16 +118,33 @@ namespace ogmaneo {
             sc->backward(pos, rng, inputs, vli);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputs, int vli) {
-            sc->learn(pos, rng, inputs, vli);
+        static void pathfindKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const IntBuffer* goalCs) {
+            sc->pathfind(pos, rng, goalCs);
+        }
+
+        static void reconstructKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const IntBuffer* hiddenReconCs, int vli) {
+            sc->reconstruct(pos, rng, hiddenReconCs, vli);
+        }
+
+        static void learnFeedKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputs, int vli) {
+            sc->learnFeed(pos, rng, inputs, vli);
+        }
+
+        static void learnTransitionKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, float reward) {
+            sc->learnTransition(pos, rng, reward);
         }
         //!@}
 
     public:
         /*!
-        \brief Learning rate
+        \brief Learning rate for feed weights
         */
         float _alpha;
+
+        /*!
+        \brief Learning rate for transitions
+        */
+        float _beta;
 
         /*!
         \brief Explaining-away iterations (part of iterative sparse coding)
@@ -143,11 +175,18 @@ namespace ogmaneo {
         void activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
 
         /*!
+        \brief Inference (determine actions)
+        \param cs is the ComputeSystem
+        \param goalCs target goal states
+        */
+        void infer(ComputeSystem &cs, const IntBuffer* goalCs);
+
+        /*!
         \brief Learn the sparse code
         \param cs is the ComputeSystem.
         \param visibleCs the visible (input) layer states
         */
-        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
+        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward);
 
         /*!
         \brief Get the number of visible layers
