@@ -55,16 +55,18 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
                 }
             }
             
-			for (int v = 0; v < _histories[l].size(); v++) {
-				int i = v / layerDescs[l]._temporalHorizon;
+			for (int i = 0; i < _inputSizes.size(); i++) {
+                for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
+                    int v = t + i * layerDescs[l]._temporalHorizon;
 
-                int inSize = inputSizes[i].x * inputSizes[i].y;
-				
-				_histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
+                    int inSize = inputSizes[i].x * inputSizes[i].y;
+                    
+                    _histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
 
-                cs.getQueue().enqueueFillBuffer(_histories[l][v], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
+                    cs.getQueue().enqueueFillBuffer(_histories[l][v], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
 
-                _historySizes[l][v] = inSize;
+                    _historySizes[l][v] = inSize;
+                }
 			}
 
             // Predictors
@@ -105,12 +107,12 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
-			for (int v = 0; v < _histories[l].size(); v++) {
-				_histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
+			for (int t = 0; t < _histories[l].size(); t++) {
+				_histories[l][t] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
 
-                cs.getQueue().enqueueFillBuffer(_histories[l][v], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
+                cs.getQueue().enqueueFillBuffer(_histories[l][t], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
 
-                _historySizes[l][v] = inSize;
+                _historySizes[l][t] = inSize;
             }
 
             // Predictors
