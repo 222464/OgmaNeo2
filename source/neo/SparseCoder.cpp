@@ -408,6 +408,8 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
         // Reconstruction buffer
         vl._visibleActivations = FloatBuffer(numVisibleColumns);
+
+        vl._visibleReconCs = IntBuffer(numVisibleColumns);
     }
 
     // Hidden Cs
