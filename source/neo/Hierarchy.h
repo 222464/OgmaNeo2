@@ -15,13 +15,6 @@
 
 namespace ogmaneo {
     /*!
-    \brief Enum describing the type of operation performed by an input layer
-    */
-    enum InputType {
-        _none, _act
-    };
-    
-    /*!
     \brief A hierarchy of sparse coders and actors, using the exponential memory structure
     */
     class Hierarchy {
@@ -41,7 +34,6 @@ namespace ogmaneo {
             \brief Radii of the sparse coder and predictor/actor
             */
             int _scRadius;
-            int _aRadius;
             //!@}
 
             /*!
@@ -64,7 +56,7 @@ namespace ogmaneo {
             */
             LayerDesc()
                 : _hiddenSize(4, 4, 16),
-                _scRadius(2), _aRadius(2),
+                _scRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2),
                 _historyCapacity(64)
             {}
@@ -72,7 +64,6 @@ namespace ogmaneo {
     private:
         // Layers
         std::vector<SparseCoder> _scLayers;
-        std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
         // Histories
         std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -120,8 +111,10 @@ namespace ogmaneo {
         \brief Get the actor output
         \param i the index of the input to retrieve
         */
-        const IntBuffer &getActionCs(int i) const {
-            return _aLayers.front()[i]->getHiddenCs();
+        const IntBuffer &getPredictionCs(int i) const {
+            int temporalHorizon = _histories.front().size() / _inputSizes.size();
+
+            return _scLayers.front().getVisibleLayer(0 + i * temporalHorizon)->_visibleReconCs;
         }
 
         /*!
@@ -157,13 +150,6 @@ namespace ogmaneo {
         */
         SparseCoder &getSCLayer(int l) {
             return _scLayers[l];
-        }
-
-        /*!
-        \brief Retrieve predictor layer(s)
-        */
-        std::vector<std::unique_ptr<Actor>> &getALayer(int l) {
-            return _aLayers[l];
         }
     };
 }

@@ -422,6 +422,16 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
     // Hidden activations
     _hiddenActivations = FloatBuffer(numHidden);
+
+    // Transition weights
+    _hiddenTransitionWeights = FloatBuffer(numHidden * _hiddenSize.z);
+
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < _hiddenTransitionWeights.size(); x++)
+        fillFloat(x, cs._rng, &_hiddenTransitionWeights, 0.0f);
+#else
+    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenTransitionWeights, 0.0f), _hiddenTransitionWeights.size(), cs._rng, cs._batchSize1);
+#endif
 }
 
 void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
