@@ -412,13 +412,15 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns);
-
+    
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < numHiddenColumns; x++)
         fillInt(x, cs._rng, &_hiddenCs, 0);
 #else
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
+
+    _hiddenReconCs = IntBuffer(numHiddenColumns);
 
     // Hidden activations
     _hiddenActivations = FloatBuffer(numHidden);
