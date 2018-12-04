@@ -58,7 +58,7 @@ namespace ogmaneo {
         */
         struct HistorySample {
             std::vector<cl::Buffer> _visibleCs;
-            cl::Buffer _actionCsPrev;
+            cl::Buffer _hiddenCs;
         
             float _reward;
         };
@@ -121,7 +121,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.9f), _historyIters(4)
+        : _alpha(0.01f), _gamma(0.9f), _historyIters(8)
         {}
 
         /*!
@@ -145,7 +145,7 @@ namespace ogmaneo {
         \param reward reinforcment signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &actionCs, std::mt19937 &rng, float reward, bool learn);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learn);
 
         /*!
         \brief Write to stream.

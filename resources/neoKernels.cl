@@ -441,14 +441,12 @@ void kernel aLearn(global const int* visibleCsPrev, global const float* hiddenAc
 
     int actionCPrev = actionCsPrev[address2(hiddenPosition, hiddenSize.x)];
 
-    int hiddenIndexPrev = address3((int3)(hiddenPosition, actionCPrev), hiddenSize.xy);
-
     float qMax = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
     
     for (int c = 1; c < hiddenSize.z; c++)
         qMax = fmax(qMax, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
 
-    float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
+    float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, actionCPrev), hiddenSize.xy)];
 
     float delta = alpha * (reward + gamma * qMax - qPrev);
 
