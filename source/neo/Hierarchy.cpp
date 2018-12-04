@@ -29,10 +29,6 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     // Default update state is no update
     _updates.resize(layerDescs.size(), false);
 
-    // Set reward accumulators to 0
-    _rewards.resize(layerDescs.size(), 0.0f);
-    _rewardCounts = _rewards;
-
     // Cache input sizes
     _inputSizes = inputSizes;
 
@@ -110,7 +106,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled, float reward) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* topGoalCs, bool learnEnabled) {
     assert(inputCs.size() == _inputSizes.size());
 
     // First tick is always 0
@@ -153,10 +149,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
 
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
-        // Accumulate reward
-        _rewards[l] += reward;
-        _rewardCounts[l] += 1.0f;
-
         // If is time for layer to tick
         if (l == 0 || _ticks[l] >= _ticksPerUpdate[l]) {
             // Reset tick
@@ -198,19 +190,12 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            const IntBuffer* goalCs = (l < _scLayers.size() - 1 ? &_scLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._visibleReconCs : &_scLayers[l].getHiddenCs());
+            const IntBuffer* goalCs = (l < _scLayers.size() - 1 ? &_scLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._visibleReconCs : topGoalCs);
 
             _scLayers[l].infer(cs, goalCs);
 
-            // Determine reward from accumulators
-            float r = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
-
-            // Reset accumulators
-            _rewards[l] = 0.0f;
-            _rewardCounts[l] = 0.0f;
-
             if (learnEnabled)
-                _scLayers[l].learn(cs, constGet(_histories[l]), r);
+                _scLayers[l].learn(cs, constGet(_histories[l]));
         }
     }
 }

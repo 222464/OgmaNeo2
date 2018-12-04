@@ -104,7 +104,7 @@ namespace ogmaneo {
         void pathfind(const Int2 &pos, std::mt19937 &rng, const IntBuffer* goalCs);
         void reconstruct(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenReconCs, int vli);
         void learnFeed(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli);
-        void learnTransition(const Int2 &pos, std::mt19937 &rng, float reward);
+        void learnTransition(const Int2 &pos, std::mt19937 &rng);
 
         static void initKernel(int pos, std::mt19937 &rng, SparseCoder* sc, int vli) {
             sc->init(pos, rng, vli);
@@ -130,8 +130,8 @@ namespace ogmaneo {
             sc->learnFeed(pos, rng, inputs, vli);
         }
 
-        static void learnTransitionKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, float reward) {
-            sc->learnTransition(pos, rng, reward);
+        static void learnTransitionKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc) {
+            sc->learnTransition(pos, rng);
         }
         //!@}
 
@@ -155,7 +155,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.1f), _beta(0.5f), _explainIters(4)
+        : _alpha(0.01f), _beta(0.1f), _explainIters(4)
         {}
 
         /*!
@@ -186,7 +186,7 @@ namespace ogmaneo {
         \param cs is the ComputeSystem.
         \param visibleCs the visible (input) layer states
         */
-        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward);
+        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
 
         /*!
         \brief Get the number of visible layers

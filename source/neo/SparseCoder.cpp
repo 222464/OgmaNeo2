@@ -14,7 +14,7 @@ using namespace ogmaneo;
 
 // Pathfinder
 int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights) {
-    std::vector<float> dist(size, 99999.0f);
+    std::vector<float> dist(size, 999999.0f);
     std::vector<int> prev(size, -1);
 
     std::unordered_set<int> q;
@@ -55,7 +55,7 @@ int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsSt
         for (int n = 0; n < size; n++) {
             float w = weights[weightsStart + n + u * size];
 
-            float alt = dist[u] + std::exp(-w);
+            float alt = dist[u] + 1.0f / std::max(0.0001f, w);
             
             if (alt < dist[n]) {
                 dist[n] = alt;
@@ -348,15 +348,17 @@ void SparseCoder::learnFeed(const Int2 &pos, std::mt19937 &rng, const std::vecto
     }
 }
 
-void SparseCoder::learnTransition(const Int2 &pos, std::mt19937 &rng, float reward) {
+void SparseCoder::learnTransition(const Int2 &pos, std::mt19937 &rng) {
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
     int startIndex = _hiddenCsPrev[hiddenIndex];
     int endIndex = _hiddenCs[hiddenIndex];
 
-    int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + endIndex + startIndex * _hiddenSize.z;
+    for (int c = 0; c < _hiddenSize.z; c++) {
+        int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + c + startIndex * _hiddenSize.z;
 
-    _hiddenTransitionWeights[wi] += _beta * (reward - _hiddenTransitionWeights[wi]);
+        _hiddenTransitionWeights[wi] += _beta * ((c == endIndex ? 1.0f : 0.0f) - _hiddenTransitionWeights[wi]);
+    }
 }
 
 void SparseCoder::createRandom(ComputeSystem &cs,
@@ -494,7 +496,7 @@ void SparseCoder::infer(ComputeSystem &cs, const IntBuffer* goalCs) {
     }
 }
 
-void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward) {
+void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
     // Final reconstruction + learning
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -514,6 +516,6 @@ void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &
         for (int y = 0; y < _hiddenSize.y; y++)
             learnTransition(Int2(x, y), cs._rng, reward);
 #else
-    runKernel2(cs, std::bind(SparseCoder::learnTransitionKernel, std::placeholders::_1, std::placeholders::_2, this, reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(SparseCoder::learnTransitionKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }

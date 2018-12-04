@@ -71,9 +71,6 @@ namespace ogmaneo {
         // Per-layer values
         std::vector<char> _updates;
 
-        std::vector<float> _rewards;
-        std::vector<float> _rewardCounts;
-
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
 
@@ -96,7 +93,7 @@ namespace ogmaneo {
         \param learnEnabled whether learning should be enabled, defaults to true
         \param reward reinforcement signal
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled = true, float reward = 0.0f);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* topGoalCs, bool learnEnabled = true);
 
         /*!
         \brief Get the number of (hidden) layers
