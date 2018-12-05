@@ -46,18 +46,12 @@ namespace ogmaneo {
             int _temporalHorizon;
 
             /*!
-            \brief History capacity
-            */
-            int _historyCapacity;
-
-            /*!
             \brief Initialize defaults
             */
             LayerDesc()
-                : _hiddenSize(4, 4, 16),
+                : _hiddenSize(4, 4, 32),
                 _scRadius(2),
-                _ticksPerUpdate(2), _temporalHorizon(2),
-                _historyCapacity(64)
+                _ticksPerUpdate(2), _temporalHorizon(2)
             {}
         };
     private:

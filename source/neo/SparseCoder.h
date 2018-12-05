@@ -14,7 +14,7 @@ namespace ogmaneo {
     /*!
     \brief Pathfinding
     */
-    int findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights);
+    int findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights, float gamma);
 
     /*!
     \brief Sparse Coder
@@ -40,7 +40,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             VisibleLayerDesc()
-                : _size({ 4, 4, 16 }),
+                : _size({ 4, 4, 32 }),
                 _radius(2)
             {}
         };
@@ -84,6 +84,7 @@ namespace ogmaneo {
         FloatBuffer _hiddenTransitionWeights;
 
         IntBuffer _hiddenReconCs;
+        IntBuffer _hiddenReconCsPrev;
         //!@}
 
         //!@{
@@ -147,6 +148,11 @@ namespace ogmaneo {
         float _beta;
 
         /*!
+        \brief Sharpness of search
+        */
+        float _gamma;
+
+        /*!
         \brief Explaining-away iterations (part of iterative sparse coding)
         */
         int _explainIters;
@@ -155,7 +161,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.01f), _beta(0.1f), _explainIters(4)
+        : _alpha(0.1f), _beta(0.1f), _gamma(4.0f), _explainIters(4)
         {}
 
         /*!

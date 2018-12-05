@@ -13,7 +13,7 @@
 using namespace ogmaneo;
 
 // Pathfinder
-int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights) {
+int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights, float gamma) {
     std::vector<float> dist(size, 999999.0f);
     std::vector<int> prev(size, -1);
 
@@ -55,7 +55,7 @@ int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsSt
         for (int n = 0; n < size; n++) {
             float w = weights[weightsStart + n + u * size];
 
-            float alt = dist[u] + 1.0f / std::max(0.0001f, w);
+            float alt = dist[u] + 1.0f / (0.0001f + std::pow(w, gamma));
             
             if (alt < dist[n]) {
                 dist[n] = alt;
@@ -204,7 +204,7 @@ void SparseCoder::pathfind(const Int2 &pos, std::mt19937 &rng, const IntBuffer* 
     int startIndex = _hiddenCs[hiddenIndex];
     int endIndex = (*goalCs)[hiddenIndex];
 
-    int reconIndex = findNextIndex(startIndex, endIndex, _hiddenSize.z, hiddenIndex * _hiddenSize.z * _hiddenSize.z, _hiddenTransitionWeights);
+    int reconIndex = findNextIndex(startIndex, endIndex, _hiddenSize.z, hiddenIndex * _hiddenSize.z * _hiddenSize.z, _hiddenTransitionWeights, _gamma);
     
     // Output state
     _hiddenReconCs[hiddenIndex] = reconIndex;
@@ -354,10 +354,18 @@ void SparseCoder::learnTransition(const Int2 &pos, std::mt19937 &rng) {
     int startIndex = _hiddenCsPrev[hiddenIndex];
     int endIndex = _hiddenCs[hiddenIndex];
 
-    for (int c = 0; c < _hiddenSize.z; c++) {
-        int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + c + startIndex * _hiddenSize.z;
+    int predIndexPrev = _hiddenReconCsPrev[hiddenIndex];
 
-        _hiddenTransitionWeights[wi] += _beta * ((c == endIndex ? 1.0f : 0.0f) - _hiddenTransitionWeights[wi]);
+    {
+        int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + endIndex + startIndex * _hiddenSize.z;
+
+        _hiddenTransitionWeights[wi] += _beta * (1.0f - _hiddenTransitionWeights[wi]);
+    }
+
+    if (predIndexPrev != endIndex) {
+        int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + predIndexPrev + startIndex * _hiddenSize.z;
+
+        _hiddenTransitionWeights[wi] += _beta * (0.0f - _hiddenTransitionWeights[wi]);
     }
 }
 
@@ -426,6 +434,13 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
     _hiddenReconCs = IntBuffer(numHiddenColumns);
 
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHiddenColumns; x++)
+        fillInt(x, cs._rng, &_hiddenReconCs, 0);
+#else
+    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenReconCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
+
     // Hidden activations
     _hiddenActivations = FloatBuffer(numHidden);
 
@@ -474,6 +489,8 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*
 }
 
 void SparseCoder::infer(ComputeSystem &cs, const IntBuffer* goalCs) {
+    _hiddenReconCsPrev = _hiddenReconCs;
+
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
