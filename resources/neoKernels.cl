@@ -435,20 +435,23 @@ void kernel aLearn(global const int* visibleCsPrev, global const float* hiddenAc
     global const int* actionCsPrev,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float gamma, float reward)
+    float alpha, float gamma, float actionGap, float reward)
 {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int actionCPrev = actionCsPrev[address2(hiddenPosition, hiddenSize.x)];
 
     float qMax = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+    float qMaxPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
     
-    for (int c = 1; c < hiddenSize.z; c++)
+    for (int c = 1; c < hiddenSize.z; c++) {
         qMax = fmax(qMax, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+        qMaxPrev = fmax(qMaxPrev, hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+    }
 
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, actionCPrev), hiddenSize.xy)];
 
-    float delta = alpha * (reward + gamma * qMax - qPrev);
+    float delta = alpha * (reward + gamma * qMax - qPrev - actionGap * (qMaxPrev - qPrev));
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
