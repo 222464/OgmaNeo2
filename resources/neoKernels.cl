@@ -449,10 +449,14 @@ void kernel aLearn(global const int* visibleCsPrev, global const float* hiddenAc
         qMaxPrev = fmax(qMaxPrev, hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
     }
 
+    float qAction = hiddenActivations[address3((int3)(hiddenPosition, actionCPrev), hiddenSize.xy)];
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, actionCPrev), hiddenSize.xy)];
 
-    float delta = alpha * (reward + gamma * qMax - qPrev - actionGap * (qMaxPrev - qPrev));
-
+    float dQ = reward + gamma * qMax - qPrev;
+    float dAdv = dQ - actionGap * (qMaxPrev - qPrev);
+    float dPAL = fmax(dAdv, dQ - actionGap * (qMax - qAction));
+    float delta = alpha * dPAL;
+    
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
     int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
