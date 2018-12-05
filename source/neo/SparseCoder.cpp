@@ -13,7 +13,7 @@
 using namespace ogmaneo;
 
 // Pathfinder
-int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights, float gamma) {
+int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights) {
     std::vector<float> dist(size, 999999.0f);
     std::vector<int> prev(size, -1);
 
@@ -55,7 +55,7 @@ int ogmaneo::findNextIndex(int startIndex, int endIndex, int size, int weightsSt
         for (int n = 0; n < size; n++) {
             float w = weights[weightsStart + n + u * size];
 
-            float alt = dist[u] + 1.0f / (0.0001f + std::pow(w, gamma));
+            float alt = dist[u] + 1.0f / (0.00001f + w);
             
             if (alt < dist[n]) {
                 dist[n] = alt;
@@ -204,7 +204,7 @@ void SparseCoder::pathfind(const Int2 &pos, std::mt19937 &rng, const IntBuffer* 
     int startIndex = _hiddenCs[hiddenIndex];
     int endIndex = (*goalCs)[hiddenIndex];
 
-    int reconIndex = findNextIndex(startIndex, endIndex, _hiddenSize.z, hiddenIndex * _hiddenSize.z * _hiddenSize.z, _hiddenTransitionWeights, _gamma);
+    int reconIndex = findNextIndex(startIndex, endIndex, _hiddenSize.z, hiddenIndex * _hiddenSize.z * _hiddenSize.z, _hiddenTransitionWeights);
     
     // Output state
     _hiddenReconCs[hiddenIndex] = reconIndex;

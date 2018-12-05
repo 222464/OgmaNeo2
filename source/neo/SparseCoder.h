@@ -14,7 +14,7 @@ namespace ogmaneo {
     /*!
     \brief Pathfinding
     */
-    int findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights, float gamma);
+    int findNextIndex(int startIndex, int endIndex, int size, int weightsStart, const std::vector<float> &weights);
 
     /*!
     \brief Sparse Coder
@@ -148,11 +148,6 @@ namespace ogmaneo {
         float _beta;
 
         /*!
-        \brief Sharpness of search
-        */
-        float _gamma;
-
-        /*!
         \brief Explaining-away iterations (part of iterative sparse coding)
         */
         int _explainIters;
@@ -161,7 +156,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.1f), _beta(0.1f), _gamma(4.0f), _explainIters(4)
+        : _alpha(0.1f), _beta(0.01f), _explainIters(4)
         {}
 
         /*!
