@@ -19,72 +19,81 @@ void Actor::init(int pos, std::mt19937 &rng, int vli) {
 }
 
 void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+    
     // Cache address calculations (taken from addressN functions)
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
     // ------------------------------ Action ------------------------------
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    if (dist01(rng) < _epsilon) {
+        std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
 
-    // For each hidden unit
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        Int3 hiddenPosition(pos.x, pos.y, hc);
-
-        // Partially computed address of weight
-        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
-
-        float sum = 0.0f;
-        float count = 0.0f;
-    
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            // Center of projected position
-            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
-
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
-
-            // Additional addressing dimensions
-            int diam = vld._radius * 2 + 1;
-            int diam2 = diam * diam;
-
-            // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
-
-            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                    Int2 visiblePosition(x, y);
-
-                    int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
-
-                    // Final component of address
-                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
-
-                    sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
-                }
-
-            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
-        }
-
-        // Normalize and save value for later
-        float activation = sum / std::max(1.0f, count);
-
-        if (activation > maxActivation) {
-            maxActivation = activation;
-            maxIndex = hc;
-        }
+        _hiddenCs[address2(pos, _hiddenSize.x)] = columnDist(rng);
     }
+    else {
+        int maxIndex = 0;
+        float maxActivation = -999999.0f;
 
-    _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
+        // For each hidden unit
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            Int3 hiddenPosition(pos.x, pos.y, hc);
+
+            // Partially computed address of weight
+            int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+
+            float sum = 0.0f;
+            float count = 0.0f;
+        
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                // Center of projected position
+                Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+
+                // Lower corner
+                Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+
+                // Additional addressing dimensions
+                int diam = vld._radius * 2 + 1;
+                int diam2 = diam * diam;
+
+                // Bounds of receptive field, clamped to input size
+                Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+                Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
+
+                for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+                    for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                        Int2 visiblePosition(x, y);
+
+                        int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
+
+                        // Final component of address
+                        int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
+
+                        sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                    }
+
+                count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
+            }
+
+            // Normalize and save value for later
+            float activation = sum / std::max(1.0f, count);
+
+            if (activation > maxActivation) {
+                maxActivation = activation;
+                maxIndex = hc;
+            }
+        }
+
+        _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
+    }
 }
 
-void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward) {
+void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCs, float reward) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -140,7 +149,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     }
 
     // Selected (past) action index
-    int actionIndex = (*hiddenActionCs)[address2(pos, _hiddenSize.x)];
+    int actionIndex = (*hiddenCs)[address2(pos, _hiddenSize.x)];
 
     // Partially computed address, this time for action
     int dPartial = pos.x + pos.y * _hiddenSize.x + actionIndex * dxy;
@@ -302,11 +311,11 @@ void Actor::createRandom(ComputeSystem &cs,
             _historySamples[i]._visibleCs[vli] = std::make_shared<IntBuffer>(numVisibleColumns);
         }
 
-        _historySamples[i]._hiddenActionCs = std::make_shared<IntBuffer>(numHiddenColumns);
+        _historySamples[i]._hiddenCs = std::make_shared<IntBuffer>(numHiddenColumns);
     }
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionCs, float reward, bool learnEnabled) {
+void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -355,9 +364,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Copy hidden Cs
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, hiddenActionCs, s._hiddenActionCs.get());
+            copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
 #else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenActionCs, s._hiddenActionCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, s._hiddenCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
         s._reward = reward;
@@ -377,9 +386,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenActionCs.get(), s._reward);
+                    learn(Int2(x, y), cs._rng, constGet(s._visibleCs), constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), s._reward);
 #else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenActionCs.get(), s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._visibleCs), constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
         }
     }

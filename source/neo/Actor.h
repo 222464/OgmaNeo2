@@ -59,7 +59,7 @@ namespace ogmaneo {
         */
         struct HistorySample {
             std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
-            std::shared_ptr<IntBuffer> _hiddenActionCs;
+            std::shared_ptr<IntBuffer> _hiddenCs;
         
             float _reward;
         };
@@ -100,7 +100,7 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCs, float reward);
 
         static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
             a->init(pos, rng, vli);
@@ -110,8 +110,8 @@ namespace ogmaneo {
             a->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward) {
-            a->learn(pos, rng, inputCs, inputCsPrev, hiddenActionCs, reward);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCs, float reward) {
+            a->learn(pos, rng, inputCs, inputCsPrev, hiddenCs, reward);
         }
         //!@}
 
@@ -127,6 +127,11 @@ namespace ogmaneo {
         float _gamma;
 
         /*!
+        \brief Exploration rate
+        */
+        float _epsilon;
+
+        /*!
         \brief Number of sample iterations
         */
         int _historyIters;
@@ -135,7 +140,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.9f), _historyIters(8)
+        : _alpha(0.01f), _gamma(0.9f), _epsilon(0.05f), _historyIters(4)
         {}
 
         /*!
@@ -156,7 +161,7 @@ namespace ogmaneo {
         \param reward reinforcement signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionCs, float reward, bool learnEnabled);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers
