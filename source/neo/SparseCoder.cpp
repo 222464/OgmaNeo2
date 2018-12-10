@@ -125,7 +125,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
                     // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                    sum += std::max(0.0f, vl._weights[dPartial + az * dxyz] * (firstIter ? 0.0f : vl._visibleActivations[visibleIndex]));
+                    sum += std::max(0.0f, vl._weights[dPartial + az * dxyz] - (firstIter ? 0.0f : vl._visibleActivations[visibleIndex]));
                 }
         }
 
@@ -367,6 +367,12 @@ void SparseCoder::learnTransition(const Int2 &pos, std::mt19937 &rng) {
 
         _hiddenTransitionWeights[wi] += _beta * (0.0f - _hiddenTransitionWeights[wi]);
     }
+
+    // for (int c = 0; c < _hiddenSize.z; c++) {
+    //     int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + c + startIndex * _hiddenSize.z;
+
+    //     _hiddenTransitionWeights[wi] += _beta * ((c == endIndex ? 1.0f : 0.0f) - _hiddenTransitionWeights[wi]);
+    // }
 }
 
 void SparseCoder::createRandom(ComputeSystem &cs,
