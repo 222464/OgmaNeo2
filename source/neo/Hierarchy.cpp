@@ -190,7 +190,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            const IntBuffer* goalCs = (l < _scLayers.size() - 1 ? &_scLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._reconCs : topGoalCs);
+            const IntBuffer* goalCs = (l < _scLayers.size() - 1 ? &_scLayers[l + 1].getVisibleLayer(0)._reconCs : topGoalCs);
 
             _scLayers[l].infer(cs, goalCs);
 
