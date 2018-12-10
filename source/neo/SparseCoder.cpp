@@ -180,7 +180,7 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
 
             // Bounds of receptive field, clamped to input size
             Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-            Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+            Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
             // Check for containment
             if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
@@ -243,7 +243,7 @@ void SparseCoder::reconstruct(const Int2 &pos, std::mt19937 &rng, const IntBuffe
 
                 // Bounds of receptive field, clamped to input size
                 Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+                Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
@@ -302,7 +302,7 @@ void SparseCoder::learnFeed(const Int2 &pos, std::mt19937 &rng, const std::vecto
 
                 // Bounds of receptive field, clamped to input size
                 Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+                Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
@@ -333,7 +333,7 @@ void SparseCoder::learnFeed(const Int2 &pos, std::mt19937 &rng, const std::vecto
 
                 // Bounds of receptive field, clamped to input size
                 Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+                Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
