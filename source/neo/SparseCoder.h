@@ -55,9 +55,9 @@ namespace ogmaneo {
             */
             FloatBuffer _weights;
 
-            FloatBuffer _visibleActivations;
+            FloatBuffer _activations;
 
-            IntBuffer _visibleReconCs;
+            IntBuffer _reconCs;
 
             Float2 _visibleToHidden; // For projection
             Float2 _hiddenToVisible; // For projection
@@ -156,7 +156,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.01f), _beta(0.1f), _explainIters(4)
+        : _alpha(0.01f), _beta(0.01f), _explainIters(2)
         {}
 
         /*!

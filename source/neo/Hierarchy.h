@@ -103,7 +103,7 @@ namespace ogmaneo {
         const IntBuffer &getPredictionCs(int i) const {
             int temporalHorizon = _histories.front().size() / _inputSizes.size();
 
-            return _scLayers.front().getVisibleLayer(0 + i * temporalHorizon)._visibleReconCs;
+            return _scLayers.front().getVisibleLayer(0 + i * temporalHorizon)._reconCs;
         }
 
         /*!

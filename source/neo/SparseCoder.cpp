@@ -124,8 +124,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     // Complete the partial address with final value needed
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                    sum += std::max(0.0f, vl._weights[dPartial + az * dxyz] - (firstIter ? 0.0f : vl._visibleActivations[visibleIndex]));
+                    sum += vl._weights[dPartial + az * dxyz] * (1.0f - (firstIter ? 0.0f : vl._activations[visibleIndex]));
                 }
         }
 
@@ -195,7 +194,7 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
         }
 
     // Set normalized reconstruction value
-    vl._visibleActivations[visibleIndex] = sum / std::max(1.0f, count);
+    vl._activations[visibleIndex] = sigmoid(sum / std::max(1.0f, count));
 }
 
 void SparseCoder::pathfind(const Int2 &pos, std::mt19937 &rng, const IntBuffer* goalCs) {
@@ -267,7 +266,7 @@ void SparseCoder::reconstruct(const Int2 &pos, std::mt19937 &rng, const IntBuffe
         }
     }
 
-    vl._visibleReconCs[visibleIndex] = maxIndex;
+    vl._reconCs[visibleIndex] = maxIndex;
 }
 
 void SparseCoder::learnFeed(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli) {
@@ -317,7 +316,7 @@ void SparseCoder::learnFeed(const Int2 &pos, std::mt19937 &rng, const std::vecto
             }
 
         // Normalized activation (reconstruction)
-        float activation = sum / std::max(1.0f, count);
+        float activation = sigmoid(sum / std::max(1.0f, count));
 
         // Weight increment
         float target = (vc == inputC ? 1.0f : 0.0f);
@@ -423,9 +422,9 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 #endif
 
         // Reconstruction buffer
-        vl._visibleActivations = FloatBuffer(numVisibleColumns);
+        vl._activations = FloatBuffer(numVisibleColumns);
 
-        vl._visibleReconCs = IntBuffer(numVisibleColumns);
+        vl._reconCs = IntBuffer(numVisibleColumns);
     }
 
     // Hidden Cs
