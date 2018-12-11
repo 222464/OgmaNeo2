@@ -79,6 +79,8 @@ namespace ogmaneo {
         IntBuffer _hiddenCs;
         IntBuffer _hiddenCsPrev;
 
+        IntBuffer _goalCsPrev;
+
         FloatBuffer _hiddenActivations;
 
         FloatBuffer _hiddenTransitionWeights;
@@ -186,8 +188,9 @@ namespace ogmaneo {
         \brief Learn the sparse code
         \param cs is the ComputeSystem.
         \param visibleCs the visible (input) layer states
+        \param goalCs target goal states
         */
-        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
+        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* goalCs);
 
         /*!
         \brief Get the number of visible layers

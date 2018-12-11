@@ -351,20 +351,17 @@ void SparseCoder::learnTransition(const Int2 &pos, std::mt19937 &rng) {
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
     int startIndex = _hiddenCsPrev[hiddenIndex];
-    int endIndex = _hiddenCs[hiddenIndex];
+    int endIndex = _goalCsPrev[hiddenIndex];
+    int stateIndex = _hiddenCs[hiddenIndex];
+
+    float target = (endIndex == stateIndex ? 1.0f : 0.0f);
 
     int predIndexPrev = _hiddenReconCsPrev[hiddenIndex];
 
     {
-        int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + endIndex + startIndex * _hiddenSize.z;
-
-        _hiddenTransitionWeights[wi] += _beta * (1.0f - _hiddenTransitionWeights[wi]);
-    }
-
-    if (predIndexPrev != endIndex) {
         int wi = hiddenIndex * _hiddenSize.z * _hiddenSize.z + predIndexPrev + startIndex * _hiddenSize.z;
 
-        _hiddenTransitionWeights[wi] += _beta * (0.0f - _hiddenTransitionWeights[wi]);
+        _hiddenTransitionWeights[wi] += _beta * (target - _hiddenTransitionWeights[wi]);
     }
 
     // for (int c = 0; c < _hiddenSize.z; c++) {
@@ -446,6 +443,15 @@ void SparseCoder::createRandom(ComputeSystem &cs,
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenReconCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
+    _goalCsPrev = IntBuffer(numHiddenColumns);
+
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHiddenColumns; x++)
+        fillInt(x, cs._rng, &_goalCsPrev, 0);
+#else
+    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_goalCsPrev, 0), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
+
     // Hidden activations
     _hiddenActivations = FloatBuffer(numHidden);
 
@@ -456,7 +462,7 @@ void SparseCoder::createRandom(ComputeSystem &cs,
     for (int x = 0; x < _hiddenTransitionWeights.size(); x++)
         fillFloat(x, cs._rng, &_hiddenTransitionWeights, 0.0f);
 #else
-    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenTransitionWeights, 1.0f), _hiddenTransitionWeights.size(), cs._rng, cs._batchSize1);
+    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenTransitionWeights, 0.0f), _hiddenTransitionWeights.size(), cs._rng, cs._batchSize1);
 #endif
 }
 
@@ -518,7 +524,7 @@ void SparseCoder::infer(ComputeSystem &cs, const IntBuffer* goalCs) {
     }
 }
 
-void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
+void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* goalCs) {
     // Final reconstruction + learning
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -540,4 +546,6 @@ void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &
 #else
     runKernel2(cs, std::bind(SparseCoder::learnTransitionKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+
+    _goalCsPrev = *goalCs;
 }

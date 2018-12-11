@@ -195,7 +195,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
             _scLayers[l].infer(cs, goalCs);
 
             if (learnEnabled)
-                _scLayers[l].learn(cs, constGet(_histories[l]));
+                _scLayers[l].learn(cs, constGet(_histories[l]), goalCs);
         }
     }
 }
