@@ -58,7 +58,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             LayerDesc()
-                : _hiddenSize(4, 4, 24),
+                : _hiddenSize(4, 4, 16),
                 _scRadius(2), _pRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2)
             {}

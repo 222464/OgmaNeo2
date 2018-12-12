@@ -35,7 +35,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             VisibleLayerDesc()
-                : _size({ 4, 4, 24 }),
+                : _size({ 4, 4, 16 }),
                 _radius(2)
             {}
         };
@@ -104,7 +104,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Predictor()
-        : _alpha(1.0f)
+        : _alpha(0.1f)
         {}
 
         /*!

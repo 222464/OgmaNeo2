@@ -35,7 +35,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             VisibleLayerDesc()
-                : _size({ 4, 4, 24 }),
+                : _size({ 4, 4, 16 }),
                 _radius(2)
             {}
         };
@@ -124,7 +124,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.1f), _explainIters(4)
+        : _alpha(0.01f), _explainIters(4)
         {}
 
         /*!
