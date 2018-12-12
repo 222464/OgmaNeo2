@@ -82,19 +82,19 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             _pLayers[l].resize(inputSizes.size());
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
 
-            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
+            pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
 
-                    _pLayers[l][p]->createRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs);
+                    _pLayers[l][p]->createRandom(cs, inputSizes[p], pVisibleLayerDescs);
                 }
             }
         }
@@ -124,18 +124,18 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
 
-            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
+            pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 _pLayers[l][p] = std::make_unique<Predictor>();
 
-                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs);
+                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDescs);
             }
         }
 		

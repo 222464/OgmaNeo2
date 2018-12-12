@@ -13,7 +13,7 @@ using namespace ogmaneo;
 // Kernels
 void Predictor::init(int pos, std::mt19937 &rng, int vli) {
     // Randomly initialize weights in range
-	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
+	std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
@@ -175,7 +175,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
 }
 
 void Predictor::createRandom(ComputeSystem &cs,
-    const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
+    const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
 {
     _visibleLayerDescs = visibleLayerDescs;
 

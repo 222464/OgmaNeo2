@@ -115,7 +115,7 @@ namespace ogmaneo {
         \param visibleLayerDescs are descriptors for visible layers
         */
         void createRandom(ComputeSystem &cs,
-            const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs); // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+            const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs); // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
 
         /*!
         \brief Activate the predictor (predict values)
