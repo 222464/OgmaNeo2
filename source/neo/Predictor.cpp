@@ -135,7 +135,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
         float target = (hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f);
         float delta = 0.0f;
         
-        if ((target > 0.5f && activation < 0.5f) || (target <= 0.5f && activation >= 0.5f))
+        if ((target > 0.5f) != (activation > 0.5f))
             delta = _alpha * (target - activation);
 
         // For each visible layer
