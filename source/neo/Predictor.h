@@ -104,7 +104,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Predictor()
-        : _alpha(0.1f)
+        : _alpha(1.0f)
         {}
 
         /*!
