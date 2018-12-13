@@ -13,7 +13,7 @@ using namespace ogmaneo;
 // Kernels
 void Predictor::init(int pos, std::mt19937 &rng, int vli) {
     // Randomly initialize weights in range
-	std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
+	std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
@@ -130,7 +130,13 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
             count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        float delta = _alpha * ((hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f) - sigmoid(sum / std::max(1.0f, count)));
+        float activation = sigmoid(sum / std::max(1.0f, count));
+
+        float target = (hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f);
+        float delta = 0.0f;
+        
+        if ((target > 0.5f && activation < 0.5f) || (target <= 0.5f && activation >= 0.5f))
+            delta = _alpha * (target - activation);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
