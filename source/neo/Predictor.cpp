@@ -36,7 +36,6 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
         float sum = 0.0f;
-        float count = 0.0f;
     
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -68,15 +67,10 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
 
                     sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                 }
-
-            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        // Normalize and save value for later
-        float activation = sum / std::max(1.0f, count);
-
-        if (activation > maxActivation) {
-            maxActivation = activation;
+        if (sum > maxActivation) {
+            maxActivation = sum;
             maxIndex = hc;
         }
     }
@@ -88,8 +82,6 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
-
-    float maxQ = -999999.0f;
 
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
