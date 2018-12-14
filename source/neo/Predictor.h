@@ -16,49 +16,18 @@ namespace ogmaneo {
     Maps input CSDRs to actions using a swarm of actor-critic units with Boltzmann exploration
     */
     class Predictor {
-    public:
-        /*!
-        \brief Visible layer descriptor
-        */
-        struct VisibleLayerDesc {
-            /*!
-            \brief Visible layer size
-            */
-            Int3 _size;
-
-            /*!
-            \brief Radius onto hidden layer
-            */
-            int _radius;
-
-            /*!
-            \brief Initialize defaults
-            */
-            VisibleLayerDesc()
-                : _size({ 4, 4, 16 }),
-                _radius(2)
-            {}
-        };
-
-        /*!
-        \brief Visible layer
-        */
-        struct VisibleLayer {
-            //!@{
-            /*!
-            \brief Visible layer values and buffers
-            */
-            FloatBuffer _weights;
-
-            Float2 _hiddenToVisible;
-            //!@}
-        };
-
     private:
         /*!
         \brief Size of the hidden layer (output/action size)
         */
         Int3 _hiddenSize;
+        Int3 _visibleSize;
+
+        int _radius;
+
+        FloatBuffer _weights;
+
+        Float2 _hiddenToVisible;
 
         /*!
         \brief Buffers for state
@@ -67,22 +36,14 @@ namespace ogmaneo {
 
         //!@{
         /*!
-        \brief Visible layers and associated descriptors
-        */
-        std::vector<VisibleLayer> _visibleLayers;
-        std::vector<VisibleLayerDesc> _visibleLayerDescs;
-        //!@}
-
-        //!@{
-        /*!
         \brief Kernels
         */
-        void init(int pos, std::mt19937 &rng, int vli);
+        void init(int pos, std::mt19937 &rng);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
         void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenTargetCs);
 
-        static void initKernel(int pos, std::mt19937 &rng, Predictor* a, int vli) {
-            a->init(pos, rng, vli);
+        static void initKernel(int pos, std::mt19937 &rng, Predictor* a) {
+            a->init(pos, rng);
         }
 
         static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Predictor* a, const std::vector<const IntBuffer*> &inputCs) {
@@ -115,7 +76,7 @@ namespace ogmaneo {
         \param visibleLayerDescs are descriptors for visible layers
         */
         void createRandom(ComputeSystem &cs,
-            const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs); // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+            const Int3 &hiddenSize, const Int3 &visibleSize, int radius);
 
         /*!
         \brief Activate the predictor (predict values)
@@ -135,27 +96,6 @@ namespace ogmaneo {
         void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCsPrev, const IntBuffer* hiddenTargetCs);
 
         /*!
-        \brief Get number of visible layers
-        */
-        int getNumVisibleLayers() const {
-            return _visibleLayers.size();
-        }
-
-        /*!
-        \brief Get a visible layer
-        */
-        const VisibleLayer &getVisibleLayer(int index) const {
-            return _visibleLayers[index];
-        }
-
-        /*!
-        \brief Get a visible layer descriptor
-        */
-        const VisibleLayerDesc &getVisibleLayerDesc(int index) const {
-            return _visibleLayerDescs[index];
-        }
-
-        /*!
         \brief Get the hidden activations (predictions)
         */
         const IntBuffer &getHiddenCs() const {
@@ -172,8 +112,8 @@ namespace ogmaneo {
         /*!
         \brief Get the weights for a visible layer
         */
-        const FloatBuffer &getWeights(int v) {
-            return _visibleLayers[v]._weights;
+        const FloatBuffer &getWeights() {
+            return _weights;
         }
     };
 }
