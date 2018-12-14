@@ -123,7 +123,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.1f), _explainIters(4)
+        : _alpha(0.01f), _explainIters(4)
         {}
 
         /*!
@@ -176,7 +176,7 @@ namespace ogmaneo {
         const IntBuffer &getHiddenCs() const {
             return _hiddenCs;
         }
-
+        
         /*!
         \brief Get the hidden size
         */
