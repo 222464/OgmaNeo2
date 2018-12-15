@@ -379,7 +379,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize > 1) {
-        const HistorySample &s = _historySamples[_historySize - 1];
         const HistorySample &sPrev = _historySamples[0];
 
         // Compute (partial) Q value, rest is completed in the kernel
