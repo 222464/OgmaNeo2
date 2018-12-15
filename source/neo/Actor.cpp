@@ -184,7 +184,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     float tdError = reward + _gamma * maxQ - valuePrev;
 
     // Deltas for value and action
-    float alphaTdError = _alpha * tdError;
+    float alphaTdError = _alpha * std::min(1.0f, std::max(-1.0f, tdError));
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
