@@ -226,7 +226,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 
                 // Update both value and action using cached parts to compute weight addressed (equivalent to calling address4)
                 vl._valueWeights[dPartialValue + az * dxy] += alphaTdError;
-                vl._actionWeights[dPartialAction + az * dxyz] += alphaTdError;
+                vl._actionWeights[dPartialAction + az * dxyz] += tdError;
             }
     }
 }
