@@ -13,9 +13,9 @@ using namespace ogmaneo;
 // Kernels
 void Actor::init(int pos, std::mt19937 &rng, int vli) {
     // Randomly initialize weights in range
-	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
+	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
 
-    _visibleLayers[vli]._weights[pos] = weightDist(rng);
+    _visibleLayers[vli]._actionWeights[pos] = weightDist(rng);
 }
 
 void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
@@ -27,56 +27,57 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
+    // ------------------------------ Value ------------------------------
+
+    int dPartialValue = pos.x + pos.y * _hiddenSize.x;
+
+    float value = 0.0f;
+    float count = 0.0f;
+
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        // Center of projected position
+        Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+
+        // Lower corner
+        Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+
+        // Additional addressing dimensions
+        int diam = vld._radius * 2 + 1;
+        int diam2 = diam * diam;
+
+        // Bounds of receptive field, clamped to input size
+        Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+        Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
+
+        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                Int2 visiblePosition(x, y);
+
+                int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
+
+                // Final component of address
+                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
+
+                value += vl._valueWeights[dPartialValue + az * dxy]; // Used cached parts to compute weight address, equivalent to calling address4
+            }
+
+        count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
+    }
+
+    value /= std::max(1.0f, count);
+
+    _hiddenValues[hiddenIndex] = value;
+
     // ------------------------------ Action ------------------------------
 
     if (dist01(rng) < _epsilon) {
         std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
 
         _hiddenCs[hiddenIndex] = columnDist(rng);
-
-        // Find activation
-        Int3 hiddenPosition(pos.x, pos.y, _hiddenCs[hiddenIndex]);
-
-        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
-
-        float sum = 0.0f;
-        float count = 0.0f;
-    
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            // Center of projected position
-            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
-
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
-
-            // Additional addressing dimensions
-            int diam = vld._radius * 2 + 1;
-            int diam2 = diam * diam;
-
-            // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
-
-            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                    Int2 visiblePosition(x, y);
-
-                    int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
-
-                    // Final component of address
-                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
-
-                    sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
-                }
-
-            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
-        }
-
-        _hiddenValues[hiddenIndex] = sum / std::max(1.0f, count);
     }
     else {
         int maxIndex = 0;
@@ -87,10 +88,9 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
             Int3 hiddenPosition(pos.x, pos.y, hc);
 
             // Partially computed address of weight
-            int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+            int dPartialAction = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
-            float sum = 0.0f;
-            float count = 0.0f;
+            float activation = 0.0f;
         
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -120,14 +120,11 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
                         // Final component of address
                         int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                        sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                        activation += vl._actionWeights[dPartialAction + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                     }
-
-                count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
             }
 
-            // Normalize and save value for later
-            float activation = sum / std::max(1.0f, count);
+            activation /= std::max(1.0f, count);
 
             if (activation > maxActivation) {
                 maxActivation = activation;
@@ -136,9 +133,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
         }
 
         _hiddenCs[hiddenIndex] = maxIndex;
-        _hiddenValues[hiddenIndex] = maxActivation;
     }
-
 }
 
 void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
@@ -147,15 +142,12 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     int dxyz = dxy * _hiddenSize.z;
 
     float valuePrev = 0.0f;
-    float countPrev = 0.0f;
+    float count = 0.0f;
 
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
-    // Selected (past) action index
-    int actionIndexPrev = (*hiddenCsPrev)[hiddenIndex];
-
     // Partially computed address, this time for action
-    int dPartialPrev = pos.x + pos.y * _hiddenSize.x + actionIndexPrev * dxy;
+    int dPartialValue = pos.x + pos.y * _hiddenSize.x;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -185,20 +177,24 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
 
-                valuePrev += vl._weights[dPartialPrev + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                valuePrev += vl._valueWeights[dPartialValue + az * dxy]; // Used cached parts to compute weight address, equivalent to calling address4
             }
 
         // Count can be computed outside of loop, this is the value equavilent to count += 1.0f after each value increment
-        countPrev += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
+        count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
     }
 
-    valuePrev /= std::max(1.0f, countPrev);
+    valuePrev /= std::max(1.0f, count);
 
     // Temporal difference error
     float tdError = q + g * _hiddenValues[hiddenIndex] - valuePrev;
 
     // Deltas for value and action
     float alphaTdError = _alpha * tdError;
+
+    Int3 hiddenPosition(pos.x, pos.y, (*hiddenCsPrev)[hiddenIndex]);
+
+    int dPartialAction = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -229,7 +225,8 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
 
                 // Update both value and action using cached parts to compute weight addressed (equivalent to calling address4)
-                vl._weights[dPartialPrev + az * dxyz] += alphaTdError;
+                vl._valueWeights[dPartialValue + az * dxy] += alphaTdError;
+                vl._actionWeights[dPartialAction + az * dxyz] += alphaTdError;
             }
     }
 }
@@ -262,16 +259,18 @@ void Actor::createRandom(ComputeSystem &cs,
 
         int numWeightsPerHidden = diam * diam * vld._size.z;
 
-        int weightsSize = numHidden * numWeightsPerHidden;
+        int weightsSizeValue = numHiddenColumns * numWeightsPerHidden;
+        int weightsSizeAction = numHidden * numWeightsPerHidden;
 
         // Create weight matrix for this visible layer and initialize randomly
-        vl._weights = FloatBuffer(weightsSize);
+        vl._valueWeights = FloatBuffer(weightsSizeValue);
+        vl._actionWeights = FloatBuffer(weightsSizeAction);
 
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < weightsSize; x++)
+        for (int x = 0; x < weightsSizeAction; x++)
             init(x, cs._rng, vli);
 #else
-        runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSizeAction, cs._rng, cs._batchSize1);
 #endif
     }
 

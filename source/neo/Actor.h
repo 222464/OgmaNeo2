@@ -48,7 +48,8 @@ namespace ogmaneo {
             /*!
             \brief Visible layer values and buffers
             */
-            FloatBuffer _weights;
+            FloatBuffer _valueWeights;
+            FloatBuffer _actionWeights;
 
             Float2 _hiddenToVisible;
             //!@}
@@ -196,8 +197,15 @@ namespace ogmaneo {
         /*!
         \brief Get the weights for a visible layer
         */
-        const FloatBuffer &getWeights(int v) {
-            return _visibleLayers[v]._weights;
+        const FloatBuffer &getValueWeights(int v) {
+            return _visibleLayers[v]._valueWeights;
+        }
+
+        /*!
+        \brief Get the weights for a visible layer
+        */
+        const FloatBuffer &getActionWeights(int v) {
+            return _visibleLayers[v]._actionWeights;
         }
     };
 }
