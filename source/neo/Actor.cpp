@@ -272,6 +272,13 @@ void Actor::createRandom(ComputeSystem &cs,
 #else
         runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSizeAction, cs._rng, cs._batchSize1);
 #endif
+
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < weightsSizeValue; x++)
+            fillFloat(x, cs._rng, &vl._valueWeights, 0.0f);
+#else
+        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._valueWeights, 0.0f), weightsSizeValue, cs._rng, cs._batchSize1);
+#endif
     }
 
     // Hidden Cs
