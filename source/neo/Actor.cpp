@@ -36,7 +36,6 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
         float sum = 0.0f;
-        float count = 0.0f;
     
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -68,15 +67,10 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
                     sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                 }
-
-            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        // Normalize and save value for later
-        float activation = sum / std::max(1.0f, count);
-
-        if (activation > maxActivation) {
-            maxActivation = activation;
+        if (sum > maxActivation) {
+            maxActivation = sum;
             maxIndex = hc;
         }
     }
@@ -136,7 +130,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        maxQ = std::max(maxQ, sum / std::max(1.0f, count));
+        maxQ = std::max(maxQ, sum);
     }
 
     // Selected (past) action index
@@ -184,7 +178,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
         count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
     }
 
-    valuePrev /= std::max(1.0f, count);
+    //valuePrev /= std::max(1.0f, count);
 
     // Temporal difference error
     float tdError = reward + _gamma * maxQ - valuePrev;
