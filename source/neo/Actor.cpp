@@ -195,8 +195,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     valuePrev /= std::max(1.0f, countPrev);
 
     // Temporal difference error
-    //float tdError = q + g * _hiddenValues[hiddenIndex] - valuePrev;
-    float tdError = q - valuePrev;
+    float tdError = q + g * _hiddenValues[hiddenIndex] - valuePrev;
 
     // Deltas for value and action
     float alphaTdError = _alpha * tdError;
