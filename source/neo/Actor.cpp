@@ -130,7 +130,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        maxQ = std::max(maxQ, sum);
+        maxQ = std::max(maxQ, sum / std::max(1.0f, count));
     }
 
     // Selected (past) action index
@@ -178,7 +178,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
         count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
     }
 
-    //valuePrev /= std::max(1.0f, count);
+    valuePrev /= std::max(1.0f, count);
 
     // Temporal difference error
     float tdError = reward + _gamma * maxQ - valuePrev;
