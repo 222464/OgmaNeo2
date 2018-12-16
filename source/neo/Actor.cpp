@@ -25,7 +25,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
-    int hiddenIndex = address2(pos, _hiddenSize.x);
+    int hiddenColumnIndex = address2(pos, _hiddenSize.x);
 
     // ------------------------------ Value ------------------------------
 
@@ -70,14 +70,14 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
     value /= std::max(1.0f, count);
 
-    _hiddenValues[hiddenIndex] = value;
+    _hiddenValues[hiddenColumnIndex] = value;
 
     // ------------------------------ Action ------------------------------
 
     if (dist01(rng) < _epsilon) {
         std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
 
-        _hiddenCs[hiddenIndex] = columnDist(rng);
+        _hiddenCs[hiddenColumnIndex] = columnDist(rng);
     }
     else {
         int maxIndex = 0;
@@ -132,7 +132,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
             }
         }
 
-        _hiddenCs[hiddenIndex] = maxIndex;
+        _hiddenCs[hiddenColumnIndex] = maxIndex;
     }
 }
 
@@ -144,7 +144,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     float valuePrev = 0.0f;
     float count = 0.0f;
 
-    int hiddenIndex = address2(pos, _hiddenSize.x);
+    int hiddenColumnIndex = address2(pos, _hiddenSize.x);
 
     // Partially computed address, this time for action
     int dPartialValue = pos.x + pos.y * _hiddenSize.x;
@@ -187,12 +187,12 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     valuePrev /= std::max(1.0f, count);
 
     // Temporal difference error
-    float tdError = q + g * _hiddenValues[hiddenIndex] - valuePrev;
+    float tdError = q + g * _hiddenValues[hiddenColumnIndex] - valuePrev;
 
     // Deltas for value and action
     float alphaTdError = _alpha * tdError;
 
-    Int3 hiddenPosition(pos.x, pos.y, (*hiddenCsPrev)[hiddenIndex]);
+    Int3 hiddenPosition(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]);
 
     int dPartialAction = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 

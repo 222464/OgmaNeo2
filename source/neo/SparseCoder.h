@@ -50,7 +50,9 @@ namespace ogmaneo {
             */
             FloatBuffer _weights;
 
-            FloatBuffer _visibleActivations;
+            FloatBuffer _activations;
+
+            FloatBuffer _rates;
 
             Float2 _visibleToHidden; // For projection
             Float2 _hiddenToVisible; // For projection
@@ -110,7 +112,7 @@ namespace ogmaneo {
 
     public:
         /*!
-        \brief Learning rate
+        \brief Learning rate decay
         */
         float _alpha;
 
@@ -123,7 +125,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.1f), _explainIters(4)
+        : _alpha(0.9f), _explainIters(4)
         {}
 
         /*!
