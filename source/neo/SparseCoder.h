@@ -50,7 +50,7 @@ namespace ogmaneo {
             */
             FloatBuffer _weights;
 
-            FloatBuffer _visibleActivations;
+            FloatBuffer _activations;
 
             Float2 _visibleToHidden; // For projection
             Float2 _hiddenToVisible; // For projection
@@ -110,7 +110,7 @@ namespace ogmaneo {
 
     public:
         /*!
-        \brief Learning rate
+        \brief Learning rate decay
         */
         float _alpha;
 
@@ -123,7 +123,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.01f), _explainIters(4)
+        : _alpha(1.0f), _explainIters(4)
         {}
 
         /*!
@@ -176,7 +176,7 @@ namespace ogmaneo {
         const IntBuffer &getHiddenCs() const {
             return _hiddenCs;
         }
-
+        
         /*!
         \brief Get the hidden size
         */
