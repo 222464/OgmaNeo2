@@ -67,7 +67,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
                     // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                    sum += std::max(0.0f, vl._weights[dPartial + az * dxyz] - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
+                    sum += std::max(0.0f, vl._weights[dPartial + az * dxyz]) * (1.0f - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
                 }
         }
 
@@ -137,7 +137,7 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
         }
 
     // Set normalized reconstruction value
-    vl._activations[visibleColumnIndex] = sum / std::max(1.0f, count);
+    vl._activations[visibleColumnIndex] = sigmoid(sum / std::max(1.0f, count));
 }
 
 void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
@@ -186,16 +186,10 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                 }
             }
 
-        int visibleIndex = address3(visiblePosition, Int2(vld._size.x, vld._size.y));
-
-        float rate = vl._rates[visibleIndex];
-
         // Weight increment
         float target = (vc == inputC ? 1.0f : 0.0f);
 
-        float delta = rate * (target - sum / std::max(1.0f, count));
-
-        vl._rates[visibleIndex] *= _alpha;
+        float delta = _alpha * (target - sigmoid(sum / std::max(1.0f, count)));
 
         for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
@@ -270,15 +264,6 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
         // Reconstruction buffer
         vl._activations = FloatBuffer(numVisibleColumns);
-
-        vl._rates = FloatBuffer(numVisible);
-
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < numHidden; x++)
-            fillFloat(x, cs._rng, &vl._rates, 0.5f);
-#else
-        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._rates, 0.5f), numVisible, cs._rng, cs._batchSize1);
-#endif
     }
 
     // Hidden Cs

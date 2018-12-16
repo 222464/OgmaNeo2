@@ -52,8 +52,6 @@ namespace ogmaneo {
 
             FloatBuffer _activations;
 
-            FloatBuffer _rates;
-
             Float2 _visibleToHidden; // For projection
             Float2 _hiddenToVisible; // For projection
 
@@ -125,7 +123,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.9f), _explainIters(4)
+        : _alpha(1.0f), _explainIters(4)
         {}
 
         /*!
