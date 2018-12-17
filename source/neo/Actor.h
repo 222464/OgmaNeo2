@@ -128,15 +128,10 @@ namespace ogmaneo {
         float _gamma;
 
         /*!
-        \brief Exploration rate
-        */
-        float _epsilon;
-
-        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.95f), _epsilon(0.02f)
+        : _alpha(0.01f), _gamma(0.95f)
         {}
 
         /*!
@@ -153,11 +148,11 @@ namespace ogmaneo {
         \brief Activate the actor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
-        \param hiddenActionCs the previously taken actions
+        \param hiddenCs the previously taken actions
         \param reward reinforcement signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenCs, float reward, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers
