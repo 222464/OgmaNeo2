@@ -19,8 +19,6 @@ void Actor::init(int pos, std::mt19937 &rng, int vli) {
 }
 
 void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
-    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
-    
     // Cache address calculations (taken from addressN functions)
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
