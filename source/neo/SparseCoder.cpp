@@ -36,6 +36,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
 
         // Accumulator
         float activation = 0.0f;
+        float count = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -69,7 +70,11 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
                     activation += vl._weights[dPartial + az * dxyz] * (1.0f - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
                 }
+
+            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
+
+        activation = sigmoid(activation / std::max(1.0f, count));
 
         int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
