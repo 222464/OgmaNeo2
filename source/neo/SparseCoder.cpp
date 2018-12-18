@@ -35,7 +35,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
         // Accumulator
-        float sum = 0.0f;
+        float activation = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -67,16 +67,16 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
                     // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                    sum += vl._weights[dPartial + az * dxyz] * (1.0f - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
+                    activation += vl._weights[dPartial + az * dxyz] * (1.0f - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
                 }
         }
 
         int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
         if (firstIter) // Clear to new sum value if is first step
-            _hiddenActivations[hiddenIndex] = sum;
+            _hiddenActivations[hiddenIndex] = activation;
         else
-            _hiddenActivations[hiddenIndex] += sum; // Add on to sum (accumulate over sparse coding iterations)
+            _hiddenActivations[hiddenIndex] += activation; // Add on to sum (accumulate over sparse coding iterations)
 
         // Determine highest cell activation and index
         if (_hiddenActivations[hiddenIndex] > maxValue) {
@@ -106,7 +106,7 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
     int diam2 = diam * diam;
 
     // Accumulators
-    float sum = 0.0f;
+    float activation = 0.0f;
     float count = 0.0f;
 
     // Bounds of receptive field, clamped to input size
@@ -131,13 +131,15 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
 
                 Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                sum += vl._weights[address4(wPos, _hiddenSize)];
+                activation += vl._weights[address4(wPos, _hiddenSize)];
                 count += 1.0f;
             }
         }
 
+    activation = sigmoid(activation / std::max(1.0f, count));
+
     // Set normalized reconstruction value
-    vl._activations[visibleColumnIndex] = sigmoid(sum / std::max(1.0f, count));
+    vl._activations[visibleColumnIndex] = activation;
 }
 
 void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
@@ -157,7 +159,7 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
     for (int vc = 0; vc < vld._size.z; vc++) {
         Int3 visiblePosition(pos.x, pos.y, vc);
 
-        float sum = 0.0f;
+        float activation = 0.0f;
         float count = 0.0f;
 
         Int2 iterLowerBound(std::max(0, hiddenPositionCenter.x - vl._reverseRadii.x), std::max(0, hiddenPositionCenter.y - vl._reverseRadii.y));
@@ -181,15 +183,17 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
 
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                    sum += vl._weights[address4(wPos, _hiddenSize)];
+                    activation += vl._weights[address4(wPos, _hiddenSize)];
                     count += 1.0f;
                 }
             }
 
+        activation = sigmoid(activation / std::max(1.0f, count));
+
         // Weight increment
         float target = (vc == inputC ? 1.0f : 0.0f);
 
-        float delta = _alpha * (target - sigmoid(sum / std::max(1.0f, count)));
+        float delta = _alpha * (target - activation);
 
         for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
