@@ -18,7 +18,7 @@ void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, bool firstIter) {
+void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -36,7 +36,6 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
 
         // Accumulator
         float activation = 0.0f;
-        float count = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -68,24 +67,13 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
                     // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                    activation += vl._weights[dPartial + az * dxyz] * (1.0f - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
+                    activation += vl._weights[dPartial + az * dxyz];// * (1.0f - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
                 }
-
-            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        activation = sigmoid(activation / std::max(1.0f, count));
-
-        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
-
-        if (firstIter) // Clear to new sum value if is first step
-            _hiddenActivations[hiddenIndex] = activation;
-        else
-            _hiddenActivations[hiddenIndex] += activation; // Add on to sum (accumulate over sparse coding iterations)
-
         // Determine highest cell activation and index
-        if (_hiddenActivations[hiddenIndex] > maxValue) {
-            maxValue = _hiddenActivations[hiddenIndex];
+        if (activation > maxValue) {
+            maxValue = activation;
 
             maxIndex = hc;
         }
@@ -93,58 +81,6 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
 
     // Output state
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
-}
-
-void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
-    VisibleLayer &vl = _visibleLayers[vli];
-    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-    int visibleColumnIndex = address2(pos, vld._size.x);
-
-    Int3 visiblePosition(pos.x, pos.y, (*inputCs[vli])[visibleColumnIndex]);
-
-    // Project to hidden
-    Int2 hiddenPositionCenter = project(pos, vl._visibleToHidden);
-
-    // Additional addressing dimensions
-    int diam = vld._radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    // Accumulators
-    float activation = 0.0f;
-    float count = 0.0f;
-
-    // Bounds of receptive field, clamped to input size
-    Int2 iterLowerBound(std::max(0, hiddenPositionCenter.x - vl._reverseRadii.x), std::max(0, hiddenPositionCenter.y - vl._reverseRadii.y));
-    Int2 iterUpperBound(std::min(_hiddenSize.x - 1, hiddenPositionCenter.x + vl._reverseRadii.x), std::min(_hiddenSize.y - 1, hiddenPositionCenter.y + vl._reverseRadii.y));
-
-    for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-        for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-            Int2 hiddenPosition(x, y);
-
-            // Next layer node's receptive field
-            Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
-
-            // Bounds of receptive field, clamped to input size
-            Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-            Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
-
-            // Check for containment
-            if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                // Address cannot be easily partially computed here, compute fully (address4)
-                int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
-
-                Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
-
-                activation += vl._weights[address4(wPos, _hiddenSize)];
-                count += 1.0f;
-            }
-        }
-
-    activation = sigmoid(activation / std::max(1.0f, count));
-
-    // Set normalized reconstruction value
-    vl._activations[visibleColumnIndex] = activation;
 }
 
 void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
@@ -216,9 +152,16 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                     // Address cannot be easily partially computed here, compute fully (address4)
                     int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
+                    // for (int dh = -1; dh <= 1; dh++) {
+                    //     int h = hiddenC + dh;
+
+                    //     if (h < 0 || h >= _hiddenSize.z)
+                    //         continue;
+
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
                     vl._weights[address4(wPos, _hiddenSize)] += delta;
+                    // }      
                 }
             }
     }
@@ -270,9 +213,6 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 #else
         runKernel1(cs, std::bind(SparseCoder::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
 #endif
-
-        // Reconstruction buffer
-        vl._activations = FloatBuffer(numVisibleColumns);
     }
 
     // Hidden Cs
@@ -284,40 +224,19 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 #else
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
-
-    // Hidden activations
-    _hiddenActivations = FloatBuffer(numHidden);
 }
 
 void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    // Sparse coding iterations: forward, reconstruct, repeat
-    for (int it = 0; it < _explainIters; it++) {
-        bool firstIter = it == 0;
-
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < _hiddenSize.x; x++)
-            for (int y = 0; y < _hiddenSize.y; y++)
-                forward(Int2(x, y), cs._rng, visibleCs, firstIter);
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            forward(Int2(x, y), cs._rng, visibleCs);
 #else
-        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, firstIter), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-#ifdef KERNEL_DEBUG
-            for (int x = 0; x < vld._size.x; x++)
-                for (int y = 0; y < vld._size.y; y++)
-                    backward(Int2(x, y), cs._rng, visibleCs, vli);
-#else
-            runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
-#endif
-        }
-    }
 }
 
 void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
