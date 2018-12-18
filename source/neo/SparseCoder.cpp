@@ -13,7 +13,7 @@ using namespace ogmaneo;
 // Kernels
 void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
     // Initialize weights into uniform range
-	std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
+	std::uniform_real_distribution<float> weightDist(0.0f, 0.0001f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
