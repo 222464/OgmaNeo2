@@ -64,7 +64,7 @@ namespace ogmaneo {
         Int3 _hiddenSize;
 
         /*!
-        \brief Buffers for hidden state
+        \brief Buffer for hidden state
         */
         IntBuffer _hiddenCs;
 
@@ -81,15 +81,15 @@ namespace ogmaneo {
         \brief Kernels
         */
         void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
+        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled);
         void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli);
 
         static void initKernel(int pos, std::mt19937 &rng, SparseCoder* sc, int vli) {
             sc->init(pos, rng, vli);
         }
 
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputCs) {
-            sc->forward(pos, rng, inputCs);
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled) {
+            sc->forward(pos, rng, inputCs, learnEnabled);
         }
 
         static void learnKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputCs, int vli) {
@@ -123,15 +123,9 @@ namespace ogmaneo {
         \brief Activate the sparse coder (perform sparse coding)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
+        \param learnEnabled whether to learn
         */
-        void activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
-
-        /*!
-        \brief Learn the sparse code
-        \param cs is the ComputeSystem.
-        \param visibleCs the visible (input) layer states
-        */
-        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, bool learnEnabled);
 
         /*!
         \brief Get the number of visible layers

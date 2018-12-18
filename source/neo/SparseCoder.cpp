@@ -13,12 +13,12 @@ using namespace ogmaneo;
 // Kernels
 void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
     // Initialize weights into uniform range
-	std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
+	std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
+void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -33,6 +33,8 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
 
         // Partial sum cache value
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+
+        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
         // Accumulator
         float activation = 0.0f;
@@ -66,8 +68,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     // Complete the partial address with final value needed
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                    activation += vl._weights[dPartial + az * dxyz];// * (1.0f - (firstIter ? 0.0f : vl._activations[visibleColumnIndex]));
+                    activation += vl._weights[dPartial + az * dxyz];
                 }
         }
 
@@ -129,7 +130,7 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                 }
             }
 
-        activation = sigmoid(activation / std::max(1.0f, count));
+        activation = std::exp(activation / std::max(1.0f, count));
 
         // Weight increment
         float target = (vc == inputC ? 1.0f : 0.0f);
@@ -152,16 +153,9 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                     // Address cannot be easily partially computed here, compute fully (address4)
                     int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
-                    // for (int dh = -1; dh <= 1; dh++) {
-                    //     int h = hiddenC + dh;
-
-                    //     if (h < 0 || h >= _hiddenSize.z)
-                    //         continue;
-
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
                     vl._weights[address4(wPos, _hiddenSize)] += delta;
-                    // }      
                 }
             }
     }
@@ -226,31 +220,31 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 #endif
 }
 
-void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
+void SparseCoder::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, visibleCs);
+            forward(Int2(x, y), cs._rng, visibleCs, learnEnabled);
 #else
-    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-}
 
-void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
-    // Final reconstruction + learning
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    if (learnEnabled) {
+        // Final reconstruction + learning
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < vld._size.x; x++)
-            for (int y = 0; y < vld._size.y; y++)
-                learn(Int2(x, y), cs._rng, visibleCs, vli);
+            for (int x = 0; x < vld._size.x; x++)
+                for (int y = 0; y < vld._size.y; y++)
+                    learn(Int2(x, y), cs._rng, visibleCs, vli);
 #else
-        runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
+        }
     }
 }
