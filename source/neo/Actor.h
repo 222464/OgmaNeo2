@@ -143,7 +143,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.5f), _beta(0.5f), _gamma(0.9f), _fixedRate(0.05f)
+        : _alpha(0.5f), _beta(0.5f), _gamma(0.9f), _fixedRate(0.1f)
         {}
 
         /*!
