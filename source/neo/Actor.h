@@ -61,7 +61,8 @@ namespace ogmaneo {
         struct HistorySample {
             std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
             std::shared_ptr<IntBuffer> _hiddenCs;
-        
+            std::shared_ptr<FloatBuffer> _hiddenValues;
+            
             float _reward;
         };
 
@@ -101,7 +102,7 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, float q, float g);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValuesPrev, float q, float g);
 
         static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
             a->init(pos, rng, vli);
@@ -111,8 +112,8 @@ namespace ogmaneo {
             a->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
-            a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValuesPrev, float q, float g) {
+            a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
         }
         //!@}
 
@@ -136,7 +137,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _beta(0.1f), _gamma(0.9f)
+        : _alpha(0.5f), _beta(0.1f), _gamma(0.9f)
         {}
 
         /*!
