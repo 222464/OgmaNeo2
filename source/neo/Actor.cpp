@@ -72,7 +72,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
     // ------------------------------ Action ------------------------------
 
-    int maxIndex = 0;
+    std::vector<float> activations(_hiddenSize.z);
     float maxActivation = -999999.0f;
 
     // For each hidden unit
@@ -116,13 +116,39 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
                 }
         }
 
-        if (activation > maxActivation) {
-            maxActivation = activation;
-            maxIndex = hc;
+        activation /= std::max(1.0f, count);
+
+        maxActivation = std::max(maxActivation, activation);
+
+        activations[hc] = activation;
+    }
+
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+
+        total += activations[hc];
+    }
+
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    float cusp = dist01(rng) * total;
+
+    float sumSoFar = 0.0f;
+    int selectIndex = 0;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        sumSoFar += activations[hc];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = hc;
+
+            break;
         }
     }
 
-    _hiddenCs[hiddenColumnIndex] = maxIndex;
+    _hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
 void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValuesPrev, float q, float g) {
@@ -226,6 +252,9 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             }
     }
 
+    std::vector<float> activations(_hiddenSize.z);
+    float maxActivation = -999999.0f;
+
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
@@ -265,9 +294,27 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                 }
         }
 
-        activation = sigmoid(activation / std::max(1.0f, count));
+        activation /= std::max(1.0f, count);
 
-        float betaTdErrorAction = _beta * tdErrorAction * ((hc == (*hiddenCsPrev)[hiddenColumnIndex] ? 1.0f : 0.0f) - activation);
+        maxActivation = std::max(maxActivation, activation);
+
+        activations[hc] = activation;
+    }
+
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+
+        total += activations[hc];
+    }
+    
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        Int3 hiddenPosition(pos.x, pos.y, hc);
+
+        int dPartialAction = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+
+        float betaTdErrorAction = _beta * tdErrorAction * ((hc == (*hiddenCsPrev)[hiddenColumnIndex] ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -402,7 +449,7 @@ void Actor::createRandom(ComputeSystem &cs,
     }
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenCs, float reward, bool learnEnabled) {
+void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -451,9 +498,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Copy hidden Cs
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, hiddenCs, s._hiddenCs.get());
+            copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
 #else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCs, s._hiddenCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, s._hiddenCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
         // Copy hidden values
@@ -470,7 +517,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize > 2) {
         const HistorySample &sPrev = _historySamples[0];
-        const HistorySample &s = _historySamples[1];
+        //const HistorySample &s = _historySamples[1];
 
         // Compute (partial) Q value, rest is completed in the kernel
         float q = 0.0f;
@@ -485,9 +532,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < _hiddenSize.x; x++)
             for (int y = 0; y < _hiddenSize.y; y++)
-                learn(Int2(x, y), cs._rng, constGet(sPrev._visibleCs), s._hiddenCs.get(), sPrev._hiddenValues.get(), q, g);
+                learn(Int2(x, y), cs._rng, constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), sPrev._hiddenValues.get(), q, g);
 #else
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._visibleCs), s._hiddenCs.get(), sPrev._hiddenValues.get(), q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), sPrev._hiddenValues.get(), q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
     }
 }

@@ -164,7 +164,7 @@ namespace ogmaneo {
         \param reward reinforcement signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenCs, float reward, bool learnEnabled);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers
