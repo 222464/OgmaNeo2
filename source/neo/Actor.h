@@ -49,6 +49,7 @@ namespace ogmaneo {
             \brief Visible layer values and buffers
             */
             FloatBuffer _valueWeights;
+            FloatBuffer _valueWeightsFixed;
             FloatBuffer _actionWeights;
 
             Float2 _hiddenToVisible;
@@ -124,15 +125,25 @@ namespace ogmaneo {
         float _alpha;
 
         /*!
+        \brief Action learning rate
+        */
+        float _beta;
+
+        /*!
         \brief Discount factor
         */
         float _gamma;
 
         /*!
+        \brief Fixed weight update rate
+        */
+        float _fixedRate;
+
+        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.5f), _gamma(0.9f)
+        : _alpha(0.5f), _beta(0.5f), _gamma(0.9f), _fixedRate(0.05f)
         {}
 
         /*!
