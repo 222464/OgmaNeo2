@@ -252,7 +252,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                 }
         }
 
-        activation = sigmoid(activation / std::max(1.0f, count));
+        activation /= std::max(1.0f, count);
 
         float target = (hc == (*hiddenCsPrev)[hiddenColumnIndex] ? 1.0f : 0.0f);
 
