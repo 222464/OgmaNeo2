@@ -13,7 +13,7 @@ using namespace ogmaneo;
 // Kernels
 void Actor::init(int pos, std::mt19937 &rng, int vli) {
     // Randomly initialize weights in range
-	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
+	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
