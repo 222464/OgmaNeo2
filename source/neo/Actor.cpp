@@ -26,7 +26,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
     // ------------------------------ Action ------------------------------
 
     int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    float maxValue = -999999.0f;
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -35,7 +35,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
         // Partially computed address of weight
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
-        float activation = 0.0f;
+        float value = 0.0f;
     
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -65,12 +65,12 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    activation += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                    value += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                 }
         }
 
-        if (activation > maxActivation) {
-            maxActivation = activation;
+        if (value > maxValue) {
+            maxValue = value;
             maxIndex = hc;
         }
     }
@@ -92,7 +92,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
         // Partially computed address of weight
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
-        float activation = 0.0f;
+        float value = 0.0f;
         float count = 0.0f;
     
         // For each visible layer
@@ -123,14 +123,14 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    activation += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                    value += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                 }
 
             // Count can be computed outside of loop, this is the value equavilent to count += 1.0f after each value increment
             count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        maxQ = std::max(maxQ, activation / std::max(1.0f, count));
+        maxQ = std::max(maxQ, value / std::max(1.0f, count));
     }
 
     // Selected (past) action index
