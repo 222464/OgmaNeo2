@@ -59,7 +59,7 @@ namespace ogmaneo {
         */
         struct HistorySample {
             std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
-            std::shared_ptr<IntBuffer> _hiddenActionCs;
+            std::shared_ptr<IntBuffer> _hiddenCs;
         
             float _reward;
         };
@@ -125,6 +125,11 @@ namespace ogmaneo {
         float _gamma;
 
         /*!
+        \brief Exploration rate
+        */
+        float _epsilon;
+
+        /*!
         \brief Number of sample iterations
         */
         int _historyIters;
@@ -133,7 +138,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.97f), _historyIters(8)
+        : _alpha(0.01f), _gamma(0.97f), _epsilon(0.005f), _historyIters(8)
         {}
 
         /*!
@@ -150,11 +155,10 @@ namespace ogmaneo {
         \brief Activate the actor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
-        \param hiddenActionCs the previously taken actions
         \param reward reinforcement signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionCs, float reward, bool learnEnabled);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers
