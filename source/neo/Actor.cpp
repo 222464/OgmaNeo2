@@ -60,7 +60,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                value += vl._valueWeightsFixed[dPartialValue + az * dxy]; // Used cached parts to compute weight address, equivalent to calling address4
+                value += vl._valueWeights[dPartialValue + az * dxy]; // Used cached parts to compute weight address, equivalent to calling address4
             }
 
         count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
@@ -235,20 +235,10 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 
                 int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
-                {
-                    // Final component of address
-                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
+                // Final component of address
+                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
 
-                    vl._valueWeights[dPartialValue + az * dxy] += alphaTdErrorValue;
-                }
-
-                for (int vc = 0; vc < vld._size.z; vc++) {
-                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + vc * diam2;
-
-                    int wi = dPartialValue + az * dxy;
-
-                    vl._valueWeightsFixed[wi] += _fixedRate * (vl._valueWeights[wi] - vl._valueWeightsFixed[wi]);
-                }
+                vl._valueWeights[dPartialValue + az * dxy] += alphaTdErrorValue;
             }
     }
 
@@ -383,7 +373,6 @@ void Actor::createRandom(ComputeSystem &cs,
 
         // Create weight matrix for this visible layer and initialize randomly
         vl._valueWeights = FloatBuffer(weightsSizeValue);
-        vl._valueWeightsFixed = FloatBuffer(weightsSizeValue);
         vl._actionWeights = FloatBuffer(weightsSizeAction);
 
 #ifdef KERNEL_DEBUG
@@ -391,13 +380,6 @@ void Actor::createRandom(ComputeSystem &cs,
             fillFloat(x, cs._rng, &vl._valueWeights, 0.0f);
 #else
         runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._valueWeights, 0.0f), weightsSizeValue, cs._rng, cs._batchSize1);
-#endif
-
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < weightsSizeValue; x++)
-            fillFloat(x, cs._rng, &vl._valueWeightsFixed, 0.0f);
-#else
-        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._valueWeightsFixed, 0.0f), weightsSizeValue, cs._rng, cs._batchSize1);
 #endif
 
 #ifdef KERNEL_DEBUG
