@@ -198,7 +198,7 @@ void Predictor::createRandom(ComputeSystem &cs,
 #endif
 
     // Hidden values
-    _hiddenActivations = FloatBuffer(numHiddenColumns);
+    _hiddenActivations = FloatBuffer(numHidden);
 
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < numHidden; x++)
