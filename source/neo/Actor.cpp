@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "Actor.h"
-#include <iostream>
+
 using namespace ogmaneo;
 
 // Kernels
