@@ -126,7 +126,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.9f), _actionGap(0.5f), _historyIters(8)
+        : _alpha(0.01f), _gamma(0.98f), _actionGap(0.5f), _historyIters(8)
         {}
 
         /*!
