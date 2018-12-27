@@ -9,7 +9,6 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
 #include "Actor.h"
 
 #include <memory>
@@ -19,7 +18,7 @@ namespace ogmaneo {
     \brief Enum describing the type of operation performed by an input layer
     */
     enum InputType {
-        _none, _predict, _act
+        _none, _act
     };
     
     /*!
