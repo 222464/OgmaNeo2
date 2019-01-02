@@ -82,19 +82,20 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             _pLayers[l].resize(inputSizes.size());
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
 
-            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
+            if (l < _scLayers.size() - 1)
+                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
 
-                    _pLayers[l][p]->createRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs);
+                    _pLayers[l][p]->createRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, pVisibleLayerDescs);
                 }
             }
         }
@@ -124,18 +125,19 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
 
-            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
+            if (l < _scLayers.size() - 1)
+                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 _pLayers[l][p] = std::make_unique<Predictor>();
 
-                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs);
+                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, pVisibleLayerDescs);
             }
         }
 		
@@ -144,7 +146,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* goalCs, bool learnEnabled) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled) {
     assert(inputCs.size() == _inputSizes.size());
 
     // First tick is always 0
@@ -232,26 +234,21 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCs(2);
-            std::vector<const IntBuffer*> feedBackLearnCs(2);
+            std::vector<const IntBuffer*> feedBackCs(l < _scLayers.size() - 1 ? 2 : 1);
 
             feedBackCs[0] = &_scLayers[l].getHiddenCs();
-            feedBackLearnCs[0] = &_scLayers[l].getHiddenCsPrev();
-            feedBackLearnCs[1] = &_scLayers[l].getHiddenCs();
 
             if (l < _scLayers.size() - 1) {
                 assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
                 feedBackCs[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
-            else
-                feedBackCs[1] = goalCs;
 
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        _pLayers[l][p]->learn(cs, feedBackLearnCs, l == 0 ? inputCs[p] : _histories[l][p].get());
+                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get());
 
                     _pLayers[l][p]->activate(cs, feedBackCs);
                 }

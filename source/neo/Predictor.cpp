@@ -84,7 +84,7 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenTargetCs) {
+void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenTargetCs) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -126,7 +126,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
                 for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                     Int2 visiblePosition(x, y);
 
-                    int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
+                    int visibleCPrev = vl._inputCsPrev[address2(visiblePosition, vld._size.x)];
 
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
@@ -163,7 +163,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
                 for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                     Int2 visiblePosition(x, y);
 
-                    int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
+                    int visibleCPrev = vl._inputCsPrev[address2(visiblePosition, vld._size.x)];
 
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
@@ -213,6 +213,15 @@ void Predictor::createRandom(ComputeSystem &cs,
 #else
         runKernel1(cs, std::bind(Predictor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
 #endif
+
+        vl._inputCsPrev = IntBuffer(numVisibleColumns);
+
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < numVisibleColumns; x++)
+            fillInt(x, cs._rng, &vl._inputCsPrev, 0);
+#else
+        runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &vl._inputCsPrev, 0), numVisibleColumns, cs._rng, cs._batchSize1);
+#endif
     }
 
     // Hidden Cs
@@ -238,15 +247,30 @@ void Predictor::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> 
 #else
     runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+
+    // Copy to prevs
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < numVisibleColumns; x++)
+            copyInt(x, cs._rng, visibleCs[vli], &vl._inputCsPrev);
+#else
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &vl._inputCsPrev), numVisibleColumns, cs._rng, cs._batchSize1);
+#endif
+    }
 }
 
-void Predictor::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCsPrev, const IntBuffer* hiddenTargetCs) {
+void Predictor::learn(ComputeSystem &cs, const IntBuffer* hiddenTargetCs) {
     // Learn kernel
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            learn(Int2(x, y), cs._rng, visibleCsPrev, hiddenTargetCs);
+            learn(Int2(x, y), cs._rng, hiddenTargetCs);
 #else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCsPrev, hiddenTargetCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }

@@ -50,6 +50,8 @@ namespace ogmaneo {
             */
             FloatBuffer _weights;
 
+            IntBuffer _inputCsPrev;
+
             Float2 _hiddenToVisible;
             //!@}
         };
@@ -79,18 +81,18 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenTargetCs);
+        void learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenTargetCs);
 
-        static void initKernel(int pos, std::mt19937 &rng, Predictor* a, int vli) {
-            a->init(pos, rng, vli);
+        static void initKernel(int pos, std::mt19937 &rng, Predictor* p, int vli) {
+            p->init(pos, rng, vli);
         }
 
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Predictor* a, const std::vector<const IntBuffer*> &inputCs) {
-            a->forward(pos, rng, inputCs);
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Predictor* p, const std::vector<const IntBuffer*> &inputCs) {
+            p->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Predictor* a, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenTargetCs) {
-            a->learn(pos, rng, inputCsPrev, hiddenTargetCs);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Predictor* p, const IntBuffer* hiddenTargetCs) {
+            p->learn(pos, rng, hiddenTargetCs);
         }
         //!@}
 
@@ -104,7 +106,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Predictor()
-        : _alpha(1.0f)
+        : _alpha(0.5f)
         {}
 
         /*!
@@ -132,7 +134,7 @@ namespace ogmaneo {
         \param visibleCsPrev the previous visible (input) layer states
         \param hiddenTargetCs the target states
         */
-        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCsPrev, const IntBuffer* hiddenTargetCs);
+        void learn(ComputeSystem &cs, const IntBuffer* hiddenTargetCs);
 
         /*!
         \brief Get number of visible layers
