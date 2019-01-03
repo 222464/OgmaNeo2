@@ -89,6 +89,24 @@ namespace ogmaneo {
 
     public:
         /*!
+        \brief Default (do nothing) ctor
+        */
+        Hierarchy()
+        {}
+
+        /*!
+        \brief Copy ctor
+        */
+        Hierarchy(const Hierarchy &other) {
+            *this = other;
+        }
+
+        /*!
+        \brief Assignment operator
+        */
+        const Hierarchy &operator=(const Hierarchy &other);
+        
+        /*!
         \brief Create a randomly initialized hierarchy
         \param cs is the ComputeSystem
         \param inputSizes vector of input dimensions

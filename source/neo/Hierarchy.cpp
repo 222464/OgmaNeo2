@@ -146,6 +146,44 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     }
 }
 
+const Hierarchy &Hierarchy::operator=(const Hierarchy &other) {
+    // Layers
+    _scLayers = other._scLayers;
+
+    _historySizes = other._historySizes;
+    _updates = other._updates;
+    _ticks = other._ticks;
+    _ticksPerUpdate = other._ticksPerUpdate;
+    _inputSizes = other._inputSizes;
+
+    _pLayers.resize(other._pLayers.size());
+    _histories.resize(other._histories.size());
+
+    for (int l = 0; l < _scLayers.size(); l++) {
+        _pLayers[l].resize(other._pLayers[l].size());
+
+        for (int v = 0; v < _pLayers[l].size(); v++) {
+            if (other._pLayers[l][v] != nullptr) {
+                _pLayers[l][v] = std::make_unique<Predictor>();
+
+                (*_pLayers[l][v]) = (*other._pLayers[l][v]);
+            }
+            else
+                _pLayers[l][v] = nullptr;
+        }
+
+        _histories[l].resize(other._histories[l].size());
+
+        for (int v = 0; v < _histories[l].size(); v++) {
+            _histories[l][v] = std::make_shared<IntBuffer>();
+            
+            (*_histories[l][v]) = (*other._histories[l][v]);
+        }
+    }
+
+    return *this;
+}
+
 void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled) {
     assert(inputCs.size() == _inputSizes.size());
 
