@@ -13,12 +13,12 @@ using namespace ogmaneo;
 // Kernels
 void ImageEncoder::init(int pos, std::mt19937 &rng, int vli) {
     // Initialize weights into uniform range
-	std::uniform_real_distribution<float> weightDist(-1.0f, 1.0f);
+	std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void ImageEncoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const FloatBuffer*> &inputActivations) {
+void ImageEncoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -82,6 +82,53 @@ void ImageEncoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector
 
     // Output state
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
+
+    if (learnEnabled) {
+        Int3 hiddenPosition(pos.x, pos.y, maxIndex);
+
+        // Partial sum cache value
+        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+
+        // Accumulator
+        float sum = 0.0f;
+
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+
+            // Lower corner
+            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+
+            // Additional addressing dimensions
+            int diam = vld._radius * 2 + 1;
+            int diam2 = diam * diam;
+
+            // Bounds of receptive field, clamped to input size
+            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
+
+            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                    for (int vc = 0; vc < vld._size.z; vc++) {
+                        Int3 visiblePosition(x, y, vc);
+
+                        int visibleIndex = address3(visiblePosition, Int2(vld._size.x, vld._size.y));
+
+                        float visibleActivation = (*inputActivations[vli])[visibleIndex];
+
+                        // Complete the partial address with final value needed
+                        int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + vc * diam2;
+
+                        int wi = dPartial + az * dxyz;
+
+                        vl._weights[wi] += _alpha * std::min(0.0f, visibleActivation - vl._weights[wi]);
+                    }
+                }
+        }
+    }
 }
 
 void ImageEncoder::createRandom(ComputeSystem &cs,
@@ -137,15 +184,14 @@ void ImageEncoder::createRandom(ComputeSystem &cs,
 #endif
 }
 
-void ImageEncoder::activate(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations) {
+void ImageEncoder::step(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
 
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputActivations);
+            forward(Int2(x, y), cs._rng, inputActivations, learnEnabled);
 #else
-    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }

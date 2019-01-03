@@ -78,22 +78,28 @@ namespace ogmaneo {
         \brief Kernels
         */
         void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const FloatBuffer*> &inputActivations);
-
+        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled);
+        
         static void initKernel(int pos, std::mt19937 &rng, ImageEncoder* sc, int vli) {
             sc->init(pos, rng, vli);
         }
 
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, ImageEncoder* sc, const std::vector<const FloatBuffer*> &inputActivations) {
-            sc->forward(pos, rng, inputActivations);
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, ImageEncoder* sc, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled) {
+            sc->forward(pos, rng, inputActivations, learnEnabled);
         }
         //!@}
 
     public:
         /*!
+        \brief Learning rate
+        */
+        float _alpha;
+
+        /*!
         \brief Initialize defaults
         */
         ImageEncoder()
+        : _alpha(0.1f)
         {}
 
         /*!
@@ -110,7 +116,7 @@ namespace ogmaneo {
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
         */
-        void activate(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations);
+        void step(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled);
 
         /*!
         \brief Get the number of visible layers
