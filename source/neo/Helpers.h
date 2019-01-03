@@ -178,8 +178,8 @@ namespace ogmaneo {
     void writeBufferToStream(std::ostream &os, const std::vector<T>* buf) {
         int size = buf->size();
 
-        os.write(reinterpret_cast<char*>(size), sizeof(int));
-        os.write(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
+        os.write(reinterpret_cast<const char*>(size), sizeof(int));
+        os.write(reinterpret_cast<const char*>(buf->data()), size * sizeof(T));
     }
 
     template <class T>
