@@ -63,13 +63,11 @@ void ImageEncoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector
                         int visibleIndex = address3(visiblePosition, Int2(vld._size.x, vld._size.y));
 
                         float visibleActivation = (*inputActivations[vli])[visibleIndex];
-                        float visibleActivationPrev = vl._visibleActivationsPrev[visibleIndex];
 
                         // Complete the partial address with final value needed
                         int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + vc * diam2;
 
-                        // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                        sum += vl._weights[dPartial + az * dxyz] * (visibleActivation - visibleActivationPrev);
+                        sum += vl._weights[dPartial + az * dxyz] * visibleActivation;
                     }
                 }
         }
@@ -126,16 +124,6 @@ void ImageEncoder::createRandom(ComputeSystem &cs,
 #else
         runKernel1(cs, std::bind(ImageEncoder::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
 #endif
-
-        // Reconstruction buffer
-        vl._visibleActivationsPrev = FloatBuffer(numVisible);
-
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < numVisible; x++)
-            fillFloat(x, cs._rng, &vl._visibleActivationsPrev, 0.0f);
-#else
-        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._visibleActivationsPrev, 0.0f), numVisible, cs._rng, cs._batchSize1);
-#endif
     }
 
     // Hidden Cs
@@ -160,20 +148,4 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<const FloatBuff
 #else
     runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-    // Copy visible activations to prev
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < numVisible; x++)
-            copyFloat(x, cs._rng, inputActivations[vli], &vl._visibleActivationsPrev);
-#else
-        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, inputActivations[vli], &vl._visibleActivationsPrev), numVisible, cs._rng, cs._batchSize1);
-#endif
-    }
 }

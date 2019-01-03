@@ -50,8 +50,6 @@ namespace ogmaneo {
             */
             FloatBuffer _weights;
 
-            FloatBuffer _visibleActivationsPrev;
-
             Float2 _hiddenToVisible; // For projection
             //!@}
         };
