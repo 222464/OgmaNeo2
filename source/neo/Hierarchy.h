@@ -107,6 +107,16 @@ namespace ogmaneo {
         void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled = true);
 
         /*!
+        \brief Write to stream
+        */
+        void writeToStream(std::ostream &os) const;
+
+        /*!
+        \brief Read from stream
+        */
+        void readFromStream(std::istream &is);
+
+        /*!
         \brief Get the number of (hidden) layers
         */
         int getNumLayers() const {
@@ -157,9 +167,23 @@ namespace ogmaneo {
         }
 
         /*!
+        \brief Retrieve a sparse coding layer
+        */
+        const SparseCoder &getSCLayer(int l) const {
+            return _scLayers[l];
+        }
+
+        /*!
         \brief Retrieve predictor layer(s)
         */
         std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
+            return _pLayers[l];
+        }
+
+        /*!
+        \brief Retrieve predictor layer(s)
+        */
+        const std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) const {
             return _pLayers[l];
         }
     };

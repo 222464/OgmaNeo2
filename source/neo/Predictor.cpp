@@ -274,3 +274,68 @@ void Predictor::learn(ComputeSystem &cs, const IntBuffer* hiddenTargetCs) {
     runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
+
+void Predictor::writeToStream(std::ostream &os) const {
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
+
+    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+
+    writeBufferToStream(os, &_hiddenCs);
+
+    int numVisibleLayers = _visibleLayers.size();
+
+    os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+    
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        const VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+        int numVisible = numVisibleColumns * vld._size.z;
+
+        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
+
+        os.write(reinterpret_cast<const char*>(&vl._hiddenToVisible), sizeof(Float2));
+
+        writeBufferToStream(os, &vl._weights);
+
+        writeBufferToStream(os, &vl._inputCsPrev);
+    }
+}
+
+void Predictor::readFromStream(std::istream &is) {
+    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
+
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+
+    readBufferFromStream(is, &_hiddenCs);
+
+    int numVisibleLayers;
+    
+    is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+
+    _visibleLayers.resize(numVisibleLayers);
+    _visibleLayerDescs.resize(numVisibleLayers);
+    
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+        int numVisible = numVisibleColumns * vld._size.z;
+
+        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
+
+        readBufferFromStream(is, &vl._weights);
+
+        readBufferFromStream(is, &vl._inputCsPrev);
+    }
+}

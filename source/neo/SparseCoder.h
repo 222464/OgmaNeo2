@@ -70,7 +70,6 @@ namespace ogmaneo {
         \brief Buffers for hidden state
         */
         IntBuffer _hiddenCs;
-        IntBuffer _hiddenCsPrev;
 
         FloatBuffer _hiddenActivations;
         //!@}
@@ -151,6 +150,16 @@ namespace ogmaneo {
         void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
 
         /*!
+        \brief Write to stream
+        */
+        void writeToStream(std::ostream &os) const;
+
+        /*!
+        \brief Read from stream
+        */
+        void readFromStream(std::istream &is);
+
+        /*!
         \brief Get the number of visible layers
         */
         int getNumVisibleLayers() const {
@@ -176,13 +185,6 @@ namespace ogmaneo {
         */
         const IntBuffer &getHiddenCs() const {
             return _hiddenCs;
-        }
-        
-        /*!
-        \brief Get the hidden activations (state)
-        */
-        const IntBuffer &getHiddenCsPrev() const {
-            return _hiddenCsPrev;
         }
 
         /*!

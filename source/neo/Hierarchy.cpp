@@ -256,3 +256,103 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
         }
     }
 }
+
+void Hierarchy::writeToStream(std::ostream &os) const {
+    int numLayers = _scLayers.size();
+
+    os.write(reinterpret_cast<const char*>(&numLayers), sizeof(int));
+
+    int numInputs = _inputSizes.size();
+
+    os.write(reinterpret_cast<const char*>(&numInputs), sizeof(int));
+
+    os.write(reinterpret_cast<const char*>(_inputSizes.data()), numInputs * sizeof(Int3));
+
+    os.write(reinterpret_cast<const char*>(_updates.data()), _updates.size() * sizeof(char));
+    os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
+    os.write(reinterpret_cast<const char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
+
+    for (int l = 0; l < numLayers; l++) {
+        int numHistorySizes = _historySizes[l].size();
+
+        os.write(reinterpret_cast<const char*>(&numHistorySizes), sizeof(int));
+
+        os.write(reinterpret_cast<const char*>(_historySizes[l].data()), numHistorySizes * sizeof(int));
+
+        for (int i = 0; i < _historySizes[l].size(); i++)
+            writeBufferToStream(os, _histories[l][i].get());
+
+        _scLayers[l].writeToStream(os);
+
+        for (int v = 0; v < _pLayers[l].size(); v++) {
+            char exists = _pLayers[l][v] != nullptr;
+
+            os.write(reinterpret_cast<char*>(&exists), sizeof(char));
+
+            if (exists)
+                _pLayers[l][v]->writeToStream(os);
+        }
+    }
+}
+
+void Hierarchy::readFromStream(std::istream &is) {
+    int numLayers;
+    is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
+
+    int numInputs;
+
+    is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
+
+    _inputSizes.resize(numInputs);
+
+    is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(Int3));
+
+    _scLayers.resize(numLayers);
+    _pLayers.resize(numLayers);
+
+    _ticks.resize(numLayers);
+
+    _histories.resize(numLayers);
+    _historySizes.resize(numLayers);
+    
+    _ticksPerUpdate.resize(numLayers);
+
+    _updates.resize(numLayers);
+
+    is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
+    is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
+    is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
+
+    for (int l = 0; l < numLayers; l++) {
+        int numHistorySizes;
+        
+        is.read(reinterpret_cast<char*>(&numHistorySizes), sizeof(int));
+        _historySizes[l].resize(numHistorySizes);
+        is.read(reinterpret_cast<char*>(_historySizes[l].data()), numHistorySizes * sizeof(int));
+
+        _histories[l].resize(numHistorySizes);
+
+        for (int i = 0; i < _historySizes[l].size(); i++) {
+            _histories[l][i] = std::make_shared<IntBuffer>();
+
+            readBufferFromStream(is, _histories[l][i].get());
+        }
+
+        _scLayers[l].readFromStream(is);
+
+        _pLayers[l].resize(l == 0 ? _inputSizes.size() : _ticksPerUpdate[l]);
+
+        for (int v = 0; v < _pLayers[l].size(); v++) {
+            char exists;
+
+            is.read(reinterpret_cast<char*>(&exists), sizeof(char));
+
+            if (exists) {
+                _pLayers[l][v] = std::make_unique<Predictor>();
+                _pLayers[l][v]->readFromStream(is);
+            }
+            else
+                _pLayers[l][v] = nullptr;
+        }
+    }
+}

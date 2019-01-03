@@ -268,20 +268,12 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns);
-    _hiddenCsPrev = IntBuffer(numHiddenColumns);
 
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < numHiddenColumns; x++)
         fillInt(x, cs._rng, &_hiddenCs, 0);
 #else
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
-#endif
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHiddenColumns; x++)
-        fillInt(x, cs._rng, &_hiddenCsPrev, 0);
-#else
-    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCsPrev, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
     // Hidden activations
@@ -291,13 +283,6 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHiddenColumns; x++)
-        copyInt(x, cs._rng, &_hiddenCs, &_hiddenCsPrev);
-#else
-    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &_hiddenCsPrev), numHiddenColumns, cs._rng, cs._batchSize1);
-#endif
 
     // Sparse coding iterations: forward, reconstruct, repeat
     for (int it = 0; it < _explainIters; it++) {
@@ -339,5 +324,76 @@ void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &
 #else
         runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
+    }
+}
+
+void SparseCoder::writeToStream(std::ostream &os) const {
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
+
+    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_explainIters), sizeof(int));
+
+    writeBufferToStream(os, &_hiddenCs);
+
+    int numVisibleLayers = _visibleLayers.size();
+
+    os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+    
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        const VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+        int numVisible = numVisibleColumns * vld._size.z;
+
+        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
+
+        os.write(reinterpret_cast<const char*>(&vl._visibleToHidden), sizeof(Float2));
+        os.write(reinterpret_cast<const char*>(&vl._hiddenToVisible), sizeof(Float2));
+        os.write(reinterpret_cast<const char*>(&vl._reverseRadii), sizeof(Int2));
+
+        writeBufferToStream(os, &vl._weights);
+    }
+}
+
+void SparseCoder::readFromStream(std::istream &is) {
+    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
+
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_explainIters), sizeof(int));
+
+    readBufferFromStream(is, &_hiddenCs);
+
+    _hiddenActivations = FloatBuffer(numHidden);
+
+    int numVisibleLayers;
+    
+    is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+
+    _visibleLayers.resize(numVisibleLayers);
+    _visibleLayerDescs.resize(numVisibleLayers);
+    
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+        int numVisible = numVisibleColumns * vld._size.z;
+
+        is.read(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(Float2));
+        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
+        is.read(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(Int2));
+
+        readBufferFromStream(is, &vl._weights);
+
+        vl._visibleActivations = FloatBuffer(numVisibleColumns);
     }
 }

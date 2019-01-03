@@ -15,6 +15,8 @@
 #include <vector>
 #include <array>
 #include <functional>
+#include <ostream>
+#include <istream>
 #include <assert.h>
 
 namespace ogmaneo {
@@ -164,5 +166,34 @@ namespace ogmaneo {
     /*!
     \brief Sigmoid
     */
-    float sigmoid(float x);
+    inline float sigmoid(float x) {
+        return 1.0f / (1.0f + std::exp(-x));
+    }
+
+    //!@{
+    /*!
+    \brief Serialization
+    */
+    template <class T>
+    void writeBufferToStream(std::ostream &os, const std::vector<T>* buf) {
+        int size = buf->size();
+
+        os.write(reinterpret_cast<char*>(size), sizeof(int));
+        os.write(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
+    }
+
+    template <class T>
+    void readBufferFromStream(std::istream &is, std::vector<T>* buf) {
+        int size;
+
+        is.read(reinterpret_cast<char*>(size), sizeof(int));
+
+        if (buf->empty())
+            buf->resize(size);
+        
+        assert(buf->size() == size);
+
+        is.read(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
+    }
+    //!@}
 }
