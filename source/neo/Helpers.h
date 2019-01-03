@@ -178,7 +178,7 @@ namespace ogmaneo {
     void writeBufferToStream(std::ostream &os, const std::vector<T>* buf) {
         int size = buf->size();
 
-        os.write(reinterpret_cast<const char*>(size), sizeof(int));
+        os.write(reinterpret_cast<const char*>(&size), sizeof(int));
         os.write(reinterpret_cast<const char*>(buf->data()), size * sizeof(T));
     }
 
@@ -186,7 +186,7 @@ namespace ogmaneo {
     void readBufferFromStream(std::istream &is, std::vector<T>* buf) {
         int size;
 
-        is.read(reinterpret_cast<char*>(size), sizeof(int));
+        is.read(reinterpret_cast<char*>(&size), sizeof(int));
 
         if (buf->empty())
             buf->resize(size);

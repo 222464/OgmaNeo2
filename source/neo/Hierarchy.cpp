@@ -325,7 +325,7 @@ void Hierarchy::writeToStream(std::ostream &os) const {
         for (int v = 0; v < _pLayers[l].size(); v++) {
             char exists = _pLayers[l][v] != nullptr;
 
-            os.write(reinterpret_cast<char*>(&exists), sizeof(char));
+            os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
 
             if (exists)
                 _pLayers[l][v]->writeToStream(os);
