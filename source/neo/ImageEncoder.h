@@ -119,6 +119,16 @@ namespace ogmaneo {
         void step(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled);
 
         /*!
+        \brief Write to stream
+        */
+        void writeToStream(std::ostream &os) const;
+
+        /*!
+        \brief Read from stream
+        */
+        void readFromStream(std::istream &is);
+        
+        /*!
         \brief Get the number of visible layers
         */
         int getNumVisibleLayers() const {
