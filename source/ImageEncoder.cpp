@@ -131,6 +131,58 @@ void ImageEncoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector
     }
 }
 
+void ImageEncoder::backward(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenCs, int vli) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    // Project to hidden
+    Int2 hiddenPositionCenter = project(pos, vl._visibleToHidden);
+
+    // Additional addressing dimensions
+    int diam = vld._radius * 2 + 1;
+    int diam2 = diam * diam;
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        Int3 visiblePosition(pos.x, pos.y, vc);
+
+        // Accumulators
+        float sum = 0.0f;
+        float count = 0.0f;
+
+        // Bounds of receptive field, clamped to input size
+        Int2 iterLowerBound(std::max(0, hiddenPositionCenter.x - vl._reverseRadii.x), std::max(0, hiddenPositionCenter.y - vl._reverseRadii.y));
+        Int2 iterUpperBound(std::min(_hiddenSize.x - 1, hiddenPositionCenter.x + vl._reverseRadii.x), std::min(_hiddenSize.y - 1, hiddenPositionCenter.y + vl._reverseRadii.y));
+
+        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                Int2 hiddenPosition(x, y);
+
+                // Next layer node's receptive field
+                Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
+
+                // Bounds of receptive field, clamped to input size
+                Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
+                Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+
+                // Check for containment
+                if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
+                    // Address cannot be easily partially computed here, compute fully (address4)
+                    int hiddenC = (*hiddenCs)[address2(hiddenPosition, _hiddenSize.x)];
+
+                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
+
+                    sum += vl._weights[address4(wPos, _hiddenSize)];
+                    count += 1.0f;
+                }
+            }
+
+        int visibleIndex = address3(visiblePosition, Int2(vld._size.x, vld._size.y));
+
+        // Set normalized reconstruction value
+        vl._visibleActivations[visibleIndex] = sum / std::max(1.0f, count);
+    }
+}
+
 void ImageEncoder::createRandom(ComputeSystem &cs,
     const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
 {
@@ -152,9 +204,15 @@ void ImageEncoder::createRandom(ComputeSystem &cs,
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        // Projection constant
+        // Projection constants
+        vl._visibleToHidden = Float2(static_cast<float>(_hiddenSize.x) / static_cast<float>(vld._size.x),
+            static_cast<float>(_hiddenSize.y) / static_cast<float>(vld._size.y));
+
         vl._hiddenToVisible = Float2(static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
             static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y));
+
+        vl._reverseRadii = Int2(static_cast<int>(std::ceil(vl._visibleToHidden.x * vld._radius) + 1),
+            static_cast<int>(std::ceil(vl._visibleToHidden.y * vld._radius) + 1));
 
         int diam = vld._radius * 2 + 1;
 
@@ -170,6 +228,15 @@ void ImageEncoder::createRandom(ComputeSystem &cs,
             init(x, cs._rng, vli);
 #else
         runKernel1(cs, std::bind(ImageEncoder::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+#endif
+
+        vl._visibleActivations = FloatBuffer(numVisible);
+
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < numVisible; x++)
+            fillFloat(x, cs._rng, &vl._visibleActivations, 0.0f);
+#else
+        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._visibleActivations, 0.0f), numVisible, cs._rng, cs._batchSize1);
 #endif
     }
 
@@ -222,6 +289,8 @@ void ImageEncoder::writeToStream(std::ostream &os) const {
         os.write(reinterpret_cast<const char*>(&vl._hiddenToVisible), sizeof(Float2));
 
         writeBufferToStream(os, &vl._weights);
+
+        writeBufferToStream(os, &vl._visibleActivations);
     }
 }
 
@@ -254,5 +323,7 @@ void ImageEncoder::readFromStream(std::istream &is) {
         is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
 
         readBufferFromStream(is, &vl._weights);
+
+        readBufferFromStream(is, &vl._visibleActivations);
     }
 }

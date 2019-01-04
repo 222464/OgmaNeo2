@@ -50,7 +50,12 @@ namespace ogmaneo {
             */
             FloatBuffer _weights;
 
+            FloatBuffer _visibleActivations; // For reconstruction
+
+            Float2 _visibleToHidden; // For projection
             Float2 _hiddenToVisible; // For projection
+
+            Int2 _reverseRadii; // Pre-computed reverse radii
             //!@}
         };
 
@@ -79,13 +84,18 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled);
-        
+        void backward(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenCs, int vli);
+
         static void initKernel(int pos, std::mt19937 &rng, ImageEncoder* sc, int vli) {
             sc->init(pos, rng, vli);
         }
 
         static void forwardKernel(const Int2 &pos, std::mt19937 &rng, ImageEncoder* sc, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled) {
             sc->forward(pos, rng, inputActivations, learnEnabled);
+        }
+
+        static void backwardKernel(const Int2 &pos, std::mt19937 &rng, ImageEncoder* sc, const IntBuffer* hiddenCs, int vli) {
+            sc->backward(pos, rng, hiddenCs, vli);
         }
         //!@}
 
@@ -117,6 +127,11 @@ namespace ogmaneo {
         \param visibleCs the visible (input) layer states
         */
         void step(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled);
+
+        /*!
+        \brief Reconstruction of input data from hidden CSDR
+        */
+        void reconstruct(ComputeSystem &cs, const IntBuffer* hiddenCs);
 
         /*!
         \brief Write to stream
