@@ -95,7 +95,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
 
-                    _pLayers[l][p]->createRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, pVisibleLayerDescs);
+                    _pLayers[l][p]->createRandom(cs, inputSizes[p], pVisibleLayerDescs);
                 }
             }
         }
@@ -137,7 +137,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 _pLayers[l][p] = std::make_unique<Predictor>();
 
-                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, pVisibleLayerDescs);
+                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDescs);
             }
         }
 		
