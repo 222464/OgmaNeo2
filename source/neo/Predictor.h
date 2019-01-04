@@ -62,10 +62,14 @@ namespace ogmaneo {
         */
         Int3 _hiddenSize;
 
+        //!@{
         /*!
         \brief Buffers for state
         */
         IntBuffer _hiddenCs;
+
+        FloatBuffer _hiddenActivations;
+        //!@}
 
         //!@{
         /*!

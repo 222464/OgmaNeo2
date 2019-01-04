@@ -79,6 +79,8 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
             maxActivation = activation;
             maxIndex = hc;
         }
+
+        _hiddenActivations[address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))] = sigmoid(activation);
     }
 
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
@@ -100,45 +102,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hidde
         // Partially computed address of weight
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
-        float sum = 0.0f;
-        float count = 0.0f;
-    
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            // Center of projected position
-            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
-
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
-
-            // Additional addressing dimensions
-            int diam = vld._radius * 2 + 1;
-            int diam2 = diam * diam;
-
-            // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
-
-            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                    Int2 visiblePosition(x, y);
-
-                    int visibleCPrev = vl._inputCsPrev[address2(visiblePosition, vld._size.x)];
-
-                    // Final component of address
-                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
-
-                    sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
-                }
-
-            // Count can be computed outside of loop, this is the value equavilent to count += 1.0f after each value increment
-            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
-        }
-
-        float delta = _alpha * ((hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f) - sigmoid(sum / std::max(1.0f, count)));
+        float delta = _alpha * ((hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f) - _hiddenActivations[address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))]);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -233,6 +197,15 @@ void Predictor::createRandom(ComputeSystem &cs,
 #else
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
+
+    _hiddenActivations = FloatBuffer(numHidden);
+
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHidden; x++)
+        fillFloat(x, cs._rng, &_hiddenActivations, 0.0f);
+#else
+    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenActivations, 0.0f), numHidden, cs._rng, cs._batchSize1);
+#endif
 }
 
 void Predictor::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
@@ -285,6 +258,8 @@ void Predictor::writeToStream(std::ostream &os) const {
 
     writeBufferToStream(os, &_hiddenCs);
 
+    writeBufferToStream(os, &_hiddenActivations);
+
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -315,6 +290,8 @@ void Predictor::readFromStream(std::istream &is) {
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
+
+    readBufferFromStream(is, &_hiddenActivations);
 
     int numVisibleLayers;
     
