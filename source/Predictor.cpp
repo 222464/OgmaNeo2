@@ -91,8 +91,6 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hidde
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
-    float maxQ = -999999.0f;
-
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
     // For each hidden unit

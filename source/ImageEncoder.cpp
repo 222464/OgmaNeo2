@@ -176,10 +176,8 @@ void ImageEncoder::backward(const Int2 &pos, std::mt19937 &rng, const IntBuffer*
                 }
             }
 
-        int visibleIndex = address3(visiblePosition, Int2(vld._size.x, vld._size.y));
-
         // Set normalized reconstruction value
-        vl._visibleActivations[visibleIndex] = sum / std::max(1.0f, count);
+        vl._visibleActivations[address3(visiblePosition, Int2(vld._size.x, vld._size.y))] = sum / std::max(1.0f, count);
     }
 }
 
