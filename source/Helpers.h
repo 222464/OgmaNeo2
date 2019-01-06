@@ -188,10 +188,8 @@ namespace ogmaneo {
 
         is.read(reinterpret_cast<char*>(&size), sizeof(int));
 
-        if (buf->empty())
+        if (buf->size() != size)
             buf->resize(size);
-        
-        assert(buf->size() == size);
 
         is.read(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
     }
