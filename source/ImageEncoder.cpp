@@ -299,7 +299,9 @@ void ImageEncoder::writeToStream(std::ostream &os) const {
 
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
+        os.write(reinterpret_cast<const char*>(&vl._visibleToHidden), sizeof(Float2));
         os.write(reinterpret_cast<const char*>(&vl._hiddenToVisible), sizeof(Float2));
+        os.write(reinterpret_cast<const char*>(&vl._reverseRadii), sizeof(Int2));
 
         writeBufferToStream(os, &vl._weights);
 
@@ -333,7 +335,9 @@ void ImageEncoder::readFromStream(std::istream &is) {
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
+        is.read(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(Float2));
         is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
+        is.read(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(Int2));
 
         readBufferFromStream(is, &vl._weights);
 
