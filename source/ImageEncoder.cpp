@@ -330,10 +330,10 @@ void ImageEncoder::readFromStream(std::istream &is) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
-
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
+
+        is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
         is.read(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(Float2));
         is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
