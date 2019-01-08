@@ -88,7 +88,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(1);
 
             aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
 
             if (l < _scLayers.size() - 1)
                 aVisibleLayerDescs.push_back(aVisibleLayerDescs[0]);
@@ -131,7 +131,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(1);
 
             aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
 
             if (l < _scLayers.size() - 1)
                 aVisibleLayerDescs.push_back(aVisibleLayerDescs[0]);

@@ -41,7 +41,7 @@ namespace ogmaneo {
             \brief Radii of the sparse coder and predictor/actor
             */
             int _scRadius;
-            int _pRadius;
+            int _aRadius;
             //!@}
 
             /*!
@@ -64,7 +64,7 @@ namespace ogmaneo {
             */
             LayerDesc()
                 : _hiddenSize(4, 4, 16),
-                _scRadius(2), _pRadius(2),
+                _scRadius(2), _aRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2),
                 _historyCapacity(8)
             {}
