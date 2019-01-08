@@ -57,8 +57,6 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
             Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
             Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
 
-            float subSum = 0.0f;
-
             for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
                 for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                     Int2 visiblePosition(x, y);
@@ -68,11 +66,10 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    subSum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                    sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                 }
 
-            sum += vld._influence * subSum;
-            count += vld._influence * (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
+            count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
         // Normalize and save value for later

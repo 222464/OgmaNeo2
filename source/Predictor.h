@@ -32,16 +32,11 @@ namespace ogmaneo {
             int _radius;
 
             /*!
-            \brief Influence of visible layer on activations
-            */
-            float _influence;
-
-            /*!
             \brief Initialize defaults
             */
             VisibleLayerDesc()
                 : _size({ 4, 4, 16 }),
-                _radius(2), _influence(1.0f)
+                _radius(2)
             {}
         };
 
