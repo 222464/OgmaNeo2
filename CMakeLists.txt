@@ -34,7 +34,7 @@ set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
     "${SOURCE_PATH}/Helpers.cpp"
     "${SOURCE_PATH}/SparseCoder.cpp"
-    "${SOURCE_PATH}/Predictor.cpp"
+    "${SOURCE_PATH}/Actor.cpp"
     "${SOURCE_PATH}/Hierarchy.cpp"
     "${SOURCE_PATH}/ImageEncoder.cpp"
 )
