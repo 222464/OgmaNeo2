@@ -9,7 +9,7 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
+#include "Actor.h"
 
 #include <memory>
 
@@ -18,7 +18,7 @@ namespace ogmaneo {
     \brief Enum describing the type of operation performed by an input layer
     */
     enum InputType {
-        _none = 0, _predict = 1
+        _none = 0, _act = 1
     };
     
     /*!
@@ -55,9 +55,9 @@ namespace ogmaneo {
             int _temporalHorizon;
 
             /*!
-            \brief Current layer (non-feedback) predictor influence
+            \brief Capacity (max length) of actor history buffer
             */
-            float _currentInfluence;
+            int _historyCapacity;
 
             /*!
             \brief Initialize defaults
@@ -66,13 +66,13 @@ namespace ogmaneo {
                 : _hiddenSize(4, 4, 16),
                 _scRadius(2), _pRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2),
-                _currentInfluence(0.1f)
+                _historyCapacity(8)
             {}
         };
     private:
         // Layers
         std::vector<SparseCoder> _scLayers;
-        std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+        std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
         // Histories
         std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -83,6 +83,9 @@ namespace ogmaneo {
 
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
+
+        std::vector<float> _rewards;
+        std::vector<float> _rewardCounts;
 
         // Input dimensions
         std::vector<Int3> _inputSizes;
@@ -120,9 +123,10 @@ namespace ogmaneo {
         \brief Simulation step/tick
         \param cs is the ComputeSystem
         \param inputs vector of input activations
+        \param reward reinforcement signal
         \param learnEnabled whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled = true);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, float reward, bool learnEnabled = true);
 
         /*!
         \brief Write to stream
@@ -145,8 +149,8 @@ namespace ogmaneo {
         \brief Get the actor output
         \param i the index of the input to retrieve
         */
-        const IntBuffer &getPredictionCs(int i) const {
-            return _pLayers.front()[i]->getHiddenCs();
+        const IntBuffer &getActionCs(int i) const {
+            return _aLayers.front()[i]->getHiddenCs();
         }
 
         /*!
@@ -194,15 +198,15 @@ namespace ogmaneo {
         /*!
         \brief Retrieve predictor layer(s)
         */
-        std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
-            return _pLayers[l];
+        std::vector<std::unique_ptr<Actor>> &getALayer(int l) {
+            return _aLayers[l];
         }
 
         /*!
         \brief Retrieve predictor layer(s)
         */
-        const std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) const {
-            return _pLayers[l];
+        const std::vector<std::unique_ptr<Actor>> &getALayer(int l) const {
+            return _aLayers[l];
         }
     };
 }
