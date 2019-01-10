@@ -25,7 +25,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
     // ------------------------------ Action ------------------------------
 
-    std::vector<float> activations(_hiddenSize.z);
+    int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     // For each hidden unit
@@ -76,37 +76,22 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
         _hiddenValues[address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))] = activation;
 
-        maxActivation = std::max(maxActivation, activation);
+        if (activation > maxActivation) {
+            maxActivation = activation;
 
-        activations[hc] = activation;
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-
-        total += activations[hc];
+            maxIndex = hc;
+        }
     }
 
     std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
-    float cusp = dist01(rng) * total;
+    if (dist01(rng) < _epsilon) {
+        std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
 
-    float sumSoFar = 0.0f;
-    int selectIndex = 0;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        sumSoFar += activations[hc];
-
-        if (sumSoFar >= cusp) {
-            selectIndex = hc;
-
-            break;
-        }
+        _hiddenCs[address2(pos, _hiddenSize.x)] = columnDist(rng);
     }
-
-    _hiddenCs[address2(pos, _hiddenSize.x)] = selectIndex;
+    else
+        _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
 void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValues, FloatBuffer* hiddenValuesPrev, float reward) {

@@ -128,6 +128,11 @@ namespace ogmaneo {
         float _gamma;
 
         /*!
+        \brief Exploration rate
+        */
+        float _epsilon;
+
+        /*!
         \brief History iterations
         */
         int _historyIters;
@@ -136,7 +141,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.9f), _historyIters(8)
+        : _alpha(0.01f), _gamma(0.9f), _epsilon(0.01f), _historyIters(8)
         {}
 
         /*!
