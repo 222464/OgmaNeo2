@@ -213,7 +213,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 
         activation /= std::max(1.0f, count);
 
-        float betaTdErrorAction = _alpha * ((*hiddenValuesPrev)[address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))] - activation);
+        float error = _alpha * ((*hiddenValuesPrev)[address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))] - activation);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -243,7 +243,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
 
-                    vl._weights[dPartialAction + az * dxyz] += betaTdErrorAction;
+                    vl._weights[dPartialAction + az * dxyz] += error;
                 }
         }
     }
