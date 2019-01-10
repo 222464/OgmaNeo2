@@ -48,8 +48,7 @@ namespace ogmaneo {
             /*!
             \brief Visible layer values and buffers
             */
-            FloatBuffer _valueWeights;
-            FloatBuffer _actionWeights;
+            FloatBuffer _weights;
 
             Float2 _hiddenToVisible;
             //!@}
@@ -102,7 +101,7 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValuesPrev, float q, float g);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, FloatBuffer* hiddenValuesPrev, float reward);
 
         static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
             a->init(pos, rng, vli);
@@ -112,8 +111,8 @@ namespace ogmaneo {
             a->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValuesPrev, float q, float g) {
-            a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, FloatBuffer* hiddenValuesPrev, float reward) {
+            a->learn(pos, rng, inputCs, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, reward);
         }
         //!@}
 
@@ -124,20 +123,20 @@ namespace ogmaneo {
         float _alpha;
 
         /*!
-        \brief Action learning rate
-        */
-        float _beta;
-
-        /*!
         \brief Discount factor
         */
         float _gamma;
 
         /*!
+        \brief History iterations
+        */
+        int _historyIters;
+
+        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _beta(0.01f), _gamma(0.98f)
+        : _alpha(0.01f), _gamma(0.98f), _historyIters(8)
         {}
 
         /*!
@@ -220,15 +219,8 @@ namespace ogmaneo {
         /*!
         \brief Get the weights for a visible layer
         */
-        const FloatBuffer &getValueWeights(int v) {
-            return _visibleLayers[v]._valueWeights;
-        }
-
-        /*!
-        \brief Get the weights for a visible layer
-        */
-        const FloatBuffer &getActionWeights(int v) {
-            return _visibleLayers[v]._actionWeights;
+        const FloatBuffer &getWeights(int v) {
+            return _visibleLayers[v]._weights;
         }
     };
 }
