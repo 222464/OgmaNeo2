@@ -228,42 +228,101 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             }
     }
 
-    Int3 hiddenPosition(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]);
+    std::vector<float> activations(_hiddenSize.z);
+    float maxActivation = -999999.0f;
 
-    int dPartialAction = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        Int3 hiddenPosition(pos.x, pos.y, hc);
 
-    float betaTdErrorAction = _beta * tdErrorAction;
+        int dPartialAction = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        float activation = 0.0f;
 
-        // Center of projected position
-        Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        // Lower corner
-        Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+            // Center of projected position
+            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
 
-        // Additional addressing dimensions
-        int diam = vld._radius * 2 + 1;
-        int diam2 = diam * diam;
+            // Lower corner
+            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
 
-        // Bounds of receptive field, clamped to input size
-        Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-        Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
+            // Additional addressing dimensions
+            int diam = vld._radius * 2 + 1;
+            int diam2 = diam * diam;
 
-        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                Int2 visiblePosition(x, y);
+            // Bounds of receptive field, clamped to input size
+            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
 
-                int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
+            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                    Int2 visiblePosition(x, y);
 
-                // Final component of address
-                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
+                    int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
-                vl._actionWeights[dPartialAction + az * dxyz] += betaTdErrorAction;
-            }
+                    // Final component of address
+                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
+
+                    activation += vl._actionWeights[dPartialAction + az * dxyz];
+                }
+        }
+
+        activation /= std::max(1.0f, count);
+
+        maxActivation = std::max(maxActivation, activation);
+
+        activations[hc] = activation;
+    }
+
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+
+        total += activations[hc];
+    }
+    
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        Int3 hiddenPosition(pos.x, pos.y, hc);
+
+        int dPartialAction = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+
+        float betaTdErrorAction = _beta * tdErrorAction * ((hc == (*hiddenCsPrev)[hiddenColumnIndex] ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
+
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            // Center of projected position
+            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+
+            // Lower corner
+            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+
+            // Additional addressing dimensions
+            int diam = vld._radius * 2 + 1;
+            int diam2 = diam * diam;
+
+            // Bounds of receptive field, clamped to input size
+            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
+
+            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                    Int2 visiblePosition(x, y);
+
+                    int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
+
+                    // Final component of address
+                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
+
+                    vl._actionWeights[dPartialAction + az * dxyz] += betaTdErrorAction;
+                }
+        }
     }
 }
 
@@ -381,10 +440,7 @@ const Actor &Actor::operator=(const Actor &other) {
     for (int t = 0; t < _historySamples.size(); t++) {
         _historySamples[t] = std::make_shared<HistorySample>();
 
-        HistorySample &s = *_historySamples[t];
-        const HistorySample &otherS = *other._historySamples[t];
-
-        s = otherS;
+        (*_historySamples[t]) = (*other._historySamples[t]);
     }
 
     return *this;
