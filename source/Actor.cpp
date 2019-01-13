@@ -94,7 +94,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
         _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValues, FloatBuffer* hiddenValuesPrev, float reward) {
+void Actor::valueUpdate(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValues, FloatBuffer* hiddenValuesPrev, float reward) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -112,7 +112,14 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     float qTarget = reward + _gamma * maxActivation;
 
     (*hiddenValuesPrev)[address3(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), Int2(_hiddenSize.x, _hiddenSize.y))] = qTarget;
-    
+}
+
+
+void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenCsPrev, const FloatBuffer* hiddenValuesPrev) {
+    // Cache address calculations
+    int dxy = _hiddenSize.x * _hiddenSize.y;
+    int dxyz = dxy * _hiddenSize.z;
+
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
@@ -373,11 +380,8 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize > 2) {
-        std::uniform_int_distribution<int> sampleDist(0, _historySamples.size() - 2);
-
-        for (int it = 0; it < _historyIters; it++) {
-            int t = sampleDist(cs._rng);
-
+        // Propagate Q values
+        for (int t = _historySize - 2; t >= 0; t--) {
             const HistorySample &s = *_historySamples[t + 1];
             HistorySample &sPrev = *_historySamples[t];
 
@@ -385,9 +389,27 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, constGet(sPrev._visibleCs), &sPrev._hiddenCs, &s._hiddenValues, &sPrev._hiddenValues, s._reward);
+                    valueUpdate(Int2(x, y), cs._rng, &sPrev._hiddenCs, &s._hiddenValues, &sPrev._hiddenValues, s._reward);
 #else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._visibleCs), &sPrev._hiddenCs, &s._hiddenValues, &sPrev._hiddenValues, s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Actor::valueUpdateKernel, std::placeholders::_1, std::placeholders::_2, this, &sPrev._hiddenCs, &s._hiddenValues, &sPrev._hiddenValues, s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+        }
+
+        std::uniform_int_distribution<int> sampleDist(0, _historySamples.size() - 2);
+
+        for (int it = 0; it < _historyIters; it++) {
+            int t = sampleDist(cs._rng);
+
+            //const HistorySample &s = *_historySamples[t + 1];
+            const HistorySample &sPrev = *_historySamples[t];
+
+            // Learn kernel
+#ifdef KERNEL_DEBUG
+            for (int x = 0; x < _hiddenSize.x; x++)
+                for (int y = 0; y < _hiddenSize.y; y++)
+                    learn(Int2(x, y), cs._rng, constGet(sPrev._visibleCs), &sPrev._hiddenCs, &sPrev._hiddenValues,);
+#else
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._visibleCs), &sPrev._hiddenCs, &sPrev._hiddenValues), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
         }
     }
