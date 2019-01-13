@@ -302,10 +302,7 @@ const Actor &Actor::operator=(const Actor &other) {
     for (int t = 0; t < _historySamples.size(); t++) {
         _historySamples[t] = std::make_shared<HistorySample>();
 
-        HistorySample &s = *_historySamples[t];
-        const HistorySample &otherS = *other._historySamples[t];
-
-        s = otherS;
+        (*_historySamples[t]) = (*other._historySamples[t]);
     }
 
     return *this;
