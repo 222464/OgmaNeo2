@@ -384,10 +384,7 @@ const Actor &Actor::operator=(const Actor &other) {
         HistorySample &s = *_historySamples[t];
         const HistorySample &otherS = *other._historySamples[t];
 
-        s._visibleCs = otherS._visibleCs;
-        s._hiddenCs = otherS._hiddenCs;
-        s._hiddenValues = otherS._hiddenValues;
-        s._reward = otherS._reward;
+        s = otherS;
     }
 
     return *this;
