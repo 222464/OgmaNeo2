@@ -99,8 +99,6 @@ void Actor::valueUpdate(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hid
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
-    int hiddenColumnIndex = address2(pos, _hiddenSize.x);
-
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -111,7 +109,7 @@ void Actor::valueUpdate(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hid
 
     float qTarget = reward + _gamma * maxActivation;
 
-    (*hiddenValuesPrev)[address3(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), Int2(_hiddenSize.x, _hiddenSize.y))] = qTarget;
+    (*hiddenValuesPrev)[address3(Int3(pos.x, pos.y, (*hiddenCsPrev)[address2(pos, _hiddenSize.x)]), Int2(_hiddenSize.x, _hiddenSize.y))] = qTarget;
 }
 
 

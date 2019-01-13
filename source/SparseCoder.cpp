@@ -67,7 +67,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
                     // Rule is: sum += max(0, weight - prevActivation), found empirically to be better than truncated weight * (1.0 - prevActivation) update
-                    sum += vl._weights[dPartial + az * dxyz] * (1.0f - (firstIter ? 0.0f : vl._visibleActivations[visibleIndex]));
+                    sum += std::max(0.0f, vl._weights[dPartial + az * dxyz] - (firstIter ? 0.0f : vl._visibleActivations[visibleIndex]));
                 }
         }
 
@@ -137,7 +137,7 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
         }
 
     // Set normalized reconstruction value
-    vl._visibleActivations[visibleIndex] = sigmoid(sum / std::max(1.0f, count));
+    vl._visibleActivations[visibleIndex] = sum / std::max(1.0f, count);
 }
 
 void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
@@ -189,7 +189,7 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
         // Weight increment
         float target = (vc == inputC ? 1.0f : 0.0f);
 
-        float delta = _alpha * (target - sigmoid(sum / std::max(1.0f, count)));
+        float delta = _alpha * (target - sum / std::max(1.0f, count));
 
         for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
