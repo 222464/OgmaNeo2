@@ -87,7 +87,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
         if (firstIter) // Clear to new sum value if is first step
             _hiddenActivations[hiddenIndex] = inputActivation;
         else
-            _hiddenActivations[hiddenIndex] *= inputActivation / (reconActivation + 0.0001f);
+            _hiddenActivations[hiddenIndex] += inputActivation - reconActivation;
 
         // Determine highest cell activation and index
         if (_hiddenActivations[hiddenIndex] > maxValue) {
