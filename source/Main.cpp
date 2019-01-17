@@ -279,7 +279,7 @@ int main() {
 					}
 
 					for (int p = 0; p < notZero.size(); ++p) {
-						sparse._noneZeroValues.push_back(_visibleLayers[0]._weights[notZero[p]]);
+						sparse._nonZeroValues.push_back(_visibleLayers[0]._weights[notZero[p]]);
 						//sparse._columnIndices.push_back(az * dxyz);
 					}
 
