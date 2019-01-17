@@ -37,9 +37,22 @@ set(SOURCES
     "${SOURCE_PATH}/Predictor.cpp"
     "${SOURCE_PATH}/Hierarchy.cpp"
     "${SOURCE_PATH}/ImageEncoder.cpp"
+	"${SOURCE_PATH}/SparseMatrix.cpp"
 )
 
-add_library(OgmaNeo ${SOURCES})
+set(HEADERS
+	"${SOURCE_PATH}/Helpers.h"
+    "${SOURCE_PATH}/SparseCoder.h"
+    "${SOURCE_PATH}/Predictor.h"
+    "${SOURCE_PATH}/Hierarchy.h"
+    "${SOURCE_PATH}/ImageEncoder.h"
+	"${SOURCE_PATH}/SparseMatrix.h"
+)
+
+add_library(OgmaNeo ${SOURCES} ${HEADERS})
+
+add_executable(neo "${SOURCE_PATH}/Main.cpp")
+target_link_libraries(neo OgmaNeo)
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin
