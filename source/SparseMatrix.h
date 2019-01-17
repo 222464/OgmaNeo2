@@ -5,11 +5,11 @@
 
 // Compressed sparse row (CSR) format
 class SparseMatrix {
-private:
+public:
 	std::vector<float> _noneZeroValues;
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
-public:
+
 	SparseMatrix() {}
 	SparseMatrix(const std::vector<float> &noneZeroValues, const std::vector<int> &rowRanges, const std::vector<int> &columnIndices);
 	SparseMatrix(const std::vector<float> &data, int rows, int columns); // From a non-compressed sparse matrix
