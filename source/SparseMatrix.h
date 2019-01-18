@@ -4,8 +4,7 @@
 #include <vector>
 
 // Compressed sparse row (CSR) format
-class SparseMatrix {
-public:
+struct SparseMatrix {
 	std::vector<float> _nonZeroValues;
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;

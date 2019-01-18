@@ -19,6 +19,7 @@ SparseMatrix::SparseMatrix(
 	_rowRanges.push_back(0);
 
 	int nonZeroCountInRow = 0; // Only need to set this to zero once because it's cumulative
+	
 	for (int row = 0; row < rows; ++row) {
 		int row_offset = row * columns;
 
