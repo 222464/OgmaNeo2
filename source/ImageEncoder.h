@@ -48,7 +48,8 @@ private:
     std::vector<VisibleLayer> _visibleLayers; // Layers
     std::vector<VisibleLayerDesc> _visibleLayerDescs; // Descs
 
-    // Kernels
+    // --- Kernels ---
+    
     void init(
         int pos,
         std::mt19937 &rng,

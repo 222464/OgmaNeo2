@@ -11,189 +11,162 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-    /*!
-    \brief A actor layer (swarm intelligence of actor columns)
-    Maps input CSDRs to actions using a swarm of actor-critic units with Boltzmann exploration
-    */
-    class Predictor {
-    public:
-        /*!
-        \brief Visible layer descriptor
-        */
-        struct VisibleLayerDesc {
-            /*!
-            \brief Visible layer size
-            */
-            Int3 _size;
+// A prediction layer (predicts x_(t+1))
+class Predictor {
+public:
+    // Visible layer descriptor
+    struct VisibleLayerDesc {
+        Int3 _size; // Size of input
 
-            /*!
-            \brief Radius onto hidden layer
-            */
-            int _radius;
+        int _radius; // Radius onto input
 
-            /*!
-            \brief Influence of visible layer on activations
-            */
-            float _influence;
-
-            /*!
-            \brief Initialize defaults
-            */
-            VisibleLayerDesc()
-                : _size({ 4, 4, 16 }),
-                _radius(2), _influence(1.0f)
-            {}
-        };
-
-        /*!
-        \brief Visible layer
-        */
-        struct VisibleLayer {
-            //!@{
-            /*!
-            \brief Visible layer values and buffers
-            */
-            FloatBuffer _weights;
-
-            IntBuffer _inputCsPrev;
-
-            Float2 _hiddenToVisible;
-            //!@}
-        };
-
-    private:
-        /*!
-        \brief Size of the hidden layer (output/action size)
-        */
-        Int3 _hiddenSize;
-
-        //!@{
-        /*!
-        \brief Buffers for state
-        */
-        IntBuffer _hiddenCs;
-
-        FloatBuffer _hiddenActivations;
-        //!@}
-
-        //!@{
-        /*!
-        \brief Visible layers and associated descriptors
-        */
-        std::vector<VisibleLayer> _visibleLayers;
-        std::vector<VisibleLayerDesc> _visibleLayerDescs;
-        //!@}
-
-        //!@{
-        /*!
-        \brief Kernels
-        */
-        void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenTargetCs);
-
-        static void initKernel(int pos, std::mt19937 &rng, Predictor* p, int vli) {
-            p->init(pos, rng, vli);
-        }
-
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Predictor* p, const std::vector<const IntBuffer*> &inputCs) {
-            p->forward(pos, rng, inputCs);
-        }
-
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Predictor* p, const IntBuffer* hiddenTargetCs) {
-            p->learn(pos, rng, hiddenTargetCs);
-        }
-        //!@}
-
-    public:
-        /*!
-        \brief Value learning rate
-        */
-        float _alpha;
-
-        /*!
-        \brief Initialize defaults
-        */
-        Predictor()
-        : _alpha(1.0f)
+        // Defaults
+        VisibleLayerDesc()
+        :
+        _size({ 4, 4, 16 }),
+        _radius(2)
         {}
-
-        /*!
-        \brief Create an actor layer with random initialization
-        \param cs is the ComputeSystem
-        \param hiddenSize size of the actions (output)
-        \param visibleLayerDescs are descriptors for visible layers
-        */
-        void createRandom(ComputeSystem &cs,
-            const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs); // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
-
-        /*!
-        \brief Activate the predictor (predict values)
-        \param cs is the ComputeSystem
-        \param visibleCs the visible (input) layer states
-        \param hiddenPredictionCsPrev the previously taken actions
-        \param learn whether to learn
-        */
-        void activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
-
-        /*!
-        \brief Learn the predictor (update weogjts)
-        \param cs is the ComputeSystem
-        \param visibleCsPrev the previous visible (input) layer states
-        \param hiddenTargetCs the target states
-        */
-        void learn(ComputeSystem &cs, const IntBuffer* hiddenTargetCs);
-
-        /*!
-        \brief Write to stream
-        */
-        void writeToStream(std::ostream &os) const;
-
-        /*!
-        \brief Read from stream
-        */
-        void readFromStream(std::istream &is);
-
-        /*!
-        \brief Get number of visible layers
-        */
-        int getNumVisibleLayers() const {
-            return _visibleLayers.size();
-        }
-
-        /*!
-        \brief Get a visible layer
-        */
-        const VisibleLayer &getVisibleLayer(int index) const {
-            return _visibleLayers[index];
-        }
-
-        /*!
-        \brief Get a visible layer descriptor
-        */
-        const VisibleLayerDesc &getVisibleLayerDesc(int index) const {
-            return _visibleLayerDescs[index];
-        }
-
-        /*!
-        \brief Get the hidden activations (predictions)
-        */
-        const IntBuffer &getHiddenCs() const {
-            return _hiddenCs;
-        }
-
-        /*!
-        \brief Get the hidden size
-        */
-        const Int3 &getHiddenSize() const {
-            return _hiddenSize;
-        }
-
-        /*!
-        \brief Get the weights for a visible layer
-        */
-        const FloatBuffer &getWeights(int v) {
-            return _visibleLayers[v]._weights;
-        }
     };
-}
+
+    // Visible layer
+    struct VisibleLayer {
+        SparseMatrix _weights; // Weight matrix
+
+        IntBuffer _inputCsPrev; // Previous timestep (prev) input states
+
+        Float2 _hiddenToVisible; // For projection
+    };
+
+private:
+    Int3 _hiddenSize; // Size of the output/hidden/prediction
+
+    IntBuffer _hiddenCs; // Hidden state
+
+    FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
+
+    // Visible layers and descs
+    std::vector<VisibleLayer> _visibleLayers;
+    std::vector<VisibleLayerDesc> _visibleLayerDescs;
+
+    // --- Kernels ---
+
+    void init(
+        int pos,
+        std::mt19937 &rng,
+        int vli
+    );
+
+    void forward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenTargetCs
+    );
+
+    static void initKernel(
+        int pos,
+        std::mt19937 &rng,
+        Predictor* p,
+        int vli
+    ) {
+        p->init(pos, rng, vli);
+    }
+
+    static void forwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Predictor* p,
+        const std::vector<const IntBuffer*> &inputCs
+    ) {
+        p->forward(pos, rng, inputCs);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Predictor* p,
+        const IntBuffer* hiddenTargetCs
+    ) {
+        p->learn(pos, rng, hiddenTargetCs);
+    }
+
+public:
+    float _alpha; // Learning rate
+
+    // Defaults
+    Predictor()
+    :
+    _alpha(1.0f)
+    {}
+
+    // Create with random initialization
+    void createRandom(
+        ComputeSystem &cs, // Compute system
+        const Int3 &hiddenSize, // Hidden/output/prediction size
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+    ); 
+
+    // Activate the predictor (predict values)
+    void activate(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &visibleCs // Hidden/output/prediction size
+    );
+
+    // Learning predictions (update weights)
+    void learn(
+        ComputeSystem &cs,
+        const IntBuffer* hiddenTargetCs
+    );
+
+    // Write to stream
+    void writeToStream(
+        std::ostream &os // Stream to write to
+    ) const;
+
+    // Read from stream
+    void readFromStream(
+        std::istream &is // Stream to read from
+    );
+
+    // Get number of visible layers
+    int getNumVisibleLayers() const {
+        return _visibleLayers.size();
+    }
+
+    // Get a visible layer
+    const VisibleLayer &getVisibleLayer(
+        int i // Index of visible layer
+    ) const {
+        return _visibleLayers[i];
+    }
+
+    // Get a visible layer descriptor
+    const VisibleLayerDesc &getVisibleLayerDesc(
+        int i // Index of visible layer
+    ) const {
+        return _visibleLayerDescs[i];
+    }
+
+    // Get the hidden activations (predictions)
+    const IntBuffer &getHiddenCs() const {
+        return _hiddenCs;
+    }
+
+    // Get the hidden size
+    const Int3 &getHiddenSize() const {
+        return _hiddenSize;
+    }
+
+    // Get the weights for a visible layer
+    const SparseMatrix &getWeights(
+        int i // Index of visible layer
+    ) {
+        return _visibleLayers[i]._weights;
+    }
+};
+} // Namespace ogmaneo

@@ -17,31 +17,43 @@ struct SparseMatrix {
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
 
-	// --- INIT ---
+	// --- Init ---
 
 	SparseMatrix() {}
 
+	// If you don't want to construct immediately
 	SparseMatrix(
 		const std::vector<float> &nonZeroValues,
 		const std::vector<int> &rowRanges,
 		const std::vector<int> &columnIndices
-	);
+	) {
+		create(nonZeroValues, rowRanges, columnIndices);
+	}
 
 	// From a non-compressed sparse matrix
 	SparseMatrix(
 		const std::vector<float> &data,
 		int rows,
 		int columns
-	);
+	) {
+		create(data, rows, columns);
+	}
 
 	// If you don't want to construct immediately
-	void init(
+	void create(
 		const std::vector<float> &nonZeroValues,
 		const std::vector<int> &rowRanges,
 		const std::vector<int> &columnIndices
 	);
 
-	// --- DENSE ---
+	// From a non-compressed sparse matrix
+	void create(
+		const std::vector<float> &data,
+		int rows,
+		int columns
+	);
+
+	// --- Dense ---
 
 	// Size of "in" must equal size of "out"
 	void multiply(
@@ -67,32 +79,6 @@ struct SparseMatrix {
 		int rectColumns,
 		int rows,
 		int columns
-	);
-
-	// --- OHERM ---
-
-	// Multiply by a one-hot-row matrix
-	void multiplyOHERM(
-		const std::vector<int> &nonZeroIndices,
-		int columns,
-		std::vector<float> &out
-	);
-
-	// Multiply one row from a given one-hot-row matrix
-	void multiplyOneRowOHERM(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int columns,
-		std::vector<float> &out
-	);
-
-	// Multiply a range of rows from a given one-hot-row matrix
-	void multiplyRangeOfRowOHERM(
-		const std::vector<int> &nonZeroIndices,
-		int startRow,
-		int rowCount,
-		int columns,
-		std::vector<float> &out
 	);
 };
 } // namespace ogmaneo

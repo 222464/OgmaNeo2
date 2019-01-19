@@ -11,14 +11,22 @@
 using namespace ogmaneo;
 
 // Kernels
-void Predictor::init(int pos, std::mt19937 &rng, int vli) {
+void Predictor::init(
+    int pos,
+    std::mt19937 &rng,
+    int vli)
+ {
     // Randomly initialize weights in range
 	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
 
-    _visibleLayers[vli]._weights[pos] = weightDist(rng);
+    _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
 }
 
-void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
+void Predictor::forward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const IntBuffer*> &inputCs
+) {
     // Cache address calculations (taken from addressN functions)
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -32,6 +40,8 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
+        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
+
         // Partially computed address of weight
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
@@ -43,36 +53,15 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            // Center of projected position
-            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+            int nextIndex = hiddenIndex + 1;
 
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+            for (int jj = vl._weights._rowRanges[hiddenIndex]; jj < vl._weights._rowRanges[nextIndex]; jj += vld._size.z) {
+                int j = jj + (*inputCs[vli])[jj / vld._size.z];
 
-            // Additional addressing dimensions
-            int diam = vld._radius * 2 + 1;
-            int diam2 = diam * diam;
+                sum += vl._weights._nonZeroValues[j];
+            }
 
-            // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
-
-            float subSum = 0.0f;
-
-            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                    Int2 visiblePosition(x, y);
-
-                    int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
-
-                    // Final component of address
-                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
-
-                    subSum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
-                }
-
-            sum += vld._influence * subSum;
-            count += vld._influence * (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
+            count += vl._weights._rowRanges[nextIndex] - vl._weights._rowRanges[hiddenIndex];
         }
 
         // Normalize and save value for later
@@ -94,7 +83,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hidde
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
-    int hiddenIndex = address2(pos, _hiddenSize.x);
+    int hiddenColumnIndex = address2(pos, _hiddenSize.x);
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -163,20 +152,14 @@ void Predictor::createRandom(ComputeSystem &cs,
         vl._hiddenToVisible = Float2(static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
             static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y));
 
-        int diam = vld._radius * 2 + 1;
-
-        int numWeightsPerHidden = diam * diam * vld._size.z;
-
-        int weightsSize = numHidden * numWeightsPerHidden;
-
         // Create weight matrix for this visible layer and initialize randomly
-        vl._weights = FloatBuffer(weightsSize);
+        createSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < weightsSize; x++)
+        for (int x = 0; x < vl._weights._nonZeroValues.size(); x++)
             init(x, cs._rng, vli);
 #else
-        runKernel1(cs, std::bind(Predictor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(Predictor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), vl._weights._nonZeroValues.size(), cs._rng, cs._batchSize1);
 #endif
 
         vl._inputCsPrev = IntBuffer(numVisibleColumns);
