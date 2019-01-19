@@ -13,9 +13,12 @@
 
 using namespace ogmaneo;
 
-void Hierarchy::createRandom(ComputeSystem &cs,
-    const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs)
-{
+void Hierarchy::createRandom(
+    ComputeSystem &cs,
+    const std::vector<Int3> &inputSizes,
+    const std::vector<InputType> &inputTypes,
+    const std::vector<LayerDesc> &layerDescs
+) {
     // Create layers
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
@@ -150,7 +153,9 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     }
 }
 
-const Hierarchy &Hierarchy::operator=(const Hierarchy &other) {
+const Hierarchy &Hierarchy::operator=(
+    const Hierarchy &other
+) {
     // Layers
     _scLayers = other._scLayers;
 
@@ -188,7 +193,11 @@ const Hierarchy &Hierarchy::operator=(const Hierarchy &other) {
     return *this;
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled) {
+void Hierarchy::step(
+    ComputeSystem &cs,
+    const std::vector<const IntBuffer*> &inputCs,
+    bool learnEnabled
+) {
     assert(inputCs.size() == _inputSizes.size());
 
     // First tick is always 0
@@ -299,7 +308,9 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
     }
 }
 
-void Hierarchy::writeToStream(std::ostream &os) const {
+void Hierarchy::writeToStream(
+    std::ostream &os
+) const {
     int numLayers = _scLayers.size();
 
     os.write(reinterpret_cast<const char*>(&numLayers), sizeof(int));
@@ -337,7 +348,9 @@ void Hierarchy::writeToStream(std::ostream &os) const {
     }
 }
 
-void Hierarchy::readFromStream(std::istream &is) {
+void Hierarchy::readFromStream(
+    std::istream &is
+) {
     int numLayers;
     is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
 

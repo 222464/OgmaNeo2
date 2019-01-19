@@ -1,15 +1,23 @@
-#ifndef SPARSE_MATRIX_HEADER
-#define SPARSE_MATRIX_HEADER
+// ----------------------------------------------------------------------------
+//  OgmaNeo
+//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//
+//  This copy of OgmaNeo is licensed to you under the terms described
+//  in the OGMANEO_LICENSE.md file included in this distribution.
+// ----------------------------------------------------------------------------
+
+#pragma once
 
 #include <vector>
 
+namespace ogmaneo {
 // Compressed sparse row (CSR) format
 struct SparseMatrix {
 	std::vector<float> _nonZeroValues;
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
 
-	// --- INIT --- \\
+	// --- INIT ---
 
 	SparseMatrix() {}
 
@@ -33,7 +41,7 @@ struct SparseMatrix {
 		const std::vector<int> &columnIndices
 	);
 
-	// --- DENSE --- \\
+	// --- DENSE ---
 
 	// Size of "in" must equal size of "out"
 	void multiply(
@@ -61,7 +69,7 @@ struct SparseMatrix {
 		int columns
 	);
 
-	// --- OHERM --- \\
+	// --- OHERM ---
 
 	// Multiply by a one-hot-row matrix
 	void multiplyOHERM(
@@ -73,7 +81,8 @@ struct SparseMatrix {
 	// Multiply one row from a given one-hot-row matrix
 	void multiplyOneRowOHERM(
 		const std::vector<int> &nonZeroIndices,
-		int row, int columns,
+		int row,
+		int columns,
 		std::vector<float> &out
 	);
 
@@ -86,5 +95,4 @@ struct SparseMatrix {
 		std::vector<float> &out
 	);
 };
-
-#endif
+} // namespace ogmaneo

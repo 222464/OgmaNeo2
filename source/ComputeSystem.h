@@ -13,36 +13,22 @@
 #include <random>
 
 namespace ogmaneo {
-	/*!
-	\brief Compute system. Mainly passed to other functions. Contains thread pooling and random number generator information
-	*/
-    class ComputeSystem {
-	public:
-		/*!
-		\brief System thread pool
-		*/
-		ctpl::thread_pool _pool;
+class ComputeSystem {
+public:
+	ctpl::thread_pool _pool;
 
-		//!@{
-		/*!
-		\brief Default batch sizes
-		*/
-		int _batchSize1;
-		Int2 _batchSize2;
-		Int3 _batchSize3;
-		//!@}
+	// Default batch sizes for dimensions 1-3
+	int _batchSize1;
+	Int2 _batchSize2;
+	Int3 _batchSize3;
 
-		/*!
-		\brief Shared random generator
-		*/
-		std::mt19937 _rng;
+	// Default RNG
+	std::mt19937 _rng;
 
-		/*!
-		\brief Initialize the system
-		\param numWorkers number of thread pool worker threads
-		*/
-        ComputeSystem(int numWorkers)
-		: _pool(numWorkers), _batchSize1(1024), _batchSize2(2, 2), _batchSize3(2, 2, 2)
-		{}
-    };
-}
+	ComputeSystem(
+		int numWorkers
+	)
+	: _pool(numWorkers), _batchSize1(1024), _batchSize2(2, 2), _batchSize3(2, 2, 2)
+	{}
+};
+} // namespace ogmaneo

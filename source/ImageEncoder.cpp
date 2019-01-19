@@ -11,14 +11,23 @@
 using namespace ogmaneo;
 
 // Kernels
-void ImageEncoder::init(int pos, std::mt19937 &rng, int vli) {
+void ImageEncoder::init(
+    int pos,
+    std::mt19937 &rng,
+    int vli
+) {
     // Initialize weights into uniform range
 	std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void ImageEncoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled) {
+void ImageEncoder::forward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const FloatBuffer*> &inputActivations,
+    bool learnEnabled
+) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -131,7 +140,12 @@ void ImageEncoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector
     }
 }
 
-void ImageEncoder::backward(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenCs, int vli) {
+void ImageEncoder::backward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    int vli
+) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
@@ -181,9 +195,11 @@ void ImageEncoder::backward(const Int2 &pos, std::mt19937 &rng, const IntBuffer*
     }
 }
 
-void ImageEncoder::createRandom(ComputeSystem &cs,
-    const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
-{
+void ImageEncoder::createRandom(
+    ComputeSystem &cs,
+    const Int3 &hiddenSize,
+    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+) {
     _visibleLayerDescs = visibleLayerDescs;
 
     _hiddenSize = hiddenSize;
@@ -249,7 +265,11 @@ void ImageEncoder::createRandom(ComputeSystem &cs,
 #endif
 }
 
-void ImageEncoder::step(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations, bool learnEnabled) {
+void ImageEncoder::step(
+    ComputeSystem &cs,
+    const std::vector<const FloatBuffer*> &inputActivations,
+    bool learnEnabled
+) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
 
 #ifdef KERNEL_DEBUG
@@ -261,7 +281,10 @@ void ImageEncoder::step(ComputeSystem &cs, const std::vector<const FloatBuffer*>
 #endif
 }
 
-void ImageEncoder::reconstruct(ComputeSystem &cs, const IntBuffer* hiddenCs) {
+void ImageEncoder::reconstruct(
+    ComputeSystem &cs,
+    const IntBuffer* hiddenCs
+) {
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
@@ -276,7 +299,9 @@ void ImageEncoder::reconstruct(ComputeSystem &cs, const IntBuffer* hiddenCs) {
     }
 }
 
-void ImageEncoder::writeToStream(std::ostream &os) const {
+void ImageEncoder::writeToStream(
+    std::ostream &os
+) const {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -309,7 +334,9 @@ void ImageEncoder::writeToStream(std::ostream &os) const {
     }
 }
 
-void ImageEncoder::readFromStream(std::istream &is) {
+void ImageEncoder::readFromStream(
+    std::istream &is
+) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;

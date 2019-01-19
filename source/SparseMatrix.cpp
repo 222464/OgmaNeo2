@@ -20,16 +20,16 @@ SparseMatrix::SparseMatrix(
 
 	int nonZeroCountInRow = 0; // Only need to set this to zero once because it's cumulative
 	
-	for (int row = 0; row < rows; ++row) {
-		int row_offset = row * columns;
+	for (int row = 0; row < rows; row++) {
+		int rowOffset = row * columns;
 
-		for (int col = 0; col < columns; ++col) {
-			int index = row_offset + col;
+		for (int col = 0; col < columns; col++) {
+			int index = rowOffset + col;
 
 			if (data[index] != 0.0f) {
 				_nonZeroValues.push_back(data[index]);
 				_columnIndices.push_back(col);
-				++nonZeroCountInRow;
+				nonZeroCountInRow++;
 			}
 		}
 
@@ -57,7 +57,7 @@ void SparseMatrix::multiply(
 	for (int i = 0; i < length; i = nextIndex) {
 		nextIndex = i + 1;
 
-		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; ++j) {
+		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; j++) {
 			out[i] += _nonZeroValues[j] * in[_columnIndices[j]];
 		}
 	}
@@ -72,12 +72,12 @@ void SparseMatrix::multiplyRange(
 	int end = startIndex + length;
 
 	int nextIndex = 0;
+
 	for (int i = startIndex; i < end; i = nextIndex) {
 		nextIndex = i + 1;
 
-		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; ++j) {
+		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; j++)
 			out[i] += _nonZeroValues[j] * in[_columnIndices[j]];
-		}
 	}
 }
 
@@ -104,18 +104,21 @@ void SparseMatrix::multiplyRectangularRange(
 	int rowEnd = startRow + rectRows;
 	int columnEnd = startColumn + rectColumns;
 
-	if (rowEnd >= rows) rowEnd = rows - 1;
-	if (columnEnd >= columns) columnEnd = columns - 1;
+	if (rowEnd >= rows)
+		rowEnd = rows - 1;
 
-	for (int row = startRow; row < rowEnd; ++row) {
+	if (columnEnd >= columns)
+		columnEnd = columns - 1;
+
+	for (int row = startRow; row < rowEnd; row++) {
 		int row_offset = row * columns;
-		for (int col = startColumn; col < columnEnd; ++col) {
+
+		for (int col = startColumn; col < columnEnd; col++) {
 			int index = row_offset + col;
 			int nextIndex = index + 1;
 
-			for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
+			for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; j++)
 				out[index] += _nonZeroValues[j] * in[_columnIndices[j]];
-			}
 		}
 	}
 }
@@ -127,13 +130,12 @@ void SparseMatrix::multiplyOHERM(
 ) {
 	int rows = nonZeroIndices.size();
 
-	for (int row = 0; row < rows; ++row) {
+	for (int row = 0; row < rows; row++) {
 		int index = row * columns + nonZeroIndices[row];
 		int nextIndex = index + 1;
 
-		for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
+		for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; j++)
 			out[index] += _nonZeroValues[j];
-		}
 	}
 }
 
@@ -145,9 +147,8 @@ void SparseMatrix::multiplyOneRowOHERM(
 	int index = row * columns + nonZeroIndices[row];
 	int nextIndex = index + 1;
 
-	for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
+	for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; j++)
 		out[index] += _nonZeroValues[j];
-	}
 }
 
 void SparseMatrix::multiplyRangeOfRowOHERM(
@@ -159,12 +160,11 @@ void SparseMatrix::multiplyRangeOfRowOHERM(
 ) {
 	int rowEnd = startRow + rowCount;
 
-	for (int row = startRow; row < rowEnd; ++row) {
+	for (int row = startRow; row < rowEnd; row++) {
 		int index = row * columns + nonZeroIndices[row];
 		int nextIndex = index + 1;
 
-		for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
+		for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; j++)
 			out[index] += _nonZeroValues[j];
-		}
 	}
 }

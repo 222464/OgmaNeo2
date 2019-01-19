@@ -14,195 +14,161 @@
 #include <memory>
 
 namespace ogmaneo {
-    /*!
-    \brief Enum describing the type of operation performed by an input layer
-    */
-    enum InputType {
-        _none = 0, _predict = 1
-    };
-    
-    /*!
-    \brief A hierarchy of sparse coders and actors, using the exponential memory structure
-    */
-    class Hierarchy {
-    public:
-        /*!
-        \brief Parameters for a layer
-        Used during construction of a hierarchy
-        */
-        struct LayerDesc {
-            /*!
-            \brief Dimensions of the hidden layer
-            */
-            Int3 _hiddenSize;
+// Type of hierarchy input layer
+enum InputType {
+    _none = 0,
+    _predict = 1
+};
 
-            //!@{
-            /*!
-            \brief Radii of the sparse coder and predictor/actor
-            */
-            int _scRadius;
-            int _pRadius;
-            //!@}
+// A SPH
+class Hierarchy {
+public:
+    // Describes a layer for construction
+    struct LayerDesc {
+        Int3 _hiddenSize; // Size of hidden layer
 
-            /*!
-            \brief Number of ticks a layer takes to update (relative to previous layer)
-            */
-            int _ticksPerUpdate;
+        int _scRadius; // Sparse coder radius
+        int _pRadius; // Prediction Radius
 
-            /*!
-            \brief Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
-            */
-            int _temporalHorizon;
+        int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
-            /*!
-            \brief Current layer (non-feedback) predictor influence
-            */
-            float _currentInfluence;
+        int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
 
-            /*!
-            \brief Initialize defaults
-            */
-            LayerDesc()
-                : _hiddenSize(4, 4, 16),
-                _scRadius(2), _pRadius(2),
-                _ticksPerUpdate(2), _temporalHorizon(2),
-                _currentInfluence(0.1f)
-            {}
-        };
-    private:
-        // Layers
-        std::vector<SparseCoder> _scLayers;
-        std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+        float _currentInfluence; // Current layer (non-feedback) predictor influence
 
-        // Histories
-        std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
-        std::vector<std::vector<int>> _historySizes;
-
-        // Per-layer values
-        std::vector<char> _updates;
-
-        std::vector<int> _ticks;
-        std::vector<int> _ticksPerUpdate;
-
-        // Input dimensions
-        std::vector<Int3> _inputSizes;
-
-    public:
-        /*!
-        \brief Default (do nothing) ctor
-        */
-        Hierarchy()
+        LayerDesc()
+        :
+        _hiddenSize(4, 4, 16),
+        _scRadius(2),
+        _pRadius(2),
+        _ticksPerUpdate(2),
+        _temporalHorizon(2),
+        _currentInfluence(0.1f)
         {}
-
-        /*!
-        \brief Copy ctor
-        */
-        Hierarchy(const Hierarchy &other) {
-            *this = other;
-        }
-
-        /*!
-        \brief Assignment operator
-        */
-        const Hierarchy &operator=(const Hierarchy &other);
-        
-        /*!
-        \brief Create a randomly initialized hierarchy
-        \param cs is the ComputeSystem
-        \param inputSizes vector of input dimensions
-        \param predictInputs flags for which inputs to generate predictions for
-        \param layerDescs vector of LayerDesc structures, describing each layer in sequence
-        */
-        void createRandom(ComputeSystem &cs,
-            const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs);
-
-        /*!
-        \brief Simulation step/tick
-        \param cs is the ComputeSystem
-        \param inputs vector of input activations
-        \param learnEnabled whether learning should be enabled, defaults to true
-        */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled = true);
-
-        /*!
-        \brief Write to stream
-        */
-        void writeToStream(std::ostream &os) const;
-
-        /*!
-        \brief Read from stream
-        */
-        void readFromStream(std::istream &is);
-
-        /*!
-        \brief Get the number of (hidden) layers
-        */
-        int getNumLayers() const {
-            return _scLayers.size();
-        }
-
-        /*!
-        \brief Get the actor output
-        \param i the index of the input to retrieve
-        */
-        const IntBuffer &getPredictionCs(int i) const {
-            return _pLayers.front()[i]->getHiddenCs();
-        }
-
-        /*!
-        \brief Whether this layer received on update this timestep
-        */
-        bool getUpdate(int l) const {
-            return _updates[l];
-        }
-
-        /*!
-        \brief Get current layer ticks, relative to previous layer
-        */
-        int getTicks(int l) const {
-            return _ticks[l];
-        }
-
-        /*!
-        \brief Get layer ticks per update, relative to previous layer
-        */
-        int getTicksPerUpdate(int l) const {
-            return _ticksPerUpdate[l];
-        }
-
-        /*!
-        \brief Get input sizes
-        */
-        const std::vector<Int3> &getInputSizes() const {
-            return _inputSizes;
-        }
-
-        /*!
-        \brief Retrieve a sparse coding layer
-        */
-        SparseCoder &getSCLayer(int l) {
-            return _scLayers[l];
-        }
-
-        /*!
-        \brief Retrieve a sparse coding layer
-        */
-        const SparseCoder &getSCLayer(int l) const {
-            return _scLayers[l];
-        }
-
-        /*!
-        \brief Retrieve predictor layer(s)
-        */
-        std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
-            return _pLayers[l];
-        }
-
-        /*!
-        \brief Retrieve predictor layer(s)
-        */
-        const std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) const {
-            return _pLayers[l];
-        }
     };
-}
+private:
+    // Layers
+    std::vector<SparseCoder> _scLayers;
+    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+
+    // Histories
+    std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
+    std::vector<std::vector<int>> _historySizes;
+
+    // Per-layer values
+    std::vector<char> _updates;
+
+    std::vector<int> _ticks;
+    std::vector<int> _ticksPerUpdate;
+
+    // Input dimensions
+    std::vector<Int3> _inputSizes;
+
+public:
+    // Default
+    Hierarchy() {}
+
+    // Copy
+    Hierarchy(
+        const Hierarchy &other // Hierarchy to copy from
+    ) {
+        *this = other;
+    }
+
+    // Assignment
+    const Hierarchy &operator=(
+        const Hierarchy &other // Hierarchy to assign from
+    );
+    
+    // Create a randomly initialized hierarchy
+    void createRandom(
+        ComputeSystem &cs, // Compute system
+        const std::vector<Int3> &inputSizes, // Sizes of input layers
+        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
+        const std::vector<LayerDesc> &layerDescs // Descriptors for layers
+    );
+
+    // Simulation step/tick
+    void step(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        bool learnEnabled = true // Whether learning is enabled
+    );
+
+    // Write to stream
+    void writeToStream(
+        std::ostream &os // Stream to write to
+    ) const;
+
+    // Read from stream
+    void readFromStream(
+        std::istream &is // Stream to read from
+    );
+
+    // Get the number of layers (scLayers)
+    int getNumLayers() const {
+        return _scLayers.size();
+    }
+
+    // Retrieve predictions
+    const IntBuffer &getPredictionCs(
+        int i // Index of input layer to get predictions for
+    ) const {
+        return _pLayers.front()[i]->getHiddenCs();
+    }
+
+    // Whether this layer received on update this timestep
+    bool getUpdate(
+        int l // Layer index
+    ) const {
+        return _updates[l];
+    }
+
+    // Get current layer ticks, relative to previous layer
+    int getTicks(
+        int l // Layer Index
+    ) const {
+        return _ticks[l];
+    }
+
+    // Get layer ticks per update, relative to previous layer
+    int getTicksPerUpdate(
+        int l // Layer Index
+    ) const {
+        return _ticksPerUpdate[l];
+    }
+
+    // Get input sizes
+    const std::vector<Int3> &getInputSizes() const {
+        return _inputSizes;
+    }
+
+    // Retrieve a sparse coding layer
+    SparseCoder &getSCLayer(
+        int l // Layer index
+    ) {
+        return _scLayers[l];
+    }
+
+    // Retrieve a sparse coding layer, const version
+    const SparseCoder &getSCLayer(
+        int l // Layer index
+    ) const {
+        return _scLayers[l];
+    }
+
+    // Retrieve predictor layer(s)
+    std::vector<std::unique_ptr<Predictor>> &getPLayer(
+        int l // Layer index
+    ) {
+        return _pLayers[l];
+    }
+
+    // Retrieve predictor layer(s), const version
+    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
+        int l // Layer index
+    ) const {
+        return _pLayers[l];
+    }
+};
+} // namespace ogmaneo

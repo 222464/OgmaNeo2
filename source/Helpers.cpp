@@ -12,7 +12,13 @@
 
 using namespace ogmaneo;
 
-void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::mt19937 &)> &func, int size, std::mt19937 &rng, int batchSize) {
+void ogmaneo::runKernel1(
+    ComputeSystem &cs,
+    const std::function<void(int, std::mt19937 &)> &func,
+    int size,
+    std::mt19937 &rng,
+    int batchSize
+) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
@@ -39,7 +45,12 @@ void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::m
         futures[i].wait();
 }
 
-void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize) {
+void ogmaneo::runKernel2(
+    ComputeSystem &cs,
+    const std::function<void(const Int2 &, std::mt19937 &)> &func,
+    const Int2 &size, std::mt19937 &rng,
+    const Int2 &batchSize
+) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
@@ -73,7 +84,13 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
         futures[i].wait();
 }
 
-void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
+void ogmaneo::runKernel3(
+    ComputeSystem &cs,
+    const std::function<void(const Int3 &, std::mt19937 &)> &func,
+    const Int3 &size,
+    std::mt19937 &rng,
+    const Int3 &batchSize
+) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
@@ -110,23 +127,45 @@ void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 
         futures[i].wait();
 }
 
-void ogmaneo::fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {
+void ogmaneo::fillInt(
+    int pos,
+    std::mt19937 &rng,
+    IntBuffer* buffer,
+    int fillValue
+) {
     (*buffer)[pos] = fillValue;
 }
 
-void ogmaneo::fillFloat(int pos, std::mt19937 &rng, FloatBuffer* buffer, float fillValue) {
+void ogmaneo::fillFloat(
+    int pos,
+    std::mt19937 &rng,
+    FloatBuffer* buffer,
+    float fillValue
+) {
     (*buffer)[pos] = fillValue;
 }
 
-void ogmaneo::copyInt(int pos, std::mt19937 &rng, const IntBuffer* src, IntBuffer* dst) {
+void ogmaneo::copyInt(
+    int pos,
+    std::mt19937 &rng,
+    const IntBuffer* src,
+    IntBuffer* dst
+) {
     (*dst)[pos] = (*src)[pos];
 }
 
-void ogmaneo::copyFloat(int pos, std::mt19937 &rng, const FloatBuffer* src, FloatBuffer* dst) {
+void ogmaneo::copyFloat(
+    int pos,
+    std::mt19937 &rng,
+    const FloatBuffer* src,
+    FloatBuffer* dst
+) {
     (*dst)[pos] = (*src)[pos];
 }
 
-std::vector<IntBuffer*> ogmaneo::get(const std::vector<std::shared_ptr<IntBuffer>> &v) {
+std::vector<IntBuffer*> ogmaneo::get(
+    const std::vector<std::shared_ptr<IntBuffer>> &v
+) {
     std::vector<IntBuffer*> vp(v.size());
 
     for (int i = 0; i < v.size(); i++)
@@ -135,7 +174,9 @@ std::vector<IntBuffer*> ogmaneo::get(const std::vector<std::shared_ptr<IntBuffer
     return vp;
 }
 
-std::vector<FloatBuffer*> ogmaneo::get(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
+std::vector<FloatBuffer*> ogmaneo::get(
+    const std::vector<std::shared_ptr<FloatBuffer>> &v
+) {
     std::vector<FloatBuffer*> vp(v.size());
 
     for (int i = 0; i < v.size(); i++)
@@ -144,7 +185,9 @@ std::vector<FloatBuffer*> ogmaneo::get(const std::vector<std::shared_ptr<FloatBu
     return vp;
 }
 
-std::vector<const IntBuffer*> ogmaneo::constGet(const std::vector<std::shared_ptr<IntBuffer>> &v) {
+std::vector<const IntBuffer*> ogmaneo::constGet(
+    const std::vector<std::shared_ptr<IntBuffer>> &v
+) {
     std::vector<const IntBuffer*> vp(v.size());
 
     for (int i = 0; i < v.size(); i++)
@@ -153,11 +196,81 @@ std::vector<const IntBuffer*> ogmaneo::constGet(const std::vector<std::shared_pt
     return vp;
 }
 
-std::vector<const FloatBuffer*> ogmaneo::constGet(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
+std::vector<const FloatBuffer*> ogmaneo::constGet(
+    const std::vector<std::shared_ptr<FloatBuffer>> &v
+) {
     std::vector<const FloatBuffer*> vp(v.size());
 
     for (int i = 0; i < v.size(); i++)
         vp[i] = v[i].get();
 
     return vp;
+}
+
+void ogmaneo::createSMLocalRF(
+    const Int3 &inSize,
+    const Int3 &outSize,
+    int radius,
+    SparseMatrix &mat
+) {
+    int numOut = outSize.x * outSize.y * outSize.z;
+
+    // Projection constant
+    Float2 outToIn = Float2(static_cast<float>(inSize.x) / static_cast<float>(outSize.x),
+        static_cast<float>(inSize.y) / static_cast<float>(outSize.y));
+
+    int diam = radius * 2 + 1;
+
+    int numWeightsPerOutput = diam * diam * inSize.z;
+
+    int weightsSize = numOut * numWeightsPerOutput;
+
+    mat._nonZeroValues.resize(weightsSize);
+
+    mat._rowRanges.resize(numOut + 1);
+    mat._rowRanges[0] = 0;
+
+    mat._columnIndices.resize(weightsSize);
+
+    int wi = 0;
+    int ri = 0;
+
+    // Initialize weight matrix
+    for (int ox = 0; ox < outSize.x; ox++)
+        for (int oy = 0; oy < outSize.y; oy++) {
+            Int2 visiblePositionCenter = project(Int2(ox, oy), outToIn);
+
+            // Lower corner
+            Int2 fieldLowerBound(visiblePositionCenter.x - radius, visiblePositionCenter.y - radius);
+
+            // Bounds of receptive field, clamped to input size
+            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterUpperBound(std::min(inSize.x - 1, visiblePositionCenter.x + radius), std::min(inSize.y - 1, visiblePositionCenter.y + radius));
+
+            for (int oz = 0; oz < outSize.z; oz++) {
+                Int3 outPos(ox, oy, oz);
+
+                int outIndex = address3(outPos, Int2(outSize.x, outSize.y));
+                
+                int nonZeroInRow = 0;
+
+                for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
+                    for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
+                        for (int iz = 0; iz < inSize.z; iz++) {
+                            Int3 inPos(ix, iy, iz);
+
+                            int inIndex = address3(inPos, Int2(inSize.x, inSize.y));
+
+                            mat._columnIndices[wi] = inIndex;
+                            
+                            nonZeroInRow++;
+                            wi++;
+                        }
+                    }
+
+                mat._rowRanges[ri + 1] = mat._rowRanges[ri] + nonZeroInRow;
+
+                ri++;
+            }
+        }
 }
