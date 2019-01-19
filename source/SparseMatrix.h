@@ -103,15 +103,17 @@ struct SparseMatrix {
 	// Multiply by a one-hot-row matrix
 	void multiplyOHVs(
 		const std::vector<int> &nonZeroIndices,
-		std::vector<float> &out
+		std::vector<float> &out,
+		int oneHotSize
 	);
 
 	// Multiply a range of rows from a given one-hot-row matrix
 	void multiplyRangeOfRowOHVs(
 		const std::vector<int> &nonZeroIndices,
+		std::vector<float> &out,
 		int startRow,
 		int rowCount,
-		std::vector<float> &out
+		int oneHotSize
 	);
 
 	// --- One-Hot Vectors Operations: Transpose ---
@@ -119,15 +121,17 @@ struct SparseMatrix {
 	// Multiply by a one-hot-row matrix
 	void multiplyOHVsT(
 		const std::vector<int> &nonZeroIndices,
-		std::vector<float> &out
+		std::vector<float> &out,
+		int oneHotSize
 	);
 
 	// Multiply a range of rows from a given one-hot-row matrix
 	void multiplyRangeOfRowOHVsT(
 		const std::vector<int> &nonZeroIndices,
+		std::vector<float> &out,
 		int startRow,
 		int rowCount,
-		std::vector<float> &out
+		int oneHotSize
 	);
 };
 } // namespace ogmaneo
