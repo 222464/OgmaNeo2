@@ -10,12 +10,20 @@
 
 #include <vector>
 
+#include <assert.h>
+
 namespace ogmaneo {
 // Compressed sparse row (CSR) format
 struct SparseMatrix {
+	int _rows, _columns; // Dimensions
+
 	std::vector<float> _nonZeroValues;
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
+
+	// Transpose
+	std::vector<int> _rowRangesT;
+	std::vector<int> _columnIndicesT;
 
 	// --- Init ---
 
@@ -23,24 +31,28 @@ struct SparseMatrix {
 
 	// If you don't want to construct immediately
 	SparseMatrix(
+		int rows,
+		int columns,
 		const std::vector<float> &nonZeroValues,
 		const std::vector<int> &rowRanges,
 		const std::vector<int> &columnIndices
 	) {
-		create(nonZeroValues, rowRanges, columnIndices);
+		create(rows, columns, nonZeroValues, rowRanges, columnIndices);
 	}
 
 	// From a non-compressed sparse matrix
 	SparseMatrix(
-		const std::vector<float> &data,
 		int rows,
-		int columns
+		int columns,
+		const std::vector<float> &data
 	) {
-		create(data, rows, columns);
+		create(rows, columns, data);
 	}
 
 	// If you don't want to construct immediately
 	void create(
+		int rows,
+		int columns,
 		const std::vector<float> &nonZeroValues,
 		const std::vector<int> &rowRanges,
 		const std::vector<int> &columnIndices
@@ -48,14 +60,16 @@ struct SparseMatrix {
 
 	// From a non-compressed sparse matrix
 	void create(
-		const std::vector<float> &data,
 		int rows,
-		int columns
+		int columns,
+		const std::vector<float> &data
 	);
+
+	// Generate a transpose, must be called after the original has been created
+	void createT();
 
 	// --- Dense ---
 
-	// Size of "in" must equal size of "out"
 	void multiply(
 		const std::vector<float> &in,
 		std::vector<float> &out
@@ -65,20 +79,55 @@ struct SparseMatrix {
 	void multiplyRange(
 		const std::vector<float> &in,
 		std::vector<float> &out,
-		int startIndex,
-		int length
+		int startRow,
+		int rowCount
 	);
 
-	// Treats "in" as having two dimensions
-	void multiplyRectangularRange(
+	// --- Transpose ---
+
+	void multiplyT(
+		const std::vector<float> &in,
+		std::vector<float> &out
+	);
+
+	// The range specifies which elements of "out" are to be computed
+	void multiplyRangeT(
 		const std::vector<float> &in,
 		std::vector<float> &out,
 		int startRow,
-		int startColumn,
-		int rectRows,
-		int rectColumns,
-		int rows,
-		int columns
+		int rowCount
+	);
+
+	// --- One-Hot Vectors Operations ---
+
+	// Multiply by a one-hot-row matrix
+	void multiplyOHVs(
+		const std::vector<int> &nonZeroIndices,
+		std::vector<float> &out
+	);
+
+	// Multiply a range of rows from a given one-hot-row matrix
+	void multiplyRangeOfRowOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int startRow,
+		int rowCount,
+		std::vector<float> &out
+	);
+
+	// --- One-Hot Vectors Operations: Transpose ---
+
+	// Multiply by a one-hot-row matrix
+	void multiplyOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		std::vector<float> &out
+	);
+
+	// Multiply a range of rows from a given one-hot-row matrix
+	void multiplyRangeOfRowOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int startRow,
+		int rowCount,
+		std::vector<float> &out
 	);
 };
 } // namespace ogmaneo
