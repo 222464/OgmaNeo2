@@ -1,5 +1,12 @@
-#ifndef SPARSE_MATRIX_HEADER
-#define SPARSE_MATRIX_HEADER
+// ----------------------------------------------------------------------------
+//  OgmaNeo
+//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//
+//  This copy of OgmaNeo is licensed to you under the terms described
+//  in the OGMANEO_LICENSE.md file included in this distribution.
+// ----------------------------------------------------------------------------
+
+#pragma once
 
 #include <vector>
 
@@ -50,5 +57,3 @@ struct SparseMatrix {
 		std::vector<float> &out
 	);
 };
-
-#endif
