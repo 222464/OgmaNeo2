@@ -161,7 +161,7 @@ int main() {
 				c.g = colorDist(rng);
 				c.b = colorDist(rng);
 
-				img.setPixel(m._columnIndices[j], i, c);
+				img.setPixel(m._columnIndices[j], m._rowIndices[j], c);
 
 				total++;
 			}
@@ -194,7 +194,7 @@ int main() {
 				c.g = colorDist(rng);
 				c.b = colorDist(rng);
 
-				img.setPixel(m._rowIndices[j], i, c);
+				img.setPixel(m._rowIndices[j], m._columnIndices[j], c);
 
 				total++;
 			}
