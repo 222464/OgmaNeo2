@@ -25,15 +25,15 @@ void SparseMatrix::create(
 	_rows = rows;
 	_columns = columns;
 
-	_rowRanges.reserve(rows + 1);
+	_rowRanges.reserve(_rows + 1);
 	_rowRanges.push_back(0);
 
 	int nonZeroCountInRow = 0; // Only need to set this to zero once because it's cumulative
 	
-	for (int row = 0; row < rows; row++) {
-		int rowOffset = row * columns;
+	for (int row = 0; row < _rows; row++) {
+		int rowOffset = row * _columns;
 
-		for (int col = 0; col < columns; col++) {
+		for (int col = 0; col < _columns; col++) {
 			int index = rowOffset + col;
 
 			if (data[index] != 0.0f) {
@@ -48,33 +48,31 @@ void SparseMatrix::create(
 }
 
 void SparseMatrix::createT() {
-	_rowRangesT.resize(_columns + 1);
-	_rowRangesT[0] = 0;
+	_columnRanges.resize(_columns + 1);
+	_columnRanges[0] = 0;
 
-	_columnIndicesT.resize(_nonZeroValues.size());
+	_rowIndices.resize(_nonZeroValues.size());
 
 	// Temporary nonzero value count
-	std::vector<int> nonZeroCountInRowT(_columns, 0);
+	std::vector<int> nonZeroCountInColumns(_columns, 0);
 
 	int nextIndex;
 
-	int nonZeroValueIndex = 0;
-	
 	for (int i = 0; i < _rows; i = nextIndex) {
 		nextIndex = i + 1;
 
 		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; j++) {
-			_columnIndicesT[nonZeroValueIndex] = i;
+			_rowIndices[j] = i;
 
-			nonZeroCountInRowT[_columnIndices[j]]++;
-
-			nonZeroValueIndex++;
+			nonZeroCountInColumns[_columnIndices[j]]++;
 		}
 	}
 
-	// Build _rowRangesT
-	for (int i = 0; i < nonZeroCountInRowT.size(); i++)
-		_rowRangesT[i + 1] = _rowRangesT[i] + nonZeroCountInRowT[i];
+	// Build _columnRanges
+	for (int i = 0; i < nonZeroCountInColumns.size(); i++)
+		_columnRanges[i + 1] = _columnRanges[i] + nonZeroCountInColumns[i];
+
+	assert(_columnRanges.back() == _rowRanges.back());
 }
 
 void SparseMatrix::multiply(
@@ -123,8 +121,8 @@ void SparseMatrix::multiplyT(
 	for (int i = 0; i < _columns; i = nextIndex) {
 		nextIndex = i + 1;
 
-		for (int j = _rowRangesT[i]; j < _rowRangesT[nextIndex]; j++) {
-			out[i] += _nonZeroValues[j] * in[_columnIndicesT[j]];
+		for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; j++) {
+			out[i] += _nonZeroValues[j] * in[_rowIndices[j]];
 		}
 	}
 }
@@ -142,8 +140,8 @@ void SparseMatrix::multiplyRangeT(
 	for (int i = startRow; i < end; i = nextIndex) {
 		nextIndex = i + 1;
 
-		for (int j = _rowRangesT[i]; j < _rowRangesT[nextIndex]; j++)
-			out[i] += _nonZeroValues[j] * in[_columnIndicesT[j]];
+		for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; j++)
+			out[i] += _nonZeroValues[j] * in[_rowIndices[j]];
 	}
 }
 
@@ -231,8 +229,8 @@ void SparseMatrix::multiplyOHVsT(
 		for (int i = 0; i < _columns; i = nextIndex) {
 			nextIndex = i + 1;
 
-			for (int jj = _rowRangesT[i]; jj < _rowRangesT[nextIndex]; jj += oneHotSize) {
-				int j = jj + nonZeroIndices[_columnIndicesT[jj] / oneHotSize];
+			for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+				int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
 				out[i] -= _nonZeroValues[j];
 			}
@@ -244,8 +242,8 @@ void SparseMatrix::multiplyOHVsT(
 		for (int i = 0; i < _columns; i = nextIndex) {
 			nextIndex = i + 1;
 
-			for (int jj = _rowRangesT[i]; jj < _rowRangesT[nextIndex]; jj += oneHotSize) {
-				int j = jj + nonZeroIndices[_columnIndicesT[jj] / oneHotSize];
+			for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+				int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
 				out[i] += _nonZeroValues[j];
 			}
@@ -269,8 +267,8 @@ void SparseMatrix::multiplyRangeOfRowOHVsT(
 		for (int i = startRow; i < endRow; i = nextIndex) {
 			nextIndex = i + 1;
 
-			for (int jj = _rowRangesT[i]; jj < _rowRangesT[nextIndex]; jj += oneHotSize) {
-				int j = jj + nonZeroIndices[_columnIndicesT[jj] / oneHotSize];
+			for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+				int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
 				out[i] -= _nonZeroValues[j];
 			}
@@ -282,8 +280,8 @@ void SparseMatrix::multiplyRangeOfRowOHVsT(
 		for (int i = startRow; i < endRow; i = nextIndex) {
 			nextIndex = i + 1;
 
-			for (int jj = _rowRangesT[i]; jj < _rowRangesT[nextIndex]; jj += oneHotSize) {
-				int j = jj + nonZeroIndices[_columnIndicesT[jj] / oneHotSize];
+			for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+				int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
 				out[i] += _nonZeroValues[j];
 			}
@@ -340,7 +338,7 @@ void SparseMatrix::deltaOHVRuleOHVs(
 		}
 	}
 
-	// Positive	
+	// Negative	
 	{
 		int negativeRow = startIndex + negativeIndex;
 
@@ -348,6 +346,47 @@ void SparseMatrix::deltaOHVRuleOHVs(
 		
 		for (int jj = _rowRanges[negativeRow]; jj < _rowRanges[nextIndex]; jj += inputOneHotSize) {
 			int j = jj + nonZeroIndices[_columnIndices[jj] / inputOneHotSize];
+
+			_nonZeroValues[j] -= alpha;
+		}
+	}
+}
+
+void SparseMatrix::deltaOHVRuleOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	int OHVIndex,
+	int inputOneHotSize,
+	int outputOneHotSize,
+	int positiveIndex,
+	int negativeIndex,
+	float alpha
+) {
+	if (positiveIndex == negativeIndex)
+		return;
+
+	int startIndex = OHVIndex * outputOneHotSize;
+
+	// Positive	
+	{
+		int positiveRow = startIndex + positiveIndex;
+
+		int nextIndex = positiveRow + 1;
+		
+		for (int jj = _columnRanges[positiveRow]; jj < _columnRanges[nextIndex]; jj += inputOneHotSize) {
+			int j = jj + nonZeroIndices[_rowIndices[jj] / inputOneHotSize];
+
+			_nonZeroValues[j] += alpha;
+		}
+	}
+
+	// Negative	
+	{
+		int negativeRow = startIndex + negativeIndex;
+
+		int nextIndex = negativeRow + 1;
+		
+		for (int jj = _columnRanges[negativeRow]; jj < _columnRanges[nextIndex]; jj += inputOneHotSize) {
+			int j = jj + nonZeroIndices[_rowIndices[jj] / inputOneHotSize];
 
 			_nonZeroValues[j] -= alpha;
 		}

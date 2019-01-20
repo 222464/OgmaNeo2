@@ -11,14 +11,23 @@
 using namespace ogmaneo;
 
 // Kernels
-void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
+void SparseCoder::init(
+    int pos,
+    std::mt19937 &rng,
+    int vli
+) {
     // Initialize weights into uniform range
 	std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
     _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
 }
 
-void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, bool firstIter) {
+void SparseCoder::forward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const IntBuffer*> &inputCs,
+    bool firstIter
+) {
     // --- Clear Activations ---
 
     if (firstIter) {
@@ -87,7 +96,12 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
     _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
+void SparseCoder::backward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const IntBuffer*> &inputCs,
+    int vli
+) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
@@ -100,7 +114,7 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
 
-        vl._weights.multiplyRangeOfRowOHVs(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
+        vl._weights.multiplyRangeOfRowOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
 
     // --- Find max ---
@@ -121,7 +135,12 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
     vl._reconCs[address2R(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
+void SparseCoder::learn(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const IntBuffer*> &inputCs,
+    int vli
+) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
@@ -132,12 +151,14 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
     int positiveIndex = (*inputCs[vli])[visibleColumnIndex];
     int negativeIndex = vl._reconCs[visibleColumnIndex];
 
-    vl._weights.deltaOHVRuleOHVs(_hiddenCs, visibleColumnIndex, _hiddenSize.z, vld._size.z, positiveIndex, negativeIndex, _alpha);
+    vl._weights.deltaOHVRuleOHVsT(_hiddenCs, visibleColumnIndex, _hiddenSize.z, vld._size.z, positiveIndex, negativeIndex, _alpha);
 }
 
-void SparseCoder::createRandom(ComputeSystem &cs,
-    const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
-{
+void SparseCoder::createRandom(
+    ComputeSystem &cs,
+    const Int3 &hiddenSize,
+    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+) {
     _visibleLayerDescs = visibleLayerDescs;
 
     _hiddenSize = hiddenSize;
@@ -193,7 +214,10 @@ void SparseCoder::createRandom(ComputeSystem &cs,
     _hiddenActivations = FloatBuffer(numHidden);
 }
 
-void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
+void SparseCoder::activate(
+    ComputeSystem &cs,
+    const std::vector<const IntBuffer*> &visibleCs
+) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -224,7 +248,10 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*
     }
 }
 
-void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
+void SparseCoder::learn(
+    ComputeSystem &cs,
+    const std::vector<const IntBuffer*> &visibleCs
+) {
     // Final reconstruction + learning
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -240,7 +267,9 @@ void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &
     }
 }
 
-void SparseCoder::writeToStream(std::ostream &os) const {
+void SparseCoder::writeToStream(
+    std::ostream &os
+) const {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -263,7 +292,9 @@ void SparseCoder::writeToStream(std::ostream &os) const {
     }
 }
 
-void SparseCoder::readFromStream(std::istream &is) {
+void SparseCoder::readFromStream(
+    std::istream &is
+) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;

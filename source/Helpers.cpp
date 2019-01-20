@@ -273,6 +273,9 @@ void ogmaneo::createSMLocalRF(
 
     mat._nonZeroValues.shrink_to_fit();
     mat._columnIndices.shrink_to_fit();
+
+    mat._rows = numOut;
+    mat._columns = inSize.x * inSize.y * inSize.z;
 }
 
 void ogmaneo::writeSMToStream(
@@ -285,8 +288,8 @@ void ogmaneo::writeSMToStream(
     writeBufferToStream(os, &mat._nonZeroValues);
     writeBufferToStream(os, &mat._rowRanges);
     writeBufferToStream(os, &mat._columnIndices);
-    writeBufferToStream(os, &mat._rowRangesT);
-    writeBufferToStream(os, &mat._columnIndicesT);
+    writeBufferToStream(os, &mat._columnRanges);
+    writeBufferToStream(os, &mat._rowIndices);
 }
 
 void ogmaneo::readSMFromStream(
@@ -299,6 +302,6 @@ void ogmaneo::readSMFromStream(
     readBufferFromStream(is, &mat._nonZeroValues);
     readBufferFromStream(is, &mat._rowRanges);
     readBufferFromStream(is, &mat._columnIndices);
-    readBufferFromStream(is, &mat._rowRangesT);
-    readBufferFromStream(is, &mat._columnIndicesT);
+    readBufferFromStream(is, &mat._columnRanges);
+    readBufferFromStream(is, &mat._rowIndices);
 }

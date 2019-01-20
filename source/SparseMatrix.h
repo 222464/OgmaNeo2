@@ -22,8 +22,8 @@ struct SparseMatrix {
 	std::vector<int> _columnIndices;
 
 	// Transpose
-	std::vector<int> _rowRangesT;
-	std::vector<int> _columnIndicesT;
+	std::vector<int> _columnRanges;
+	std::vector<int> _rowIndices;
 
 	// --- Init ---
 
@@ -151,6 +151,16 @@ struct SparseMatrix {
 
 	// For when deltas are also OHVs
 	void deltaOHVRuleOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int OHVIndex,
+		int inputOneHotSize,
+		int outputOneHotSize,
+		int positiveIndex,
+		int negativeIndex,
+		float alpha
+	);
+
+	void deltaOHVRuleOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int OHVIndex,
 		int inputOneHotSize,
