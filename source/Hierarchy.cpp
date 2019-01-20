@@ -90,10 +90,8 @@ void Hierarchy::createRandom(
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            if (l < _scLayers.size() - 1) {
+            if (l < _scLayers.size() - 1)
                 pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
-                pVisibleLayerDescs[0]._influence = layerDescs[l]._currentInfluence;
-            }
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
@@ -135,10 +133,8 @@ void Hierarchy::createRandom(
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            if (l < _scLayers.size() - 1) {
+            if (l < _scLayers.size() - 1)
                 pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
-                pVisibleLayerDescs[0]._influence = layerDescs[l]._currentInfluence;
-            }
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {

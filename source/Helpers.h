@@ -206,6 +206,27 @@ inline int address4(
     return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
 }
 
+inline int address2R(
+    const Int2 &pos, // Position
+    const Int2 &dims // Dimensions to ravel with
+) {
+    return pos.y + pos.x * dims.y;
+}
+
+inline int address3R(
+    const Int3 &pos, // Position
+    const Int3 &dims // Dimensions to ravel with
+) {
+    return pos.z + pos.y * dims.z + pos.x * dims.z * dims.y;
+}
+
+inline int address4R(
+    const Int4 &pos, // Position
+    const Int4 &dims // Dimensions to ravel with
+) {
+    return pos.w + pos.z * dims.w + pos.y * dims.w * dims.z + pos.x * dims.w * dims.z * dims.y;
+}
+
 // --- Getters ---
 
 std::vector<IntBuffer*> get(

@@ -34,14 +34,16 @@ void Predictor::forward(
 
     // --- Multiply ---
 
-    int startIndex = address3(Int3(pos.x, pos.y, 0), Int2(_hiddenSize.x, _hiddenSize.y));
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.multiplyRangeOfRowOHVs(*inputCs[vli], _hiddenActivations, startIndex, _hiddenSize.z, vld._size.z);
+            vl._weights.multiplyRangeOfRowOHVs(*inputCs[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
+        }
     }
 
     // --- Find max ---
@@ -51,11 +53,7 @@ void Predictor::forward(
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        Int3 hiddenPosition(pos.x, pos.y, hc);
-
-        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
-
-        _hiddenActivations[hiddenIndex] = sigmoid(_hiddenActivations[hiddenIndex]);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -78,19 +76,21 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hidde
 
         float target = (hc == targetIndex ? 1.0f : 0.0f);
 
-        _hiddenDeltas[hiddenIndex] = _alpha * (target - _hiddenActivations[hiddenIndex]); // Delta
+        _hiddenDeltas[hiddenIndex] = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex])); // Delta
     }
 
     // --- Delta Rule ---
 
-    int startIndex = address3(Int3(pos.x, pos.y, 0), Int2(_hiddenSize.x, _hiddenSize.y));
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.deltaRuleRangeOHVs(vl._inputCsPrev, _hiddenDeltas, startIndex, _hiddenSize.z, vld._size.z); // Apply delta rule
+            vl._weights.deltaRuleRangeOHVs(vl._inputCsPrev, _hiddenDeltas, hiddenIndex, 1, vld._size.z); // Apply delta rule
+        }
     }
 }
 

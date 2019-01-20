@@ -130,7 +130,7 @@ int main() {
 	m.print(6);
 	printf("\n");
 
-	SparseMatrix sm(m._data, m._rows, m._columns);
+	SparseMatrix sm(4, 4, m._data);
 
 	{
 		std::vector<float> test = { 1.0f, 1.0f, 1.0f, 1.0f };

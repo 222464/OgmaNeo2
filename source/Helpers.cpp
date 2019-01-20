@@ -225,14 +225,13 @@ void ogmaneo::createSMLocalRF(
 
     int weightsSize = numOut * numWeightsPerOutput;
 
-    mat._nonZeroValues.resize(weightsSize);
+    mat._nonZeroValues.reserve(weightsSize);
 
     mat._rowRanges.resize(numOut + 1);
     mat._rowRanges[0] = 0;
 
-    mat._columnIndices.resize(weightsSize);
+    mat._columnIndices.reserve(weightsSize);
 
-    int wi = 0;
     int ri = 0;
 
     // Initialize weight matrix
@@ -250,8 +249,6 @@ void ogmaneo::createSMLocalRF(
             for (int oz = 0; oz < outSize.z; oz++) {
                 Int3 outPos(ox, oy, oz);
 
-                int outIndex = address3(outPos, Int2(outSize.x, outSize.y));
-                
                 int nonZeroInRow = 0;
 
                 for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
@@ -259,12 +256,12 @@ void ogmaneo::createSMLocalRF(
                         for (int iz = 0; iz < inSize.z; iz++) {
                             Int3 inPos(ix, iy, iz);
 
-                            int inIndex = address3(inPos, Int2(inSize.x, inSize.y));
+                            int inIndex = address3R(inPos, inSize);
 
-                            mat._columnIndices[wi] = inIndex;
+                            mat._nonZeroValues.push_back(0.0f);
+                            mat._columnIndices.push_back(inIndex);
                             
                             nonZeroInRow++;
-                            wi++;
                         }
                     }
 
@@ -273,8 +270,10 @@ void ogmaneo::createSMLocalRF(
                 ri++;
             }
         }
-}
 
+    mat._nonZeroValues.shrink_to_fit();
+    mat._columnIndices.shrink_to_fit();
+}
 
 void ogmaneo::writeSMToStream(
     std::ostream &os,
