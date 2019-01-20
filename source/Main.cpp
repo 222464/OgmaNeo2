@@ -117,6 +117,46 @@ int main() {
 		printVector(result, 6);
 		printf("Sparse matrix:\n");
 		printVector(result2, 6);
+		printf("\n");
+	}
+
+	// Tranpose test
+	{
+		sm.initTranpose();
+
+		printf("Sparse Matrix:\n");
+		sm.print(6);
+		printf("\n");
+		printf("Sparse Matrix Transposed:\n");
+		sm.printT(6);
+		printf("\n");
+	}
+
+	// Not square
+	{
+		printf("Not square test:\n");
+
+		Matrix nsm(4, 5);
+		nsm(1, 0) = 5.0f;
+		nsm(1, 1) = 8.0f;
+		nsm(2, 2) = 3.0f;
+		nsm(3, 1) = 6.0f;
+		nsm(0, 4) = 2.0f;
+
+		SparseMatrix nssm(nsm._data, nsm._rows, nsm._columns);
+		nssm.initTranpose();
+
+		printf("Not sparse:\n");
+		nsm.print(6);
+		printf("\n");
+
+		printf("Sparse:\n");
+		nssm.print(6);
+		printf("\n");
+
+		printf("Sparse Transposed:\n");
+		nssm.printT(6);
+		printf("\n");
 	}
 
 	getchar();

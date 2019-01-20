@@ -16,11 +16,16 @@
 struct SparseMatrix {
 	int _rows;
 	int _columns;
+
 	std::vector<float> _nonZeroValues;
+
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
 
-	SparseMatrix() {}
+	std::vector<int> _columnRanges;
+	std::vector<int> _rowIndices;
+
+	SparseMatrix();
 
 	SparseMatrix(
 		int rows,
@@ -46,6 +51,15 @@ struct SparseMatrix {
 		const std::vector<int> &columnIndices
 	);
 
+	void initFromMatrix(
+		const std::vector<float> &data,
+		int rows,
+		int columns
+	);
+
+	// Needs to be called once before using transposed functions
+	void initTranpose();
+
 	// Size of "in" must equal size of "out"
 	void multiplyVector(
 		const std::vector<float> &in,
@@ -56,4 +70,8 @@ struct SparseMatrix {
 		const OneHotVectorArray &arr,
 		std::vector<float> &out
 	);
+
+	void print(int elementWidth);
+
+	void printT(int elementWidth);
 };
