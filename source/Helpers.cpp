@@ -274,3 +274,32 @@ void ogmaneo::createSMLocalRF(
             }
         }
 }
+
+
+void ogmaneo::writeSMToStream(
+    std::ostream &os,
+    const SparseMatrix &mat
+) {
+    os.write(reinterpret_cast<const char*>(&mat._rows), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&mat._columns), sizeof(int));
+
+    writeBufferToStream(os, &mat._nonZeroValues);
+    writeBufferToStream(os, &mat._rowRanges);
+    writeBufferToStream(os, &mat._columnIndices);
+    writeBufferToStream(os, &mat._rowRangesT);
+    writeBufferToStream(os, &mat._columnIndicesT);
+}
+
+void ogmaneo::readSMFromStream(
+    std::istream &is,
+    SparseMatrix &mat
+) {
+    is.read(reinterpret_cast<char*>(&mat._rows), sizeof(int));
+    is.read(reinterpret_cast<char*>(&mat._columns), sizeof(int));
+
+    readBufferFromStream(is, &mat._nonZeroValues);
+    readBufferFromStream(is, &mat._rowRanges);
+    readBufferFromStream(is, &mat._columnIndices);
+    readBufferFromStream(is, &mat._rowRangesT);
+    readBufferFromStream(is, &mat._columnIndicesT);
+}

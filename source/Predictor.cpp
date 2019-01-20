@@ -17,7 +17,7 @@ void Predictor::init(
     int vli)
  {
     // Randomly initialize weights in range
-	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
+	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
 
     _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
 }
@@ -27,11 +27,24 @@ void Predictor::forward(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    // Cache address calculations (taken from addressN functions)
-    int dxy = _hiddenSize.x * _hiddenSize.y;
-    int dxyz = dxy * _hiddenSize.z;
+    // --- Clear Activations ---
 
-    // ------------------------------ Action ------------------------------
+    for (int hc = 0; hc < _hiddenSize.z; hc++)
+        _hiddenActivations[address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
+
+    // --- Multiply ---
+
+    int startIndex = address3(Int3(pos.x, pos.y, 0), Int2(_hiddenSize.x, _hiddenSize.y));
+
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        vl._weights.multiplyRangeOfRowOHVs(*inputCs[vli], _hiddenActivations, startIndex, _hiddenSize.z, vld._size.z);
+    }
+
+    // --- Find max ---
 
     int maxIndex = 0;
     float maxActivation = -999999.0f;
@@ -42,89 +55,42 @@ void Predictor::forward(
 
         int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
-        // Partially computed address of weight
-        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+        _hiddenActivations[hiddenIndex] = sigmoid(_hiddenActivations[hiddenIndex]);
 
-        float sum = 0.0f;
-        float count = 0.0f;
-    
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            int nextIndex = hiddenIndex + 1;
-
-            for (int jj = vl._weights._rowRanges[hiddenIndex]; jj < vl._weights._rowRanges[nextIndex]; jj += vld._size.z) {
-                int j = jj + (*inputCs[vli])[jj / vld._size.z];
-
-                sum += vl._weights._nonZeroValues[j];
-            }
-
-            count += vl._weights._rowRanges[nextIndex] - vl._weights._rowRanges[hiddenIndex];
-        }
-
-        // Normalize and save value for later
-        float activation = sum / std::max(0.0001f, count);
-
-        if (activation > maxActivation) {
-            maxActivation = activation;
+        if (_hiddenActivations[hiddenIndex] > maxActivation) {
+            maxActivation = _hiddenActivations[hiddenIndex];
             maxIndex = hc;
         }
-
-        _hiddenActivations[address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))] = sigmoid(activation);
     }
 
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
 void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenTargetCs) {
-    // Cache address calculations
-    int dxy = _hiddenSize.x * _hiddenSize.y;
-    int dxyz = dxy * _hiddenSize.z;
+    int targetIndex = (*hiddenTargetCs)[address2(pos, _hiddenSize.x)];
 
-    int hiddenColumnIndex = address2(pos, _hiddenSize.x);
+    // --- Find Deltas ---
 
-    // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
-        // Partially computed address of weight
-        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
-        float delta = _alpha * ((hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f) - _hiddenActivations[address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))]);
+        float target = (hc == targetIndex ? 1.0f : 0.0f);
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        _hiddenDeltas[hiddenIndex] = _alpha * (target - _hiddenActivations[hiddenIndex]); // Delta
+    }
 
-            // Center of projected position
-            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+    // --- Delta Rule ---
 
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+    int startIndex = address3(Int3(pos.x, pos.y, 0), Int2(_hiddenSize.x, _hiddenSize.y));
 
-            // Additional addressing dimensions
-            int diam = vld._radius * 2 + 1;
-            int diam2 = diam * diam;
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
-
-            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                    Int2 visiblePosition(x, y);
-
-                    int visibleCPrev = vl._inputCsPrev[address2(visiblePosition, vld._size.x)];
-
-                    // Final component of address
-                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
-
-                    vl._weights[dPartial + az * dxyz] += delta;
-                }
-        }
+        vl._weights.deltaRuleRangeOHVs(vl._inputCsPrev, _hiddenDeltas, startIndex, _hiddenSize.z, vld._size.z); // Apply delta rule
     }
 }
 
@@ -189,6 +155,15 @@ void Predictor::createRandom(ComputeSystem &cs,
         fillFloat(x, cs._rng, &_hiddenActivations, 0.0f);
 #else
     runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenActivations, 0.0f), numHidden, cs._rng, cs._batchSize1);
+#endif
+
+    _hiddenDeltas = FloatBuffer(numHidden);
+
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHidden; x++)
+        fillFloat(x, cs._rng, &_hiddenDeltas, 0.0f);
+#else
+    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenDeltas, 0.0f), numHidden, cs._rng, cs._batchSize1);
 #endif
 }
 
@@ -259,7 +234,7 @@ void Predictor::writeToStream(std::ostream &os) const {
 
         os.write(reinterpret_cast<const char*>(&vl._hiddenToVisible), sizeof(Float2));
 
-        writeBufferToStream(os, &vl._weights);
+        writeSMToStream(os, vl._weights);
 
         writeBufferToStream(os, &vl._inputCsPrev);
     }
@@ -295,7 +270,7 @@ void Predictor::readFromStream(std::istream &is) {
 
         is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
 
-        readBufferFromStream(is, &vl._weights);
+        readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._inputCsPrev);
     }

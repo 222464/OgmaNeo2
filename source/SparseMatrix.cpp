@@ -226,3 +226,25 @@ void SparseMatrix::multiplyRangeOfRowOHVsT(
 		}
 	}
 }
+
+void SparseMatrix::deltaRuleRangeOHVs(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &deltas,
+	int startRow,
+	int rowCount,
+	int oneHotSize
+) {
+	int endRow = startRow + rowCount;
+
+	int nextIndex;
+	
+	for (int i = startRow; i < endRow; i = nextIndex) {
+		nextIndex = i + 1;
+
+		for (int jj = _rowRanges[i]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+			int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+			_nonZeroValues[j] += deltas[i];
+		}
+	}
+}

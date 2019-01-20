@@ -269,4 +269,16 @@ void createSMLocalRF(
     int radius, // Radius of output onto input
     SparseMatrix &mat // Matrix to fill
 );
+
+// --- Sparse Matrix Serialization ---
+
+void writeSMToStream(
+    std::ostream &os, // Stream to write to
+    const SparseMatrix &mat // Matrix to write to stream
+);
+
+void readSMFromStream(
+    std::istream &is, // Stream to read from
+    SparseMatrix &mat // Matrix to read from stream
+);
 } // namespace ogmaneo

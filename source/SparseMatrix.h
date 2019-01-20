@@ -133,5 +133,15 @@ struct SparseMatrix {
 		int rowCount,
 		int oneHotSize
 	);
+
+	// --- Matrix Modification Rules ---
+
+	void deltaRuleRangeOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &deltas,
+		int startRow,
+		int rowCount,
+		int oneHotSize
+	);
 };
 } // namespace ogmaneo
