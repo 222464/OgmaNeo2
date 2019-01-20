@@ -13,8 +13,6 @@ struct SparseMatrix {
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
 
-	// --- INIT --- \\
-
 	SparseMatrix() {}
 
 	SparseMatrix(
@@ -47,7 +45,6 @@ struct SparseMatrix {
 		std::vector<float> &out
 	);
 
-	// Size of out = arr.size() * vectorSize
 	void multiplyOneHotVectorArray(
 		const OneHotVectorArray &arr,
 		std::vector<float> &out
