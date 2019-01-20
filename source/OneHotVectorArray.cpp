@@ -21,21 +21,21 @@ void OneHotVectorArray::fromVectorMax(
 	const std::vector<float> &data
 ) {
 	for (int vectorIndex = 0; vectorIndex < _vectorSize; ++vectorIndex) {
-		int vector_offset = vectorIndex * _vectorSize;
-		int max_index = 0;
-		float max_value = 0.0f;
+		int vectorOffset = vectorIndex * _vectorSize;
+		int maxIndex = 0;
+		float maxValue = 0.0f;
 
 		for (int i = 0; i < _vectorSize; ++i) {
-			int index = vector_offset + i;
+			int index = vectorOffset + i;
 
 			float value = data[index];
 
-			if (value > max_value) {
-				max_index = index;
-				max_value = value;
+			if (value > maxValue) {
+				maxIndex = index;
+				maxValue = value;
 			}
 		}
 
-		_indices[vector_offset] = max_index;
+		_indices[vectorOffset] = maxIndex;
 	}
 }
