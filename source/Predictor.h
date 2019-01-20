@@ -33,8 +33,6 @@ public:
         SparseMatrix _weights; // Weight matrix
 
         IntBuffer _inputCsPrev; // Previous timestep (prev) input states
-
-        Float2 _hiddenToVisible; // For projection
     };
 
 private:

@@ -114,10 +114,6 @@ void Predictor::createRandom(ComputeSystem &cs,
 
         int numVisibleColumns = vld._size.x * vld._size.y;
 
-        // Projection constant
-        vl._hiddenToVisible = Float2(static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
-            static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y));
-
         // Create weight matrix for this visible layer and initialize randomly
         createSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
@@ -227,12 +223,7 @@ void Predictor::writeToStream(std::ostream &os) const {
         const VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
-
-        os.write(reinterpret_cast<const char*>(&vl._hiddenToVisible), sizeof(Float2));
 
         writeSMToStream(os, vl._weights);
 
@@ -264,11 +255,6 @@ void Predictor::readFromStream(std::istream &is) {
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
-
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
-        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
 
         readSMFromStream(is, vl._weights);
 

@@ -11,194 +11,187 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-    /*!
-    \brief Sparse Coder
-    A 2D sparse coding layer, using Columnar Binary Sparse Coding (computes CSDR -> compressed CSDR)
-    */
-    class SparseCoder {
-    public:
-        /*!
-        \brief Visible layer descriptor
-        */
-        struct VisibleLayerDesc {
-            /*!
-            \brief Visible layer size
-            */
-            Int3 _size;
+// Sparse coder
+class SparseCoder {
+public:
+    // Visible layer descriptor
+    struct VisibleLayerDesc {
+        Int3 _size; // Size of input
 
-            /*!
-            \brief Radius onto hidden layer
-            */
-            int _radius;
+        int _radius; // Radius onto input
 
-            /*!
-            \brief Initialize defaults
-            */
-            VisibleLayerDesc()
-                : _size({ 4, 4, 16 }),
-                _radius(2)
-            {}
-        };
-
-        /*!
-        \brief Visible layer
-        */
-        struct VisibleLayer {
-            //!@{
-            /*!
-            \brief Visible layer values and buffers
-            */
-            FloatBuffer _weights;
-
-            FloatBuffer _visibleActivations;
-
-            Float2 _visibleToHidden; // For projection
-            Float2 _hiddenToVisible; // For projection
-
-            Int2 _reverseRadii; // Pre-computed reverse radii
-            //!@}
-        };
-
-    private:
-        /*!
-        \brief Size of the hidden layer
-        */
-        Int3 _hiddenSize;
-
-        //!@{
-        /*!
-        \brief Buffers for hidden state
-        */
-        IntBuffer _hiddenCs;
-
-        FloatBuffer _hiddenActivations;
-        //!@}
-
-        //!@{
-        /*!
-        \brief Visible layers and associated descriptors
-        */
-        std::vector<VisibleLayer> _visibleLayers;
-        std::vector<VisibleLayerDesc> _visibleLayerDescs;
-        //!@}
-
-        //!@{
-        /*!
-        \brief Kernels
-        */
-        void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, bool firstIter);
-        void backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli);
-
-        static void initKernel(int pos, std::mt19937 &rng, SparseCoder* sc, int vli) {
-            sc->init(pos, rng, vli);
-        }
-
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputCs, bool firstIter) {
-            sc->forward(pos, rng, inputCs, firstIter);
-        }
-
-        static void backwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputCs, int vli) {
-            sc->backward(pos, rng, inputCs, vli);
-        }
-
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputCs, int vli) {
-            sc->learn(pos, rng, inputCs, vli);
-        }
-        //!@}
-
-    public:
-        /*!
-        \brief Learning rate
-        */
-        float _alpha;
-
-        /*!
-        \brief Explaining-away iterations (part of iterative sparse coding)
-        */
-        int _explainIters;
-
-        /*!
-        \brief Initialize defaults
-        */
-        SparseCoder()
-        : _alpha(0.1f), _explainIters(4)
+        // Defaults
+        VisibleLayerDesc()
+        :
+        _size({ 4, 4, 16 }),
+        _radius(2)
         {}
-
-        /*!
-        \brief Create a sparse coding layer with random initialization
-        \param cs is the ComputeSystem
-        \param hiddenSize size of the hidden layer
-        \param visibleLayerDescs the descriptors for the visible layers
-        */
-        void createRandom(ComputeSystem &cs,
-            const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
-
-        /*!
-        \brief Activate the sparse coder (perform sparse coding)
-        \param cs is the ComputeSystem
-        \param visibleCs the visible (input) layer states
-        */
-        void activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
-
-        /*!
-        \brief Learn the sparse code
-        \param cs is the ComputeSystem.
-        \param visibleCs the visible (input) layer states
-        */
-        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
-
-        /*!
-        \brief Write to stream
-        */
-        void writeToStream(std::ostream &os) const;
-
-        /*!
-        \brief Read from stream
-        */
-        void readFromStream(std::istream &is);
-
-        /*!
-        \brief Get the number of visible layers
-        */
-        int getNumVisibleLayers() const {
-            return _visibleLayers.size();
-        }
-
-        /*!
-        \brief Get a visible layer
-        */
-        const VisibleLayer &getVisibleLayer(int index) const {
-            return _visibleLayers[index];
-        }
-
-        /*!
-        \brief Get a visible layer descriptor
-        */
-        const VisibleLayerDesc &getVisibleLayerDesc(int index) const {
-            return _visibleLayerDescs[index];
-        }
-
-        /*!
-        \brief Get the hidden activations (state)
-        */
-        const IntBuffer &getHiddenCs() const {
-            return _hiddenCs;
-        }
-
-        /*!
-        \brief Get the hidden size
-        */
-        const Int3 &getHiddenSize() const {
-            return _hiddenSize;
-        }
-
-        /*!
-        \brief Get a visible layer's feed weights
-        */
-        const FloatBuffer &getWeights(int v) const {
-            return _visibleLayers[v]._weights;
-        }
     };
-}
+
+    // Visible layer
+    struct VisibleLayer {
+        SparseMatrix _weights; // Weight matrix
+
+        FloatBuffer _visibleActivations; // Reconstruction buffer for (visible) activations
+
+        IntBuffer _reconCs; // Reconstruction states
+    };
+
+private:
+    Int3 _hiddenSize; // Size of hidden/output layer
+
+    IntBuffer _hiddenCs; // Hidden states
+
+    FloatBuffer _hiddenStimulus; // Activations of input
+    FloatBuffer _hiddenActivations; // Hidden activations combined
+
+    // Visible layers and associated descriptors
+    std::vector<VisibleLayer> _visibleLayers;
+    std::vector<VisibleLayerDesc> _visibleLayerDescs;
+    
+    // --- Kernels ---
+    
+    void init(
+        int pos,
+        std::mt19937 &rng,
+        int vli
+    );
+
+    void forward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
+        bool firstIter
+    );
+
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    );
+
+    static void initKernel(
+        int pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        int vli
+    ) {
+        sc->init(pos, rng, vli);
+    }
+
+    static void forwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        bool firstIter
+    ) {
+        sc->forward(pos, rng, inputCs, firstIter);
+    }
+
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    ) {
+        sc->backward(pos, rng, inputCs, vli);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    ) {
+        sc->learn(pos, rng, inputCs, vli);
+    }
+
+public:
+    float _alpha; // Learning rate
+
+    int _explainIters; // Explaining-away iterations (part of iterative sparse coding)
+
+    // Defaults
+    SparseCoder()
+    :
+    _alpha(0.1f),
+    _explainIters(4)
+    {}
+
+    // Create a sparse coding layer with random initialization
+    void createRandom(
+        ComputeSystem &cs, // Compute system
+        const Int3 &hiddenSize, // Hidden/output size
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
+    );
+
+    // Activate the sparse coder (perform sparse coding)
+    void activate(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &inputCs // Input states
+    );
+
+    // Improve dictionary
+    void learn(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &inputCs // Input states
+    );
+
+    // Write to stream
+    void writeToStream(
+        std::ostream &os // Stream to write to
+    ) const;
+
+    // Read from stream
+    void readFromStream(
+        std::istream &is // Stream to read from
+    );
+
+    // Get the number of visible layers
+    int getNumVisibleLayers() const {
+        return _visibleLayers.size();
+    }
+
+    // Get a visible layer
+    const VisibleLayer &getVisibleLayer(
+        int i // Index of visible layer
+    ) const {
+        return _visibleLayers[i];
+    }
+
+    // Get a visible layer descriptor
+    const VisibleLayerDesc &getVisibleLayerDesc(
+        int i // Index of visible layer
+    ) const {
+        return _visibleLayerDescs[i];
+    }
+
+    // Get the hidden states
+    const IntBuffer &getHiddenCs() const {
+        return _hiddenCs;
+    }
+
+    // Get the hidden size
+    const Int3 &getHiddenSize() const {
+        return _hiddenSize;
+    }
+
+    // Get the weights for a visible layer
+    const SparseMatrix &getWeights(
+        int i // Index of visible layer
+    ) const {
+        return _visibleLayers[i]._weights;
+    }
+};
+} // namespace ogmaneo

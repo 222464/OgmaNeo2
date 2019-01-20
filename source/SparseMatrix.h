@@ -104,7 +104,8 @@ struct SparseMatrix {
 	void multiplyOHVs(
 		const std::vector<int> &nonZeroIndices,
 		std::vector<float> &out,
-		int oneHotSize
+		int oneHotSize,
+		bool negative = false
 	);
 
 	// Multiply a range of rows from a given one-hot-row matrix
@@ -113,7 +114,8 @@ struct SparseMatrix {
 		std::vector<float> &out,
 		int startRow,
 		int rowCount,
-		int oneHotSize
+		int oneHotSize,
+		bool negative = false
 	);
 
 	// --- One-Hot Vectors Operations: Transpose ---
@@ -122,7 +124,8 @@ struct SparseMatrix {
 	void multiplyOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		std::vector<float> &out,
-		int oneHotSize
+		int oneHotSize,
+		bool negative = false
 	);
 
 	// Multiply a range of rows from a given one-hot-row matrix
@@ -131,17 +134,30 @@ struct SparseMatrix {
 		std::vector<float> &out,
 		int startRow,
 		int rowCount,
-		int oneHotSize
+		int oneHotSize,
+		bool negative = false
 	);
 
 	// --- Matrix Modification Rules ---
 
+	// For dense deltas
 	void deltaRuleRangeOHVs(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &deltas,
 		int startRow,
 		int rowCount,
 		int oneHotSize
+	);
+
+	// For when deltas are also OHVs
+	void deltaOHVRuleOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int OHVIndex,
+		int inputOneHotSize,
+		int outputOneHotSize,
+		int positiveIndex,
+		int negativeIndex,
+		float alpha
 	);
 };
 } // namespace ogmaneo
