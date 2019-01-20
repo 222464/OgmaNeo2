@@ -94,8 +94,8 @@ struct SparseMatrix {
 	void multiplyRangeT(
 		const std::vector<float> &in,
 		std::vector<float> &out,
-		int startRow,
-		int rowCount
+		int startColumn,
+		int columnCount
 	);
 
 	// --- One-Hot Vectors Operations ---
@@ -132,8 +132,8 @@ struct SparseMatrix {
 	void multiplyRangeOfRowOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		std::vector<float> &out,
-		int startRow,
-		int rowCount,
+		int startColumn,
+		int columnCount,
 		int oneHotSize,
 		bool negative = false
 	);

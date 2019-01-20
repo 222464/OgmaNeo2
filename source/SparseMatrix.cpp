@@ -130,14 +130,14 @@ void SparseMatrix::multiplyT(
 void SparseMatrix::multiplyRangeT(
 	const std::vector<float> &in,
 	std::vector<float> &out,
-	int startRow,
-	int rowCount
+	int startColumn,
+	int columnCount
 ) {
-	int end = startRow + rowCount;
+	int endColumn = startColumn + columnCount;
 
 	int nextIndex;
 
-	for (int i = startRow; i < end; i = nextIndex) {
+	for (int i = startColumn; i < endColumn; i = nextIndex) {
 		nextIndex = i + 1;
 
 		for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; j++)
@@ -254,17 +254,17 @@ void SparseMatrix::multiplyOHVsT(
 void SparseMatrix::multiplyRangeOfRowOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	std::vector<float> &out,
-	int startRow,
-	int rowCount,
+	int startColumn,
+	int columnCount,
 	int oneHotSize,
 	bool negative
 ) {
-	int endRow = startRow + rowCount;
+	int endColumn = startColumn + columnCount;
 
 	if (negative) {
 		int nextIndex;
 		
-		for (int i = startRow; i < endRow; i = nextIndex) {
+		for (int i = startColumn; i < endColumn; i = nextIndex) {
 			nextIndex = i + 1;
 
 			for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
@@ -277,7 +277,7 @@ void SparseMatrix::multiplyRangeOfRowOHVsT(
 	else {
 		int nextIndex;
 		
-		for (int i = startRow; i < endRow; i = nextIndex) {
+		for (int i = startColumn; i < endColumn; i = nextIndex) {
 			nextIndex = i + 1;
 
 			for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
