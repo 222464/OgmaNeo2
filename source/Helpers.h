@@ -182,21 +182,22 @@ inline Int2 projectf(
 
 // --- Addressing ---
 
-inline int address2(
+// Row-major versions
+inline int address2R(
     const Int2 &pos, // Position
     int dim // Dimension to ravel with
 ) {
     return pos.x + pos.y * dim;
 }
 
-inline int address3(
+inline int address3R(
     const Int3 &pos, // Position
     const Int2 &dims // Dimensions to ravel with
 ) {
     return pos.x + pos.y * dims.x + pos.z * dims.x * dims.y;
 }
 
-inline int address4(
+inline int address4R(
     const Int4 &pos, // Position
     const Int3 &dims // Dimensions to ravel with
 ) {
@@ -206,21 +207,22 @@ inline int address4(
     return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
 }
 
-inline int address2R(
+// Column-major versions
+inline int address2C(
     const Int2 &pos, // Position
     const Int2 &dims // Dimensions to ravel with
 ) {
     return pos.y + pos.x * dims.y;
 }
 
-inline int address3R(
+inline int address3C(
     const Int3 &pos, // Position
     const Int3 &dims // Dimensions to ravel with
 ) {
     return pos.z + pos.y * dims.z + pos.x * dims.z * dims.y;
 }
 
-inline int address4R(
+inline int address4C(
     const Int4 &pos, // Position
     const Int4 &dims // Dimensions to ravel with
 ) {

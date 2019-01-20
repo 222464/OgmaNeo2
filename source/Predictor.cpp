@@ -30,12 +30,12 @@ void Predictor::forward(
     // --- Clear Activations ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++)
-        _hiddenActivations[address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
+        _hiddenActivations[address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
 
     // --- Multiply ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -53,7 +53,7 @@ void Predictor::forward(
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -61,18 +61,18 @@ void Predictor::forward(
         }
     }
 
-    _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
+    _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
 }
 
 void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenTargetCs) {
-    int targetIndex = (*hiddenTargetCs)[address2(pos, _hiddenSize.x)];
+    int targetIndex = (*hiddenTargetCs)[address2R(pos, _hiddenSize.x)];
 
     // --- Find Deltas ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
-        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3R(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
         float target = (hc == targetIndex ? 1.0f : 0.0f);
 
@@ -82,7 +82,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hidde
     // --- Delta Rule ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {

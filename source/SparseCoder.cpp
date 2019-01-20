@@ -59,7 +59,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                 for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                     Int2 visiblePosition(x, y);
 
-                    int visibleIndex = address2(visiblePosition, vld._size.x);
+                    int visibleIndex = address2R(visiblePosition, vld._size.x);
 
                     int visibleC = (*inputCs[vli])[visibleIndex];
 
@@ -71,7 +71,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                 }
         }
 
-        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3R(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
         if (firstIter) // Clear to new sum value if is first step
             _hiddenActivations[hiddenIndex] = sum;
@@ -87,14 +87,14 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
     }
 
     // Output state
-    _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
+    _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
 }
 
 void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    int visibleIndex = address2(pos, vld._size.x);
+    int visibleIndex = address2R(pos, vld._size.x);
 
     Int3 visiblePosition(pos.x, pos.y, (*inputCs[vli])[visibleIndex]);
 
@@ -127,11 +127,11 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
             // Check for containment
             if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
                 // Address cannot be easily partially computed here, compute fully (address4)
-                int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
+                int hiddenC = _hiddenCs[address2R(hiddenPosition, _hiddenSize.x)];
 
                 Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                sum += vl._weights[address4(wPos, _hiddenSize)];
+                sum += vl._weights[address4R(wPos, _hiddenSize)];
                 count += 1.0f;
             }
         }
@@ -144,7 +144,7 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    int visibleIndex = address2(pos, vld._size.x);
+    int visibleIndex = address2R(pos, vld._size.x);
 
     int inputC = (*inputCs[vli])[visibleIndex];
 
@@ -177,11 +177,11 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
                     // Address cannot be easily partially computed here, compute fully (address4)
-                    int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
+                    int hiddenC = _hiddenCs[address2R(hiddenPosition, _hiddenSize.x)];
 
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                    sum += vl._weights[address4(wPos, _hiddenSize)];
+                    sum += vl._weights[address4R(wPos, _hiddenSize)];
                     count += 1.0f;
                 }
             }
@@ -205,11 +205,11 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
                     // Address cannot be easily partially computed here, compute fully (address4)
-                    int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
+                    int hiddenC = _hiddenCs[address2R(hiddenPosition, _hiddenSize.x)];
 
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                    vl._weights[address4(wPos, _hiddenSize)] += delta;
+                    vl._weights[address4R(wPos, _hiddenSize)] += delta;
                 }
             }
     }

@@ -69,7 +69,7 @@ void ImageEncoder::forward(
                     for (int vc = 0; vc < vld._size.z; vc++) {
                         Int3 visiblePosition(x, y, vc);
 
-                        int visibleIndex = address3(visiblePosition, Int2(vld._size.x, vld._size.y));
+                        int visibleIndex = address3R(visiblePosition, Int2(vld._size.x, vld._size.y));
 
                         float visibleActivation = (*inputActivations[vli])[visibleIndex];
 
@@ -90,7 +90,7 @@ void ImageEncoder::forward(
     }
 
     // Output state
-    _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
+    _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
 
     if (learnEnabled) {
         Int3 hiddenPosition(pos.x, pos.y, maxIndex);
@@ -124,7 +124,7 @@ void ImageEncoder::forward(
                     for (int vc = 0; vc < vld._size.z; vc++) {
                         Int3 visiblePosition(x, y, vc);
 
-                        int visibleIndex = address3(visiblePosition, Int2(vld._size.x, vld._size.y));
+                        int visibleIndex = address3R(visiblePosition, Int2(vld._size.x, vld._size.y));
 
                         float visibleActivation = (*inputActivations[vli])[visibleIndex];
 
@@ -181,17 +181,17 @@ void ImageEncoder::backward(
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
                     // Address cannot be easily partially computed here, compute fully (address4)
-                    int hiddenC = (*hiddenCs)[address2(hiddenPosition, _hiddenSize.x)];
+                    int hiddenC = (*hiddenCs)[address2R(hiddenPosition, _hiddenSize.x)];
 
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                    sum += vl._weights[address4(wPos, _hiddenSize)];
+                    sum += vl._weights[address4R(wPos, _hiddenSize)];
                     count += 1.0f;
                 }
             }
 
         // Set normalized reconstruction value
-        vl._visibleActivations[address3(visiblePosition, Int2(vld._size.x, vld._size.y))] = sum / std::max(1.0f, count);
+        vl._visibleActivations[address3R(visiblePosition, Int2(vld._size.x, vld._size.y))] = sum / std::max(1.0f, count);
     }
 }
 

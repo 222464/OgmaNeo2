@@ -256,7 +256,7 @@ void ogmaneo::createSMLocalRF(
                         for (int iz = 0; iz < inSize.z; iz++) {
                             Int3 inPos(ix, iy, iz);
 
-                            int inIndex = address3R(inPos, inSize);
+                            int inIndex = address3C(inPos, inSize);
 
                             mat._nonZeroValues.push_back(0.0f);
                             mat._columnIndices.push_back(inIndex);

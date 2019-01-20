@@ -267,7 +267,7 @@ int main() {
 							for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
 								Int2 visiblePosition(x, y);
 
-								int visibleIndex = address2(visiblePosition, vld._size.x);
+								int visibleIndex = address2R(visiblePosition, vld._size.x);
 
 								int visibleC = (*inputCs[vli])[visibleIndex];
 
@@ -333,7 +333,7 @@ int main() {
 							for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
 								Int2 visiblePosition(x, y);
 
-								int visibleIndex = address2(visiblePosition, vld._size.x);
+								int visibleIndex = address2R(visiblePosition, vld._size.x);
 
 								int visibleC = (*inputCs[vli])[visibleIndex];
 
@@ -345,7 +345,7 @@ int main() {
 							}
 					}
 
-					int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
+					int hiddenIndex = address3R(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
 					_hiddenActivations[hiddenIndex] = sum;
 				}
