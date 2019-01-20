@@ -3,9 +3,12 @@
 
 #include <vector>
 
+#include "OneHotVectorArray.h"
+
 // Compressed sparse row (CSR) format
-class SparseMatrix {
-public:
+struct SparseMatrix {
+	int _rows;
+	int _columns;
 	std::vector<float> _nonZeroValues;
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
@@ -15,6 +18,8 @@ public:
 	SparseMatrix() {}
 
 	SparseMatrix(
+		int rows,
+		int columns,
 		const std::vector<float> &nonZeroValues,
 		const std::vector<int> &rowRanges,
 		const std::vector<int> &columnIndices
@@ -29,61 +34,22 @@ public:
 
 	// If you don't want to construct immediately
 	void init(
+		int rows,
+		int columns,
 		const std::vector<float> &nonZeroValues,
 		const std::vector<int> &rowRanges,
 		const std::vector<int> &columnIndices
 	);
 
-	// --- DENSE --- \\
-
 	// Size of "in" must equal size of "out"
-	void multiply(
+	void multiplyVector(
 		const std::vector<float> &in,
 		std::vector<float> &out
 	);
 
-	// The range specifies which elements of "out" are to be computed
-	void multiplyRange(
-		const std::vector<float> &in,
-		std::vector<float> &out,
-		int startIndex,
-		int length
-	);
-
-	// Treats "in" as having two dimensions
-	void multiplyRectangularRange(
-		const std::vector<float> &in,
-		std::vector<float> &out,
-		int startRow,
-		int startColumn,
-		int rectRows,
-		int rectColumns,
-		int rows,
-		int columns
-	);
-
-	// --- OHERM --- \\
-
-	// Multiply by a one-hot-row matrix
-	void multiplyOHERM(
-		const std::vector<int> &nonZeroIndices,
-		int columns,
-		std::vector<float> &out
-	);
-
-	// Multiply one row from a given one-hot-row matrix
-	void multiplyOneRowOHERM(
-		const std::vector<int> &nonZeroIndices,
-		int row, int columns,
-		std::vector<float> &out
-	);
-
-	// Multiply a range of rows from a given one-hot-row matrix
-	void multiplyRangeOfRowOHERM(
-		const std::vector<int> &nonZeroIndices,
-		int startRow,
-		int rowCount,
-		int columns,
+	// Size of out = arr.size() * vectorSize
+	void multiplyOneHotVectorArray(
+		const OneHotVectorArray &arr,
 		std::vector<float> &out
 	);
 };

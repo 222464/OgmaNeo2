@@ -38,6 +38,7 @@ set(SOURCES
     "${SOURCE_PATH}/Hierarchy.cpp"
     "${SOURCE_PATH}/ImageEncoder.cpp"
 	"${SOURCE_PATH}/SparseMatrix.cpp"
+	"${SOURCE_PATH}/OneHotVectorArray.cpp"
 )
 
 set(HEADERS
@@ -47,6 +48,7 @@ set(HEADERS
     "${SOURCE_PATH}/Hierarchy.h"
     "${SOURCE_PATH}/ImageEncoder.h"
 	"${SOURCE_PATH}/SparseMatrix.h"
+	"${SOURCE_PATH}/OneHotVectorArray.h"
 )
 
 add_library(OgmaNeo ${SOURCES} ${HEADERS})

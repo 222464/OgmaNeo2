@@ -1,10 +1,14 @@
 #include "SparseMatrix.h"
 
 SparseMatrix::SparseMatrix(
+	int rows,
+	int columns,
 	const std::vector<float> &nonZeroValues,
 	const std::vector<int> &rowRanges,
 	const std::vector<int> &columnIndices
 ) :
+	_rows(rows),
+	_columns(columns),
 	_nonZeroValues(nonZeroValues),
 	_rowRanges(rowRanges),
 	_columnIndices(columnIndices)
@@ -15,6 +19,9 @@ SparseMatrix::SparseMatrix(
 	int rows,
 	int columns
 ) {
+	_rows = rows;
+	_columns = columns;
+
 	_rowRanges.reserve(rows);
 	_rowRanges.push_back(0);
 
@@ -37,16 +44,20 @@ SparseMatrix::SparseMatrix(
 }
 
 void SparseMatrix::init(
+	int rows,
+	int columns,
 	const std::vector<float> &nonZeroValues,
 	const std::vector<int> &rowRanges,
 	const std::vector<int> &columnIndices
 ) {
+	_rows = rows;
+	_columns = columns;
 	_nonZeroValues = nonZeroValues;
 	_rowRanges = rowRanges;
 	_columnIndices = columnIndices;
 }
 
-void SparseMatrix::multiply(
+void SparseMatrix::multiplyVector(
 	const std::vector<float> &in,
 	std::vector<float> &out
 ) {
@@ -62,108 +73,18 @@ void SparseMatrix::multiply(
 	}
 }
 
-void SparseMatrix::multiplyRange(
-	const std::vector<float> &in,
-	std::vector<float> &out,
-	int startIndex,
-	int length
+void SparseMatrix::multiplyOneHotVectorArray(
+	const OneHotVectorArray &arr,
+	std::vector<float> &out                                                                                   
 ) {
-	int end = startIndex + length;
+	int length = out.size();
 
 	int nextIndex = 0;
-	for (int i = startIndex; i < end; i = nextIndex) {
+	for (int i = 0; i < length; i = nextIndex) {
 		nextIndex = i + 1;
 
-		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; ++j) {
-			out[i] += _nonZeroValues[j] * in[_columnIndices[j]];
-		}
-	}
-}
-
-void SparseMatrix::multiplyRectangularRange(
-	const std::vector<float> &in,
-	std::vector<float> &out,
-	int startRow,
-	int startColumn,
-	int rectRows,
-	int rectColumns,
-	int rows,
-	int columns
-) {
-	if (startRow < 0)
-		startRow = 0;
-	else if (startRow >= rows)
-		return;
-
-	if (startColumn < 0)
-		startColumn = 0;
-	else if (startColumn >= columns)
-		return;
-	
-	int rowEnd = startRow + rectRows;
-	int columnEnd = startColumn + rectColumns;
-
-	if (rowEnd >= rows) rowEnd = rows - 1;
-	if (columnEnd >= columns) columnEnd = columns - 1;
-
-	for (int row = startRow; row < rowEnd; ++row) {
-		int row_offset = row * columns;
-		for (int col = startColumn; col < columnEnd; ++col) {
-			int index = row_offset + col;
-			int nextIndex = index + 1;
-
-			for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
-				out[index] += _nonZeroValues[j] * in[_columnIndices[j]];
-			}
-		}
-	}
-}
-
-void SparseMatrix::multiplyOHERM(
-	const std::vector<int> &nonZeroIndices,
-	int columns,
-	std::vector<float> &out
-) {
-	int rows = nonZeroIndices.size();
-
-	for (int row = 0; row < rows; ++row) {
-		int index = row * columns + nonZeroIndices[row];
-		int nextIndex = index + 1;
-
-		for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
-			out[index] += _nonZeroValues[j];
-		}
-	}
-}
-
-void SparseMatrix::multiplyOneRowOHERM(
-	const std::vector<int> &nonZeroIndices,
-	int row, int columns,
-	std::vector<float> &out
-) {
-	int index = row * columns + nonZeroIndices[row];
-	int nextIndex = index + 1;
-
-	for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
-		out[index] += _nonZeroValues[j];
-	}
-}
-
-void SparseMatrix::multiplyRangeOfRowOHERM(
-	const std::vector<int> &nonZeroIndices,
-	int startRow,
-	int rowCount,
-	int columns,
-	std::vector<float> &out
-) {
-	int rowEnd = startRow + rowCount;
-
-	for (int row = startRow; row < rowEnd; ++row) {
-		int index = row * columns + nonZeroIndices[row];
-		int nextIndex = index + 1;
-
-		for (int j = _rowRanges[index]; j < _rowRanges[nextIndex]; ++j) {
-			out[index] += _nonZeroValues[j];
+		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; j += arr._vectorSize) {
+			out[i] += _nonZeroValues[j + arr._indices[_columnIndices[j] / arr._vectorSize]];
 		}
 	}
 }
