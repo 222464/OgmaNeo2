@@ -42,7 +42,7 @@ void Predictor::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.multiplyRangeOfRowOHVs(*inputCs[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
+            vl._weights.multiplyRangeOHVs(*inputCs[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
         }
     }
 
