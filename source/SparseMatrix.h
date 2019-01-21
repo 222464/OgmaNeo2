@@ -22,6 +22,7 @@ struct SparseMatrix {
 	std::vector<int> _columnIndices;
 
 	// Transpose
+	std::vector<int> _nonZeroValueIndices;
 	std::vector<int> _columnRanges;
 	std::vector<int> _rowIndices;
 
@@ -64,6 +65,9 @@ struct SparseMatrix {
 		int columns,
 		const std::vector<float> &data
 	);
+
+	// Generate random access indices
+	void createNonZeroIndices();
 
 	// Generate a transpose, must be called after the original has been created
 	void createT();
