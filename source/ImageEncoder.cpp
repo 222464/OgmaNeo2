@@ -62,7 +62,7 @@ void ImageEncoder::forward(
         }
     }
 
-    _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
+    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
 
     // --- Learn ---
 
