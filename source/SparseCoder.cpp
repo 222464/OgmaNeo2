@@ -146,10 +146,20 @@ void SparseCoder::learn(
 
     int visibleColumnIndex = address2R(pos, vld._size.x);
 
-    int positiveIndex = (*inputCs[vli])[visibleColumnIndex];
-    int negativeIndex = vl._reconCs[visibleColumnIndex];
+    int targetC = (*inputCs[vli])[visibleColumnIndex];
 
-    vl._weights.deltaOHVRuleOHVsT(_hiddenCs, visibleColumnIndex, _hiddenSize.z, vld._size.z, positiveIndex, negativeIndex, _alpha);
+    // Set deltas
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+
+        vl._visibleDeltas[visibleIndex] = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(vl._visibleActivations[visibleIndex]));
+    }
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+
+        vl._weights.deltaRuleRangeOHVsT(_hiddenCs, vl._visibleDeltas, visibleIndex, 1, _hiddenSize.z);
+    }
 }
 
 void SparseCoder::initRandom(
@@ -190,6 +200,9 @@ void SparseCoder::initRandom(
 
         // Visible activations buffer
         vl._visibleActivations = FloatBuffer(numVisible);
+
+        // Deltas for updating weights buffer
+        vl._visibleDeltas = FloatBuffer(numVisible);
 
         // Reconstruction states
         vl._reconCs = IntBuffer(numVisibleColumns);
@@ -341,6 +354,8 @@ void SparseCoder::readFromStream(
         readSMFromStream(is, vl._weights);
 
         vl._visibleActivations = FloatBuffer(numVisible);
+
+        vl._visibleDeltas = FloatBuffer(numVisible);
 
         vl._reconCs = IntBuffer(numVisibleColumns);
     }

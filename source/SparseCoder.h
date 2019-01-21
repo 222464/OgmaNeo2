@@ -34,6 +34,8 @@ public:
 
         FloatBuffer _visibleActivations; // Reconstruction buffer for (visible) activations
 
+        FloatBuffer _visibleDeltas; // Modifications buffer for weights
+
         IntBuffer _reconCs; // Reconstruction states
     };
 
@@ -125,7 +127,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.001f),
+    _alpha(0.1f),
     _explainIters(4)
     {}
 
