@@ -154,6 +154,8 @@ void ImageEncoder::initRandom(
 #else
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
+
+    _hiddenActivations = FloatBuffer(numHidden);
 }
 
 void ImageEncoder::step(
@@ -253,4 +255,6 @@ void ImageEncoder::readFromStream(
 
         readBufferFromStream(is, &vl._visibleActivations);
     }
+
+    _hiddenActivations = FloatBuffer(numHidden);
 }
