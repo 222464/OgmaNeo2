@@ -110,10 +110,10 @@ void SparseCoder::backward(
         vl._visibleActivations[address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y))] = 0.0f;
 
     // --- Multiply ---
-
+    
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
-
+    
         vl._weights.multiplyRangeOfRowOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
 

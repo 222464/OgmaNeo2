@@ -1,5 +1,5 @@
 #include "SparseMatrix.h"
-#include <iostream>
+
 using namespace ogmaneo;
 
 void SparseMatrix::create(
