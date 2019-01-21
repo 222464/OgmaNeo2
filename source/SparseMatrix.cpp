@@ -371,6 +371,28 @@ void SparseMatrix::deltaOHVRuleOHVs(
 	}
 }
 
+void SparseMatrix::deltaRuleRangeOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &deltas,
+	int startColumn,
+	int columnCount,
+	int oneHotSize
+) {
+	int endColumn = startColumn + columnCount;
+
+	int nextIndex;
+	
+	for (int i = startColumn; i < endColumn; i = nextIndex) {
+		nextIndex = i + 1;
+
+		for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+			int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+			_nonZeroValues[_nonZeroValueIndices[j]] += deltas[i];
+		}
+	}
+}
+
 void SparseMatrix::deltaOHVRuleOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	int OHVIndex,
@@ -408,6 +430,27 @@ void SparseMatrix::deltaOHVRuleOHVsT(
 			int j = jj + nonZeroIndices[_rowIndices[jj] / inputOneHotSize];
 
 			_nonZeroValues[_nonZeroValueIndices[j]] -= alpha;
+		}
+	}
+}
+
+void SparseMatrix::hebbRuleOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
 		}
 	}
 }

@@ -138,20 +138,19 @@ void SparseCoder::backward(
 void SparseCoder::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs,
-    int vli
+    const std::vector<const IntBuffer*> &inputCs
 ) {
-    VisibleLayer &vl = _visibleLayers[vli];
-    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    int hiddenC = _hiddenCs[address2R(pos, _hiddenSize.x)];
+    
+    int hiddenIndex = address3R(Int3(pos.x, pos.y, hiddenC), Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int visibleColumnIndex = address2R(pos, _hiddenSize.x);
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    // --- Delta Rule ---
-
-    int positiveIndex = (*inputCs[vli])[visibleColumnIndex];
-    int negativeIndex = vl._reconCs[visibleColumnIndex];
-
-    vl._weights.deltaOHVRuleOHVsT(_hiddenCs, visibleColumnIndex, _hiddenSize.z, vld._size.z, positiveIndex, negativeIndex, _alpha);
+        vl._weights.hebbRuleOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
+    }
 }
 
 void SparseCoder::createRandom(
@@ -252,19 +251,13 @@ void SparseCoder::learn(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &visibleCs
 ) {
-    // Final reconstruction + learning
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < vld._size.x; x++)
-            for (int y = 0; y < vld._size.y; y++)
-                learn(Int2(x, y), cs._rng, visibleCs, vli);
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            learn(Int2(x, y), cs._rng, visibleCs);
 #else
-        runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-    }
 }
 
 void SparseCoder::writeToStream(

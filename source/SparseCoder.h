@@ -74,8 +74,7 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void initKernel(
@@ -111,10 +110,9 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->learn(pos, rng, inputCs);
     }
 
 public:
@@ -125,7 +123,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.0001f),
+    _alpha(0.1f),
     _explainIters(4)
     {}
 

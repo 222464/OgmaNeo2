@@ -142,7 +142,7 @@ struct SparseMatrix {
 		bool negative = false
 	);
 
-	// --- Matrix Modification Rules ---
+	// --- Delta Rules ---
 
 	// For dense deltas
 	void deltaRuleRangeOHVs(
@@ -164,6 +164,15 @@ struct SparseMatrix {
 		float alpha
 	);
 
+	// For dense deltas
+	void deltaRuleRangeOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &deltas,
+		int startColumn,
+		int columnCount,
+		int oneHotSize
+	);
+
 	void deltaOHVRuleOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int OHVIndex,
@@ -171,6 +180,15 @@ struct SparseMatrix {
 		int outputOneHotSize,
 		int positiveIndex,
 		int negativeIndex,
+		float alpha
+	);
+
+	// -- Hebb Rules ---
+
+	void hebbRuleOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
 		float alpha
 	);
 };
