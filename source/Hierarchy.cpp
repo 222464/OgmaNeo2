@@ -13,7 +13,7 @@
 
 using namespace ogmaneo;
 
-void Hierarchy::createRandom(
+void Hierarchy::initRandom(
     ComputeSystem &cs,
     const std::vector<Int3> &inputSizes,
     const std::vector<InputType> &inputTypes,
@@ -98,7 +98,7 @@ void Hierarchy::createRandom(
                 if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
 
-                    _pLayers[l][p]->createRandom(cs, inputSizes[p], pVisibleLayerDescs);
+                    _pLayers[l][p]->initRandom(cs, inputSizes[p], pVisibleLayerDescs);
                 }
             }
         }
@@ -140,12 +140,12 @@ void Hierarchy::createRandom(
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 _pLayers[l][p] = std::make_unique<Predictor>();
 
-                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDescs);
+                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDescs);
             }
         }
 		
         // Create the sparse coding layer
-        _scLayers[l].createRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
+        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
     }
 }
 

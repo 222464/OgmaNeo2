@@ -152,7 +152,7 @@ void SparseCoder::learn(
     vl._weights.deltaOHVRuleOHVsT(_hiddenCs, visibleColumnIndex, _hiddenSize.z, vld._size.z, positiveIndex, negativeIndex, _alpha);
 }
 
-void SparseCoder::createRandom(
+void SparseCoder::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs
@@ -176,7 +176,7 @@ void SparseCoder::createRandom(
         int numVisible = numVisibleColumns * vld._size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        createSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < vl._weights._nonZeroValues.size(); x++)
@@ -186,7 +186,7 @@ void SparseCoder::createRandom(
 #endif
 
         // Generate transpose (needed for reconstruction)
-        vl._weights.createT();
+        vl._weights.initT();
 
         // Visible activations buffer
         vl._visibleActivations = FloatBuffer(numVisible);

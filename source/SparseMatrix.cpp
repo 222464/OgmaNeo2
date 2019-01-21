@@ -2,7 +2,7 @@
 
 using namespace ogmaneo;
 
-void SparseMatrix::create(
+void SparseMatrix::init(
 	int rows,
 	int columns,
 	const std::vector<float> &nonZeroValues,
@@ -17,7 +17,7 @@ void SparseMatrix::create(
 	_columnIndices = columnIndices;
 }
 
-void SparseMatrix::create(
+void SparseMatrix::init(
 	int rows,
 	int columns,
 	const std::vector<float> &data
@@ -47,7 +47,7 @@ void SparseMatrix::create(
 	}
 }
 
-void SparseMatrix::createT() {
+void SparseMatrix::initT() {
 	_columnRanges.resize(_columns + 1, 0);
 
 	_rowIndices.resize(_nonZeroValues.size());

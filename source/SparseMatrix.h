@@ -38,7 +38,7 @@ struct SparseMatrix {
 		const std::vector<int> &rowRanges,
 		const std::vector<int> &columnIndices
 	) {
-		create(rows, columns, nonZeroValues, rowRanges, columnIndices);
+		init(rows, columns, nonZeroValues, rowRanges, columnIndices);
 	}
 
 	// From a non-compressed sparse matrix
@@ -47,11 +47,11 @@ struct SparseMatrix {
 		int columns,
 		const std::vector<float> &data
 	) {
-		create(rows, columns, data);
+		init(rows, columns, data);
 	}
 
 	// If you don't want to construct immediately
-	void create(
+	void init(
 		int rows,
 		int columns,
 		const std::vector<float> &nonZeroValues,
@@ -60,17 +60,14 @@ struct SparseMatrix {
 	);
 
 	// From a non-compressed sparse matrix
-	void create(
+	void init(
 		int rows,
 		int columns,
 		const std::vector<float> &data
 	);
 
-	// Generate random access indices
-	void createNonZeroIndices();
-
 	// Generate a transpose, must be called after the original has been created
-	void createT();
+	void initT();
 
 	// --- Dense ---
 

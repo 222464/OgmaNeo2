@@ -130,7 +130,7 @@ public:
     {}
 
     // Create a sparse coding layer with random initialization
-    void createRandom(
+    void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers

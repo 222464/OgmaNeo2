@@ -104,7 +104,7 @@ public:
     {}
 
     // Create with random initialization
-    void createRandom(
+    void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output/prediction size
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever

@@ -207,7 +207,7 @@ std::vector<const FloatBuffer*> ogmaneo::constGet(
     return vp;
 }
 
-void ogmaneo::createSMLocalRF(
+void ogmaneo::initSMLocalRF(
     const Int3 &inSize,
     const Int3 &outSize,
     int radius,

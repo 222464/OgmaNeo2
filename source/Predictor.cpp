@@ -98,7 +98,7 @@ void Predictor::learn(
     }
 }
 
-void Predictor::createRandom(
+void Predictor::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs
@@ -121,7 +121,7 @@ void Predictor::createRandom(
         int numVisibleColumns = vld._size.x * vld._size.y;
 
         // Create weight matrix for this visible layer and initialize randomly
-        createSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < vl._weights._nonZeroValues.size(); x++)

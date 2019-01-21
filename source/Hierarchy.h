@@ -81,7 +81,7 @@ public:
     );
     
     // Create a randomly initialized hierarchy
-    void createRandom(
+    void initRandom(
         ComputeSystem &cs, // Compute system
         const std::vector<Int3> &inputSizes, // Sizes of input layers
         const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
