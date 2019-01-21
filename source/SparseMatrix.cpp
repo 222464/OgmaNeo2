@@ -48,8 +48,7 @@ void SparseMatrix::create(
 }
 
 void SparseMatrix::createT() {
-	_columnRanges.resize(_columns + 1);
-	_columnRanges[0] = 0;
+	_columnRanges.resize(_columns + 1, 0);
 
 	_rowIndices.resize(_nonZeroValues.size());
 
@@ -86,11 +85,11 @@ void SparseMatrix::createT() {
 		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; j++) {
 			int colIndex = _columnIndices[j];
 
-			int nonZeroIndex = columnOffsets[colIndex];
+			int nonZeroIndexT = columnOffsets[colIndex];
 
-			_rowIndices[nonZeroIndex] = i;
+			_rowIndices[nonZeroIndexT] = i;
 
-			_nonZeroValueIndices[nonZeroIndex] = j;
+			_nonZeroValueIndices[nonZeroIndexT] = j;
 
 			columnOffsets[colIndex]++;
 		}
