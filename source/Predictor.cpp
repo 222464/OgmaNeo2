@@ -30,12 +30,12 @@ void Predictor::forward(
     // --- Clear Activations ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++)
-        _hiddenActivations[address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
+        _hiddenActivations[address3C(Int3(pos.x, pos.y, hc), _hiddenSize)] = 0.0f;
 
     // --- Multiply ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -53,7 +53,7 @@ void Predictor::forward(
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -76,7 +76,7 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
-        int hiddenIndex = address3R(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(hiddenPosition, _hiddenSize);
 
         float target = (hc == targetC ? 1.0f : 0.0f);
 
@@ -86,7 +86,7 @@ void Predictor::learn(
     // --- Delta Rule ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {

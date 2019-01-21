@@ -262,7 +262,7 @@ void ogmaneo::initSMLocalRF(
                         }
                     }
 
-                mat._rowRanges[address3R(outPos, Int2(outSize.x, outSize.y))] = nonZeroInRow;
+                mat._rowRanges[address3C(outPos, outSize)] = nonZeroInRow;
             }
         }
 

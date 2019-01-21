@@ -32,12 +32,12 @@ void SparseCoder::forward(
 
     if (firstIter) {
         for (int hc = 0; hc < _hiddenSize.z; hc++)
-            _hiddenStimulus[address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
+            _hiddenStimulus[address3C(Int3(pos.x, pos.y, hc), _hiddenSize)] = 0.0f;
 
         // --- Multiply Stimulus ---
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -50,7 +50,7 @@ void SparseCoder::forward(
 
         // Set activation to stimulus
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
             _hiddenActivations[hiddenIndex] = _hiddenStimulus[hiddenIndex];
         }
@@ -58,7 +58,7 @@ void SparseCoder::forward(
     else {
         // Increment activations by stimulus
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
             _hiddenActivations[hiddenIndex] += _hiddenStimulus[hiddenIndex];
         }
@@ -66,7 +66,7 @@ void SparseCoder::forward(
         // --- Multiply and Subtract Recon ---
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -85,7 +85,7 @@ void SparseCoder::forward(
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -107,12 +107,12 @@ void SparseCoder::backward(
 
     // Clear activations
     for (int vc = 0; vc < vld._size.z; vc++)
-        vl._visibleActivations[address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y))] = 0.0f;
+        vl._visibleActivations[address3C(Int3(pos.x, pos.y, vc), vld._size)] = 0.0f;
 
     // --- Multiply ---
     
     for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
     
         vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
@@ -124,7 +124,7 @@ void SparseCoder::backward(
 
     // For each hidden unit
     for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
         if (vl._visibleActivations[visibleIndex] > maxActivation) {
             maxActivation = vl._visibleActivations[visibleIndex];
@@ -142,7 +142,7 @@ void SparseCoder::learn(
 ) {
     int hiddenC = _hiddenCs[address2R(pos, _hiddenSize.x)];
     
-    int hiddenIndex = address3R(Int3(pos.x, pos.y, hiddenC), Int2(_hiddenSize.x, _hiddenSize.y));
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, hiddenC), _hiddenSize);
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
