@@ -77,7 +77,7 @@ void SparseMatrix::createT() {
 
 	_columnRanges[_columns] = offset;
 
-	std::vector<int> columnOffsets(_columnRanges.size(), 0);
+	std::vector<int> columnOffsets = _columnRanges;
 
 	for (int i = 0; i < _rows; i = nextIndex) {
 		nextIndex = i + 1;
