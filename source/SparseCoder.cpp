@@ -93,7 +93,7 @@ void SparseCoder::forward(
         }
     }
 
-    _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
+    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
 }
 
 void SparseCoder::backward(
@@ -132,7 +132,7 @@ void SparseCoder::backward(
         }
     }
 
-    vl._reconCs[address2R(pos, _hiddenSize.x)] = maxIndex;
+    vl._reconCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
 }
 
 void SparseCoder::learn(
@@ -144,19 +144,19 @@ void SparseCoder::learn(
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    int visibleColumnIndex = address2R(pos, vld._size.x);
+    int visibleColumnIndex = address2C(pos, Int2(vld._size.x, vld._size.y));
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
 
     // Set deltas
     for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
         vl._visibleDeltas[visibleIndex] = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(vl._visibleActivations[visibleIndex]));
     }
 
     for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
         vl._weights.deltaRuleRangeOHVsT(_hiddenCs, vl._visibleDeltas, visibleIndex, 1, _hiddenSize.z);
     }

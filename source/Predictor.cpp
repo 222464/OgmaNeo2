@@ -61,7 +61,7 @@ void Predictor::forward(
         }
     }
 
-    _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
+    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
 }
 
 void Predictor::learn(
@@ -69,7 +69,7 @@ void Predictor::learn(
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs
 ) {
-    int targetC = (*hiddenTargetCs)[address2R(pos, _hiddenSize.x)];
+    int targetC = (*hiddenTargetCs)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
 
     // --- Find Deltas ---
 
