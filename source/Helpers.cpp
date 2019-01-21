@@ -228,11 +228,8 @@ void ogmaneo::initSMLocalRF(
     mat._nonZeroValues.reserve(weightsSize);
 
     mat._rowRanges.resize(numOut + 1);
-    mat._rowRanges[0] = 0;
 
     mat._columnIndices.reserve(weightsSize);
-
-    int ri = 0;
 
     // Initialize weight matrix
     for (int ox = 0; ox < outSize.x; ox++)
@@ -265,14 +262,25 @@ void ogmaneo::initSMLocalRF(
                         }
                     }
 
-                mat._rowRanges[ri + 1] = mat._rowRanges[ri] + nonZeroInRow;
-
-                ri++;
+                mat._rowRanges[address3R(outPos, Int2(outSize.x, outSize.y))] = nonZeroInRow;
             }
         }
 
     mat._nonZeroValues.shrink_to_fit();
     mat._columnIndices.shrink_to_fit();
+
+    // Convert rowRanges from counts to cumulative counts
+    int offset = 0;
+
+	for (int i = 0; i < numOut; i++) {
+		int temp = mat._rowRanges[i];
+
+		mat._rowRanges[i] = offset;
+
+		offset += temp;
+	}
+
+    mat._rowRanges[numOut] = offset;
 
     mat._rows = numOut;
     mat._columns = inSize.x * inSize.y * inSize.z;

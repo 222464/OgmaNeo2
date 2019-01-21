@@ -69,7 +69,7 @@ void Predictor::learn(
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs
 ) {
-    int targetIndex = (*hiddenTargetCs)[address2R(pos, _hiddenSize.x)];
+    int targetC = (*hiddenTargetCs)[address2R(pos, _hiddenSize.x)];
 
     // --- Find Deltas ---
 
@@ -78,7 +78,7 @@ void Predictor::learn(
 
         int hiddenIndex = address3R(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
-        float target = (hc == targetIndex ? 1.0f : 0.0f);
+        float target = (hc == targetC ? 1.0f : 0.0f);
 
         _hiddenDeltas[hiddenIndex] = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex])); // Delta
     }
