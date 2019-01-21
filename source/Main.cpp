@@ -135,9 +135,9 @@ int main() {
 
 	SparseMatrix m;
 
-	createSMLocalRF(inputSize, hiddenSize, 1, m);
+	initSMLocalRF(inputSize, hiddenSize, 1, m);
 
-	m.createT();
+	m.initT();
 
 	// Regular
 	{

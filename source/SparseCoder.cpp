@@ -231,17 +231,19 @@ void SparseCoder::activate(
         runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, firstIter), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        if (it != _explainIters - 1) {
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
 #ifdef KERNEL_DEBUG
-            for (int x = 0; x < vld._size.x; x++)
-                for (int y = 0; y < vld._size.y; y++)
-                    backward(Int2(x, y), cs._rng, visibleCs, vli);
+                for (int x = 0; x < vld._size.x; x++)
+                    for (int y = 0; y < vld._size.y; y++)
+                        backward(Int2(x, y), cs._rng, visibleCs, vli);
 #else
-            runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+                runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
+            }
         }
     }
 }
@@ -252,6 +254,19 @@ void SparseCoder::learn(
 ) {
     if (_alpha == 0.0f)
         return;
+
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < vld._size.x; x++)
+            for (int y = 0; y < vld._size.y; y++)
+                backward(Int2(x, y), cs._rng, visibleCs, vli);
+#else
+        runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+#endif
+    }
 
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
