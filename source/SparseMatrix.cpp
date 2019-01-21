@@ -299,9 +299,8 @@ void SparseMatrix::multiplyRangeOfRowOHVsT(
 		for (int i = startColumn; i < endColumn; i = nextIndex) {
 			nextIndex = i + 1;
 
-			for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; j++) {
-				int row = _rowIndices[j];
-				int col = _columnIndices[j];
+			for (int jj = _columnRanges[i]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+				int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
 				out[i] += _nonZeroValues[_nonZeroValueIndices[j]];
 			}
