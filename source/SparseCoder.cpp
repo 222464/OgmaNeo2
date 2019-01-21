@@ -44,7 +44,7 @@ void SparseCoder::forward(
                 VisibleLayer &vl = _visibleLayers[vli];
                 const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                vl._weights.multiplyRangeOfRowOHVs(*inputCs[vli], _hiddenStimulus, hiddenIndex, 1, vld._size.z);
+                vl._weights.multiplyRangeOHVs(*inputCs[vli], _hiddenStimulus, hiddenIndex, 1, vld._size.z);
             }
         }
 
@@ -73,7 +73,7 @@ void SparseCoder::forward(
                 VisibleLayer &vl = _visibleLayers[vli];
                 const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                vl._weights.multiplyRangeOfRowOHVs(vl._reconCs, _hiddenActivations, hiddenIndex, 1, vld._size.z, true);
+                vl._weights.multiplyRangeOHVs(vl._reconCs, _hiddenActivations, hiddenIndex, 1, vld._size.z, true);
             }
         }
     }
@@ -114,7 +114,7 @@ void SparseCoder::backward(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
     
-        vl._weights.multiplyRangeOfRowOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
+        vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
 
     // --- Find max ---

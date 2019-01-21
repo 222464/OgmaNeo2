@@ -19,7 +19,7 @@ void ImageEncoder::init(
     // Initialize weights into uniform range
 	std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
-    _visibleLayers[vli]._weights[pos] = weightDist(rng);
+    _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
 }
 
 void ImageEncoder::forward(
@@ -28,115 +28,52 @@ void ImageEncoder::forward(
     const std::vector<const FloatBuffer*> &inputActivations,
     bool learnEnabled
 ) {
-    // Cache address calculations
-    int dxy = _hiddenSize.x * _hiddenSize.y;
-    int dxyz = dxy * _hiddenSize.z;
+     // --- Clear Activations ---
 
-    // Running max data
-    int maxIndex = 0;
-    float maxValue = -999999.0f;
+    for (int hc = 0; hc < _hiddenSize.z; hc++)
+        _hiddenActivations[address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
 
-    // For each hidden cell
+    // --- Multiply ---
+
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        Int3 hiddenPosition(pos.x, pos.y, hc);
-
-        // Partial sum cache value
-        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
-
-        // Accumulator
-        float sum = 0.0f;
+        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
-
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
-
-            // Additional addressing dimensions
-            int diam = vld._radius * 2 + 1;
-            int diam2 = diam * diam;
-
-            // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
-
-            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                    for (int vc = 0; vc < vld._size.z; vc++) {
-                        Int3 visiblePosition(x, y, vc);
-
-                        int visibleIndex = address3R(visiblePosition, Int2(vld._size.x, vld._size.y));
-
-                        float visibleActivation = (*inputActivations[vli])[visibleIndex];
-
-                        // Complete the partial address with final value needed
-                        int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + vc * diam2;
-
-                        sum += vl._weights[dPartial + az * dxyz] * visibleActivation;
-                    }
-                }
+            vl._weights.multiplyRange(*inputActivations[vli], _hiddenActivations, hiddenIndex, 1);
         }
+    }
 
-        // Determine highest cell activation and index
-        if (sum > maxValue) {
-            maxValue = sum;
+    // --- Find max ---
 
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
+
+    // For each hidden unit
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+
+        if (_hiddenActivations[hiddenIndex] > maxActivation) {
+            maxActivation = _hiddenActivations[hiddenIndex];
             maxIndex = hc;
         }
     }
 
-    // Output state
     _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
 
-    if (learnEnabled) {
-        Int3 hiddenPosition(pos.x, pos.y, maxIndex);
+    // --- Learn ---
 
-        // Partial sum cache value
-        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+    int hiddenIndex = address3R(Int3(pos.x, pos.y, maxIndex), Int2(_hiddenSize.x, _hiddenSize.y));
 
-        // Accumulator
-        float sum = 0.0f;
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
-
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
-
-            // Additional addressing dimensions
-            int diam = vld._radius * 2 + 1;
-            int diam2 = diam * diam;
-
-            // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
-            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
-
-            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                    for (int vc = 0; vc < vld._size.z; vc++) {
-                        Int3 visiblePosition(x, y, vc);
-
-                        int visibleIndex = address3R(visiblePosition, Int2(vld._size.x, vld._size.y));
-
-                        float visibleActivation = (*inputActivations[vli])[visibleIndex];
-
-                        // Complete the partial address with final value needed
-                        int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + vc * diam2;
-
-                        int wi = dPartial + az * dxyz;
-
-                        vl._weights[wi] += _alpha * std::min(0.0f, visibleActivation - vl._weights[wi]);
-                    }
-                }
-        }
+        vl._weights.hebbRuleDecreasing(*inputActivations[vli], hiddenIndex, _alpha);
     }
 }
 
@@ -149,53 +86,20 @@ void ImageEncoder::backward(
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    // Project to hidden
-    Int2 hiddenPositionCenter = project(pos, vl._visibleToHidden);
+    // Clear activations
+    for (int vc = 0; vc < vld._size.z; vc++)
+        vl._visibleActivations[address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y))] = 0.0f;
 
-    // Additional addressing dimensions
-    int diam = vld._radius * 2 + 1;
-    int diam2 = diam * diam;
-
+    // --- Multiply ---
+    
     for (int vc = 0; vc < vld._size.z; vc++) {
-        Int3 visiblePosition(pos.x, pos.y, vc);
-
-        // Accumulators
-        float sum = 0.0f;
-        float count = 0.0f;
-
-        // Bounds of receptive field, clamped to input size
-        Int2 iterLowerBound(std::max(0, hiddenPositionCenter.x - vl._reverseRadii.x), std::max(0, hiddenPositionCenter.y - vl._reverseRadii.y));
-        Int2 iterUpperBound(std::min(_hiddenSize.x - 1, hiddenPositionCenter.x + vl._reverseRadii.x), std::min(_hiddenSize.y - 1, hiddenPositionCenter.y + vl._reverseRadii.y));
-
-        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
-            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
-                Int2 hiddenPosition(x, y);
-
-                // Next layer node's receptive field
-                Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
-
-                // Bounds of receptive field, clamped to input size
-                Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
-
-                // Check for containment
-                if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                    // Address cannot be easily partially computed here, compute fully (address4)
-                    int hiddenC = (*hiddenCs)[address2R(hiddenPosition, _hiddenSize.x)];
-
-                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
-
-                    sum += vl._weights[address4R(wPos, _hiddenSize)];
-                    count += 1.0f;
-                }
-            }
-
-        // Set normalized reconstruction value
-        vl._visibleActivations[address3R(visiblePosition, Int2(vld._size.x, vld._size.y))] = sum / std::max(1.0f, count);
+        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+    
+        vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
 }
 
-void ImageEncoder::createRandom(
+void ImageEncoder::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs
@@ -218,31 +122,18 @@ void ImageEncoder::createRandom(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        // Projection constants
-        vl._visibleToHidden = Float2(static_cast<float>(_hiddenSize.x) / static_cast<float>(vld._size.x),
-            static_cast<float>(_hiddenSize.y) / static_cast<float>(vld._size.y));
-
-        vl._hiddenToVisible = Float2(static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
-            static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y));
-
-        vl._reverseRadii = Int2(static_cast<int>(std::ceil(vl._visibleToHidden.x * vld._radius) + 1),
-            static_cast<int>(std::ceil(vl._visibleToHidden.y * vld._radius) + 1));
-
-        int diam = vld._radius * 2 + 1;
-
-        int numWeightsPerHidden = diam * diam * vld._size.z;
-
-        int weightsSize = numHidden * numWeightsPerHidden;
-
         // Create weight matrix for this visible layer and initialize randomly
-        vl._weights = FloatBuffer(weightsSize);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < weightsSize; x++)
+        for (int x = 0; x < vl._weights._nonZeroValues.size(); x++)
             init(x, cs._rng, vli);
 #else
-        runKernel1(cs, std::bind(ImageEncoder::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(ImageEncoder::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), vl._weights._nonZeroValues.size(), cs._rng, cs._batchSize1);
 #endif
+
+        // Generate transpose (needed for reconstruction)
+        vl._weights.initT();
 
         vl._visibleActivations = FloatBuffer(numVisible);
 
@@ -324,11 +215,7 @@ void ImageEncoder::writeToStream(
 
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
-        os.write(reinterpret_cast<const char*>(&vl._visibleToHidden), sizeof(Float2));
-        os.write(reinterpret_cast<const char*>(&vl._hiddenToVisible), sizeof(Float2));
-        os.write(reinterpret_cast<const char*>(&vl._reverseRadii), sizeof(Int2));
-
-        writeBufferToStream(os, &vl._weights);
+        writeSMToStream(os, vl._weights);
 
         writeBufferToStream(os, &vl._visibleActivations);
     }
@@ -362,11 +249,7 @@ void ImageEncoder::readFromStream(
 
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        is.read(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(Float2));
-        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
-        is.read(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(Int2));
-
-        readBufferFromStream(is, &vl._weights);
+        readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._visibleActivations);
     }

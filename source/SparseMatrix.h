@@ -110,7 +110,7 @@ struct SparseMatrix {
 	);
 
 	// Multiply a range of rows from a given one-hot-row matrix
-	void multiplyRangeOfRowOHVs(
+	void multiplyRangeOHVs(
 		const std::vector<int> &nonZeroIndices,
 		std::vector<float> &out,
 		int startRow,
@@ -130,7 +130,7 @@ struct SparseMatrix {
 	);
 
 	// Multiply a range of rows from a given one-hot-row matrix
-	void multiplyRangeOfRowOHVsT(
+	void multiplyRangeOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		std::vector<float> &out,
 		int startColumn,
@@ -182,6 +182,12 @@ struct SparseMatrix {
 
 	// -- Hebb Rules ---
 
+	void hebbRuleDecreasing(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+	
 	void hebbRuleOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,

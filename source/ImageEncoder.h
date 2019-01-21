@@ -30,20 +30,17 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        FloatBuffer _weights; // Weight matrix
+        SparseMatrix _weights; // Weight matrix
 
         FloatBuffer _visibleActivations; // For reconstruction
-
-        Float2 _visibleToHidden; // For projection
-        Float2 _hiddenToVisible; // For projection
-
-        Int2 _reverseRadii; // Pre-computed reverse radii
     };
 
 private:
     Int3 _hiddenSize; // Hidden layer size
 
     IntBuffer _hiddenCs; // Hidden state
+
+    FloatBuffer _hiddenActivations; // Activations buffer
 
     std::vector<VisibleLayer> _visibleLayers; // Layers
     std::vector<VisibleLayerDesc> _visibleLayerDescs; // Descs
@@ -109,7 +106,7 @@ public:
     {}
 
     // Create a randomly initialized image encoder
-    void createRandom(
+    void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Size of the hidden layer
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descs
@@ -168,7 +165,7 @@ public:
     }
 
     // Get a visible layer's feed weights
-    const FloatBuffer &getWeights(
+    const SparseMatrix &getWeights(
         int i // Index of the visible layer
     ) const {
         return _visibleLayers[i]._weights;
