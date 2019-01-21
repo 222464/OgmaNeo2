@@ -17,7 +17,7 @@ void SparseCoder::init(
     int vli
 ) {
     // Initialize weights into uniform range
-	std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
+	std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
 
     _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
 }
