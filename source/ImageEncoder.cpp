@@ -31,12 +31,12 @@ void ImageEncoder::forward(
      // --- Clear Activations ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++)
-        _hiddenActivations[address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
+        _hiddenActivations[address3C(Int3(pos.x, pos.y, hc), _hiddenSize)] = 0.0f;
 
     // --- Multiply ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -54,7 +54,7 @@ void ImageEncoder::forward(
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -66,7 +66,7 @@ void ImageEncoder::forward(
 
     // --- Learn ---
 
-    int hiddenIndex = address3R(Int3(pos.x, pos.y, maxIndex), Int2(_hiddenSize.x, _hiddenSize.y));
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -88,12 +88,12 @@ void ImageEncoder::backward(
 
     // Clear activations
     for (int vc = 0; vc < vld._size.z; vc++)
-        vl._visibleActivations[address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y))] = 0.0f;
+        vl._visibleActivations[address3C(Int3(pos.x, pos.y, vc), vld._size)] = 0.0f;
 
     // --- Multiply ---
     
     for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3R(Int3(pos.x, pos.y, vc), Int2(vld._size.x, vld._size.y));
+        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
     
         vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
