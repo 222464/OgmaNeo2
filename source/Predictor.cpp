@@ -64,7 +64,11 @@ void Predictor::forward(
     _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hiddenTargetCs) {
+void Predictor::learn(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenTargetCs
+) {
     int targetIndex = (*hiddenTargetCs)[address2R(pos, _hiddenSize.x)];
 
     // --- Find Deltas ---
@@ -94,9 +98,11 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const IntBuffer* hidde
     }
 }
 
-void Predictor::createRandom(ComputeSystem &cs,
-    const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
-{
+void Predictor::createRandom(
+    ComputeSystem &cs,
+    const Int3 &hiddenSize,
+    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+) {
     _visibleLayerDescs = visibleLayerDescs;
 
     _hiddenSize = hiddenSize;
@@ -163,7 +169,10 @@ void Predictor::createRandom(ComputeSystem &cs,
 #endif
 }
 
-void Predictor::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
+void Predictor::activate(
+    ComputeSystem &cs,
+    const std::vector<const IntBuffer*> &visibleCs
+) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -192,7 +201,13 @@ void Predictor::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> 
     }
 }
 
-void Predictor::learn(ComputeSystem &cs, const IntBuffer* hiddenTargetCs) {
+void Predictor::learn(
+    ComputeSystem &cs,
+    const IntBuffer* hiddenTargetCs
+) {
+    if (_alpha == 0.0f)
+        return;
+
     // Learn kernel
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < _hiddenSize.x; x++)
@@ -203,7 +218,9 @@ void Predictor::learn(ComputeSystem &cs, const IntBuffer* hiddenTargetCs) {
 #endif
 }
 
-void Predictor::writeToStream(std::ostream &os) const {
+void Predictor::writeToStream(
+    std::ostream &os
+) const {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -231,7 +248,9 @@ void Predictor::writeToStream(std::ostream &os) const {
     }
 }
 
-void Predictor::readFromStream(std::istream &is) {
+void Predictor::readFromStream(
+    std::istream &is
+) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;

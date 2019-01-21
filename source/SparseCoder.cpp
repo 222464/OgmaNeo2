@@ -250,6 +250,9 @@ void SparseCoder::learn(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &visibleCs
 ) {
+    if (_alpha == 0.0f)
+        return;
+
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
