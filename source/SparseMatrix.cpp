@@ -445,7 +445,7 @@ void SparseMatrix::hebbRuleDecreasing(
 		_nonZeroValues[j] += alpha * std::min(0.0f, in[_columnIndices[j]] - _nonZeroValues[j]);
 }
 
-void SparseMatrix::hebbRuleOHVs(
+void SparseMatrix::hebbRuleDecreasingOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
 	int oneHotSize,
@@ -461,7 +461,7 @@ void SparseMatrix::hebbRuleOHVs(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * std::min(0.0f, target - _nonZeroValues[_nonZeroValueIndices[j]]);
 		}
 	}
 }
