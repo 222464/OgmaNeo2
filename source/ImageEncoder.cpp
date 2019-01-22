@@ -66,14 +66,16 @@ void ImageEncoder::forward(
 
     // --- Learn ---
 
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
+    if (learnEnabled) {
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.hebbRuleDecreasing(*inputActivations[vli], hiddenIndex, _alpha);
+            vl._weights.hebbRuleDecreasing(*inputActivations[vli], hiddenIndex, _alpha);
+        }
     }
 }
 
