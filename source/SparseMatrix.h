@@ -18,12 +18,15 @@ struct SparseMatrix {
 	int _columns;
 
 	std::vector<float> _nonZeroValues;
-
 	std::vector<int> _rowRanges;
 	std::vector<int> _columnIndices;
 
+	std::vector<int> _nonZeroValueIndices;
 	std::vector<int> _columnRanges;
 	std::vector<int> _rowIndices;
+
+	// True if initTranspose was executed on this object
+	bool _transposable;
 
 	SparseMatrix();
 
@@ -32,14 +35,16 @@ struct SparseMatrix {
 		int columns,
 		const std::vector<float> &nonZeroValues,
 		const std::vector<int> &rowRanges,
-		const std::vector<int> &columnIndices
+		const std::vector<int> &columnIndices,
+		bool generateTranspose = false
 	);
 
 	// From a non-compressed sparse matrix
 	SparseMatrix(
-		const std::vector<float> &data,
 		int rows,
-		int columns
+		int columns,
+		const std::vector<float> &data,
+		bool generateTranspose = false
 	);
 
 	// If you don't want to construct immediately
@@ -52,25 +57,56 @@ struct SparseMatrix {
 	);
 
 	void initFromMatrix(
-		const std::vector<float> &data,
 		int rows,
-		int columns
+		int columns,
+		const std::vector<float> &data
 	);
 
 	// Needs to be called once before using transposed functions
 	void initTranpose();
 
-	// Size of "in" must equal size of "out"
+	// ---- All available operations below ----
+
+	// Let A be *this* object ("this" pointer points to A)
+	// Setting transposed to true will transpose A (*this* object)
+
+	// -- AB or -(AB) (with negative = true) --
 	void multiplyVector(
 		const std::vector<float> &in,
-		std::vector<float> &out
+		std::vector<float> &out,
+		bool negative = false,
+		bool transposed = false
 	);
 
-	void multiplyOneHotVectorArray(
-		const OneHotVectorArray &arr,
-		std::vector<float> &out
+	void multiplyOHVA(
+		const OneHotVectorArray &in,
+		std::vector<float> &out,
+		bool negative = false,
+		bool transposed = false
 	);
 
+	// --- Output range versions ---
+
+	// -- AB (with range) or -(AB) (with negative = true) --
+	void multiplyRangeVector(
+		const std::vector<float> &in,
+		std::vector<float> &out,
+		int startIndex,
+		int length,
+		bool negative = false,
+		bool transposed = false
+	);
+
+	void multiplyRangeOHVA(
+		const OneHotVectorArray &in,
+		std::vector<float> &out,
+		int startIndex,
+		int length,
+		bool negative = false,
+		bool transposed = false
+	);
+
+	// ---- Print functions ----
 	void print(int elementWidth);
 
 	void printT(int elementWidth);

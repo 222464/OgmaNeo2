@@ -95,7 +95,7 @@ int main() {
 	m(2, 2) = 3;
 	m(3, 1) = 6;
 
-	SparseMatrix sm(m._data, m._rows, m._columns);
+	SparseMatrix sm(m._rows, m._columns, m._data);
 
 	m.print(6);
 	printf("         X\n");
@@ -124,11 +124,21 @@ int main() {
 	{
 		sm.initTranpose();
 
-		printf("Sparse Matrix:\n");
+		printf("Sparse matrix:\n");
 		sm.print(6);
 		printf("\n");
-		printf("Sparse Matrix Transposed:\n");
+		printf("Sparse matrix transposed:\n");
 		sm.printT(6);
+		printf("\n");
+
+		std::vector<float> test = { 1.0f, 1.0f, 1.0f, 1.0f };
+		std::vector<float> result;
+		result.resize(test.size(), 0.0f);
+
+		sm.multiplyVector(test, result, false, true);
+
+		printf("Sparse matrix transposed multiply by vector:\n");
+		printVector(result, 6);
 		printf("\n");
 	}
 
@@ -143,19 +153,29 @@ int main() {
 		nsm(3, 1) = 6.0f;
 		nsm(0, 4) = 2.0f;
 
-		SparseMatrix nssm(nsm._data, nsm._rows, nsm._columns);
+		SparseMatrix nssm(nsm._rows, nsm._columns, nsm._data);
 		nssm.initTranpose();
 
 		printf("Not sparse:\n");
 		nsm.print(6);
 		printf("\n");
 
-		printf("Sparse:\n");
+		printf("Sparse matrix:\n");
 		nssm.print(6);
 		printf("\n");
 
-		printf("Sparse Transposed:\n");
+		printf("Sparse matrix transposed:\n");
 		nssm.printT(6);
+		printf("\n");
+
+		std::vector<float> test = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+		std::vector<float> result;
+		result.resize(test.size(), 0.0f);
+
+		nssm.multiplyVector(test, result, false, true);
+
+		printf("Sparse matrix transposed multiply by vector:\n");
+		printVector(result, 6);
 		printf("\n");
 	}
 
