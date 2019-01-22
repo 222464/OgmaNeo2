@@ -142,7 +142,7 @@ void Actor::learn(
             vl._actionWeights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
         }
 
-        activations[hc] = _hiddenActivations[hc];
+        activations[hc] = _hiddenActivations[hiddenIndex];
 
         maxActivation = std::max(maxActivation, activations[hc]);
     }
