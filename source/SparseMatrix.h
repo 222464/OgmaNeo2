@@ -25,9 +25,6 @@ struct SparseMatrix {
 	std::vector<int> _columnRanges;
 	std::vector<int> _rowIndices;
 
-	// True if initTranspose was executed on this object
-	bool _transposable;
-
 	SparseMatrix();
 
 	SparseMatrix(
@@ -106,8 +103,9 @@ struct SparseMatrix {
 		bool transposed = false
 	);
 
-	// ---- Print functions ----
-	void print(int elementWidth);
-
-	void printT(int elementWidth);
+	void print(
+		int elementWidth,
+		int precision = 2,
+		bool transposed = false
+	);
 };

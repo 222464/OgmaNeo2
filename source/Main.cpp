@@ -125,10 +125,10 @@ int main() {
 		sm.initTranpose();
 
 		printf("Sparse matrix:\n");
-		sm.print(6);
+		sm.print(6, 2);
 		printf("\n");
 		printf("Sparse matrix transposed:\n");
-		sm.printT(6);
+		sm.print(6, 2, true);
 		printf("\n");
 
 		std::vector<float> test = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -161,11 +161,11 @@ int main() {
 		printf("\n");
 
 		printf("Sparse matrix:\n");
-		nssm.print(6);
+		nssm.print(6, 2);
 		printf("\n");
 
 		printf("Sparse matrix transposed:\n");
-		nssm.printT(6);
+		nssm.print(6, 2, true);
 		printf("\n");
 
 		std::vector<float> test = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };

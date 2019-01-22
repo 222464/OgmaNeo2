@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 
+#include <assert.h>
+
 SparseMatrix::SparseMatrix() {}
 
 SparseMatrix::SparseMatrix(
@@ -48,7 +50,6 @@ void SparseMatrix::init(
 	_nonZeroValues = nonZeroValues;
 	_rowRanges = rowRanges;
 	_columnIndices = columnIndices;
-	_transposable = false;
 }
 
 void SparseMatrix::initFromMatrix(
@@ -78,8 +79,6 @@ void SparseMatrix::initFromMatrix(
 
 		_rowRanges.push_back(nonZeroCountInRow);
 	}
-
-	_transposable = false;
 }
 
 void SparseMatrix::initTranpose() {
@@ -134,8 +133,6 @@ void SparseMatrix::initTranpose() {
 			++columnOffsets[columnIndex];
 		}
 	}
-
-	_transposable = true;
 }
 
 void SparseMatrix::multiplyVector(
@@ -173,6 +170,8 @@ void SparseMatrix::multiplyRangeVector(
 	int end = startIndex + length;
 
 	if (transposed) {
+		assert(_nonZeroValueIndices.size() > 0);
+
 		if (negative) {
 			int nextIndex;
 
@@ -233,6 +232,8 @@ void SparseMatrix::multiplyRangeOHVA(
 	int end = startIndex + length;
 
 	if (transposed) {
+		assert(_nonZeroValueIndices.size() > 0);
+
 		if (negative) {
 			int nextIndex;
 
@@ -283,106 +284,109 @@ void SparseMatrix::multiplyRangeOHVA(
 }
 
 void SparseMatrix::print(
-	int elementWidth
+	int elementWidth,
+	int precision,
+	bool transposed
 ) {
-	std::vector<float> data;
-	data.resize(_rows * _columns, 0.0f);
+	if (transposed) {
+		assert(_nonZeroValueIndices.size() > 0);
 
-	int nextIndex = 0;
-	for (int i = 0; i < _rows; i = nextIndex) {
-		int rowOffset = i * _columns;
-		nextIndex = i + 1;
+		std::vector<float> data;
+		data.resize(_columns * _rows, 0.0f);
 
-		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; ++j) {
-			float value = _nonZeroValues[j];
-			int col = _columnIndices[j];
+		int nextIndex = 0;
+		for (int i = 0; i < _columns; i = nextIndex) {
+			nextIndex = i + 1;
 
-			data[rowOffset + col] = value;
-		}
-	}
+			for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; ++j) {
+				float value = _nonZeroValues[_nonZeroValueIndices[j]];
+				int row = _rowIndices[j];
 
-	printf("[");
-
-	for (int row = 0; row < _rows; ++row) {
-		int rowOffset = row * _columns;
-
-		if (row > 0) {
-			printf(" [");
-		}
-		else {
-			printf("[");
+				data[i * _rows + row] = value;
+			}
 		}
 
-		for (int col = 0; col < _columns; ++col) {
-			float value = data[rowOffset + col];
+		printf("[");
 
-			if (col < _columns - 1) {
-				printf("%*.2f, ", elementWidth, value);
+		for (int row = 0; row < _columns; ++row) {
+			int rowOffset = row * _rows;
+
+			if (row > 0) {
+				printf(" [");
 			}
 			else {
-				printf("%*.2f", elementWidth, value);
+				printf("[");
 			}
-		}
 
-		printf("]");
+			for (int col = 0; col < _rows; ++col) {
+				float value = data[rowOffset + col];
 
-		if (row < _rows - 1) {
-			printf("\n");
-		}
-		else {
-			printf("]\n");
-		}
-	}
-}
+				if (col < _rows - 1) {
+					printf("%*.*f, ", elementWidth, precision, value);
+				}
+				else {
+					printf("%*.*f", elementWidth, precision, value);
+				}
+			}
 
-void SparseMatrix::printT(
-	int elementWidth
-) {
-	std::vector<float> data;
-	data.resize(_columns * _rows, 0.0f);
+			printf("]");
 
-	int nextIndex = 0;
-	for (int i = 0; i < _columns; i = nextIndex) {
-		nextIndex = i + 1;
-
-		for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; ++j) {
-			float value = _nonZeroValues[_nonZeroValueIndices[j]];
-			int row = _rowIndices[j];
-
-			data[i * _rows + row] = value;
-		}
-	}
-
-	printf("[");
-
-	for (int row = 0; row < _columns; ++row) {
-		int rowOffset = row * _rows;
-
-		if (row > 0) {
-			printf(" [");
-		}
-		else {
-			printf("[");
-		}
-
-		for (int col = 0; col < _rows; ++col) {
-			float value = data[rowOffset + col];
-
-			if (col < _rows - 1) {
-				printf("%*.2f, ", elementWidth, value);
+			if (row < _columns - 1) {
+				printf("\n");
 			}
 			else {
-				printf("%*.2f", elementWidth, value);
+				printf("]\n");
+			}
+		}
+	}
+	else {
+		std::vector<float> data;
+		data.resize(_rows * _columns, 0.0f);
+
+		int nextIndex = 0;
+		for (int i = 0; i < _rows; i = nextIndex) {
+			int rowOffset = i * _columns;
+			nextIndex = i + 1;
+
+			for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; ++j) {
+				float value = _nonZeroValues[j];
+				int col = _columnIndices[j];
+
+				data[rowOffset + col] = value;
 			}
 		}
 
-		printf("]");
+		printf("[");
 
-		if (row < _columns - 1) {
-			printf("\n");
-		}
-		else {
-			printf("]\n");
+		for (int row = 0; row < _rows; ++row) {
+			int rowOffset = row * _columns;
+
+			if (row > 0) {
+				printf(" [");
+			}
+			else {
+				printf("[");
+			}
+
+			for (int col = 0; col < _columns; ++col) {
+				float value = data[rowOffset + col];
+
+				if (col < _columns - 1) {
+					printf("%*.*f, ", elementWidth, precision, value);
+				}
+				else {
+					printf("%*.*f", elementWidth, precision, value);
+				}
+			}
+
+			printf("]");
+
+			if (row < _rows - 1) {
+				printf("\n");
+			}
+			else {
+				printf("]\n");
+			}
 		}
 	}
 }
