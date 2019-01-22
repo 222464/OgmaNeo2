@@ -32,7 +32,7 @@ void Actor::forward(
     // --- Value ---
 
     {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, 0), _hiddenSize);
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, 0), Int3(_hiddenSize.x, _hiddenSize.y, 1));
 
         _hiddenValues[hiddenIndex] = 0.0f;
 
@@ -96,7 +96,7 @@ void Actor::learn(
     // --- Value Prev ---
 
     {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, 0), _hiddenSize);
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, 0), Int3(_hiddenSize.x, _hiddenSize.y, 1));
 
         float newValue = q + g * _hiddenValues[hiddenIndex];
 
@@ -331,7 +331,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
             // Copy visible Cs
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < numVisibleColumns; x++)
-                copyInt(x, cs._rng, visibleCs[vli], s._inputCs[vli].get());
+                copyInt(x, cs._rng, visibleCs[vli], &s._inputCs[vli]);
 #else
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &s._inputCs[vli]), numVisibleColumns, cs._rng, cs._batchSize1);
 #endif
@@ -340,7 +340,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Copy hidden Cs
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
+            copyInt(x, cs._rng, &_hiddenCs, &s._hiddenCs);
 #else
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
@@ -348,7 +348,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Copy hidden values
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyFloat(x, cs._rng, &_hiddenValues, s._hiddenValues.get());
+            copyFloat(x, cs._rng, &_hiddenValues, &s._hiddenValues);
 #else
         runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, &s._hiddenValues), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
