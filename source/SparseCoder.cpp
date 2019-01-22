@@ -31,13 +31,12 @@ void SparseCoder::forward(
     // --- Clear Activations ---
 
     if (firstIter) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++)
-            _hiddenStimulus[address3C(Int3(pos.x, pos.y, hc), _hiddenSize)] = 0.0f;
-
         // --- Multiply Stimulus ---
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+            _hiddenStimulus[hiddenIndex] = 0.0f;
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -46,27 +45,17 @@ void SparseCoder::forward(
 
                 vl._weights.multiplyRangeOHVs(*inputCs[vli], _hiddenStimulus, hiddenIndex, 1, vld._size.z);
             }
-        }
-
-        // Set activation to stimulus
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
             _hiddenActivations[hiddenIndex] = _hiddenStimulus[hiddenIndex];
         }
     }
     else {
-        // Increment activations by stimulus
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-            _hiddenActivations[hiddenIndex] += _hiddenStimulus[hiddenIndex];
-        }
-
         // --- Multiply and Subtract Recon ---
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+            _hiddenActivations[hiddenIndex] += _hiddenStimulus[hiddenIndex];
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -105,26 +94,17 @@ void SparseCoder::backward(
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    // Clear activations
-    for (int vc = 0; vc < vld._size.z; vc++)
-        vl._visibleActivations[address3C(Int3(pos.x, pos.y, vc), vld._size)] = 0.0f;
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
     // --- Multiply ---
     
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
+
+        vl._visibleActivations[visibleIndex] = 0.0f;
     
         vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
-    }
-
-    // --- Find max ---
-
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
-    // For each hidden unit
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
         if (vl._visibleActivations[visibleIndex] > maxActivation) {
             maxActivation = vl._visibleActivations[visibleIndex];
@@ -148,17 +128,12 @@ void SparseCoder::learn(
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
 
-    // Set deltas
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
-        vl._visibleDeltas[visibleIndex] = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(vl._visibleActivations[visibleIndex]));
-    }
+        vl._visibleActivations[visibleIndex] = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(vl._visibleActivations[visibleIndex]));
 
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
-
-        vl._weights.deltaRuleRangeOHVsT(_hiddenCs, vl._visibleDeltas, visibleIndex, 1, _hiddenSize.z);
+        vl._weights.deltaRuleRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
 }
 
@@ -200,9 +175,6 @@ void SparseCoder::initRandom(
 
         // Visible activations buffer
         vl._visibleActivations = FloatBuffer(numVisible);
-
-        // Deltas for updating weights buffer
-        vl._visibleDeltas = FloatBuffer(numVisible);
 
         // Reconstruction states
         vl._reconCs = IntBuffer(numVisibleColumns);
@@ -341,8 +313,6 @@ void SparseCoder::readFromStream(
         readSMFromStream(is, vl._weights);
 
         vl._visibleActivations = FloatBuffer(numVisible);
-
-        vl._visibleDeltas = FloatBuffer(numVisible);
 
         vl._reconCs = IntBuffer(numVisibleColumns);
     }

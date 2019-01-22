@@ -34,8 +34,6 @@ public:
 
         FloatBuffer _visibleActivations; // Reconstruction buffer for (visible) activations
 
-        FloatBuffer _visibleDeltas; // Modifications buffer for weights
-
         IntBuffer _reconCs; // Reconstruction states
     };
 
