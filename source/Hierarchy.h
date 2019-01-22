@@ -9,7 +9,7 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
+#include "Actor.h"
 
 #include <memory>
 
@@ -28,28 +28,28 @@ public:
         Int3 _hiddenSize; // Size of hidden layer
 
         int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction Radius
+        int _aRadius; // Prediction Radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
         int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
 
-        float _currentInfluence; // Current layer (non-feedback) predictor influence
+        int _historyCapacity; // Maximum number of history samples
 
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
         _scRadius(2),
-        _pRadius(2),
+        _aRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2),
-        _currentInfluence(0.1f)
+        _historyCapacity(8)
         {}
     };
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+    std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -60,6 +60,9 @@ private:
 
     std::vector<int> _ticks;
     std::vector<int> _ticksPerUpdate;
+
+    std::vector<float> _rewards;
+    std::vector<float> _rewardCounts;
 
     // Input dimensions
     std::vector<Int3> _inputSizes;
@@ -92,6 +95,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        float reward, // Reinforcement signal
         bool learnEnabled = true // Whether learning is enabled
     );
 
@@ -111,10 +115,10 @@ public:
     }
 
     // Retrieve predictions
-    const IntBuffer &getPredictionCs(
+    const IntBuffer &getActionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front()[i]->getHiddenCs();
+        return _aLayers.front()[i]->getHiddenCs();
     }
 
     // Whether this layer received on update this timestep
@@ -158,17 +162,17 @@ public:
     }
 
     // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayer(
+    std::vector<std::unique_ptr<Actor>> &getALayer(
         int l // Layer index
     ) {
-        return _pLayers[l];
+        return _aLayers[l];
     }
 
     // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
+    const std::vector<std::unique_ptr<Actor>> &getALayer(
         int l // Layer index
     ) const {
-        return _pLayers[l];
+        return _aLayers[l];
     }
 };
 } // namespace ogmaneo
