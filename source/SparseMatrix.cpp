@@ -129,6 +129,18 @@ void SparseMatrix::multiplyRange(
 	}
 }
 
+void SparseMatrix::counts(
+	std::vector<int> &out
+) {
+	int nextIndex;
+	
+	for (int i = 0; i < _rows; i = nextIndex) {
+		nextIndex = i + 1;
+
+		out[i] += _rowRanges[nextIndex] - _rowRanges[i];
+	}
+}
+
 void SparseMatrix::multiplyT(
 	const std::vector<float> &in,
 	std::vector<float> &out
@@ -161,6 +173,18 @@ void SparseMatrix::multiplyRangeT(
 
 		for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; j++)
 			out[i] += _nonZeroValues[_nonZeroValueIndices[j]] * in[_rowIndices[j]];
+	}
+}
+
+void SparseMatrix::countsT(
+	std::vector<int> &out
+) {
+	int nextIndex;
+	
+	for (int i = 0; i < _columns; i = nextIndex) {
+		nextIndex = i + 1;
+
+		out[i] += _columnRanges[nextIndex] - _columnRanges[i];
 	}
 }
 

@@ -84,6 +84,11 @@ struct SparseMatrix {
 		int rowCount
 	);
 
+	// Count number of elements in each row
+	void counts(
+		std::vector<int> &out
+	);
+
 	// --- Transpose ---
 
 	void multiplyT(
@@ -97,6 +102,11 @@ struct SparseMatrix {
 		std::vector<float> &out,
 		int startColumn,
 		int columnCount
+	);
+
+	// Count number of elements in each column
+	void countsT(
+		std::vector<int> &out
 	);
 
 	// --- One-Hot Vectors Operations ---

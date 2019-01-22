@@ -97,6 +97,12 @@ void ImageEncoder::backward(
     
         vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
+
+        vl._visibleActivations[visibleIndex] /= static_cast<float>(vl._visibleCounts[visibleIndex]);
+    }
 }
 
 void ImageEncoder::initRandom(
@@ -143,6 +149,17 @@ void ImageEncoder::initRandom(
 #else
         runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._visibleActivations, 0.0f), numVisible, cs._rng, cs._batchSize1);
 #endif
+
+        vl._visibleCounts = IntBuffer(numVisible);
+
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < numVisible; x++)
+            fillInt(x, cs._rng, &vl._visibleCounts, 0);
+#else
+        runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &vl._visibleCounts, 0), numVisible, cs._rng, cs._batchSize1);
+#endif
+
+        vl._weights.countsT(vl._visibleCounts);
     }
 
     // Hidden Cs
