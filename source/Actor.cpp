@@ -279,6 +279,7 @@ const Actor &Actor::operator=(
     _alpha = other._alpha;
     _beta = other._beta;
     _gamma = other._gamma;
+    _epsilon = other._epsilon;
 
     _historySamples.resize(other._historySamples.size());
 
