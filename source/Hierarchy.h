@@ -17,7 +17,7 @@ namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
     _none = 0,
-    _predict = 1
+    _act = 1
 };
 
 // A SPH

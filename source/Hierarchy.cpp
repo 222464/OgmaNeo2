@@ -98,7 +98,7 @@ void Hierarchy::initRandom(
 
             // Create actors
             for (int p = 0; p < _aLayers[l].size(); p++) {
-                if (inputTypes[p] == InputType::_predict) {
+                if (inputTypes[p] == InputType::_act) {
                     _aLayers[l][p] = std::make_unique<Actor>();
 
                     _aLayers[l][p]->initRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs);
