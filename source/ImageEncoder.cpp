@@ -101,7 +101,7 @@ void ImageEncoder::backward(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
-        vl._visibleActivations[visibleIndex] /= static_cast<float>(vl._visibleCounts[visibleIndex]);
+        vl._visibleActivations[visibleIndex] = vl._visibleActivations[visibleIndex] * _hiddenSize.z / static_cast<float>(vl._visibleCounts[visibleIndex]);
     }
 }
 
