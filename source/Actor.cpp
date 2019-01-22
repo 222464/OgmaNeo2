@@ -19,7 +19,7 @@ void Actor::init(
     // Randomly initialize weights in range
 	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
 
-    _visibleLayers[vli]._actionWeights._nonZeroValues[pos] = weightDist(rng);
+    _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
 }
 
 void Actor::forward(
@@ -29,10 +29,11 @@ void Actor::forward(
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    // --- Value ---
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
-    {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, 0), Int3(_hiddenSize.x, _hiddenSize.y, 1));
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         _hiddenValues[hiddenIndex] = 0.0f;
 
@@ -41,11 +42,15 @@ void Actor::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._valueWeights.multiplyRangeOHVs(*inputCs[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
+            vl._weights.multiplyRangeOHVs(*inputCs[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
+        }
+
+        if (_hiddenValues[hiddenIndex] > maxActivation) {
+            maxActivation = _hiddenValues[hiddenIndex];
+
+            maxIndex = hc;
         }
     }
-
-    // --- Action ---
 
     std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
@@ -54,51 +59,43 @@ void Actor::forward(
 
         _hiddenCs[hiddenColumnIndex] = columnDist(rng);
     }
-    else {
-        int maxIndex = 0;
-        float maxActivation = -999999.0f;
-
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-            _hiddenActivations[hiddenIndex] = 0.0f;
-
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-                vl._actionWeights.multiplyRangeOHVs(*inputCs[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
-            }
-
-            if (_hiddenActivations[hiddenIndex] > maxActivation) {
-                maxActivation = _hiddenActivations[hiddenIndex];
-
-                maxIndex = hc;
-            }
-        }
-
+    else
         _hiddenCs[hiddenColumnIndex] = maxIndex;
-    }
 }
 
-void Actor::learn(
+void Actor::valueUpdate(
     const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCsPrev,
+    const FloatBuffer* hiddenValues,
+    FloatBuffer* hiddenValuesPrev,
+    float reward
+) {
+    // Cache address calculations
+    int dxy = _hiddenSize.x * _hiddenSize.y;
+    int dxyz = dxy * _hiddenSize.z;
+
+    float maxActivation = -999999.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        Int3 hiddenPosition(pos.x, pos.y, hc);
+
+        maxActivation = std::max(maxActivation, (*hiddenValues)[address3C(hiddenPosition, _hiddenSize)]);
+    }
+
+    float qTarget = reward + _gamma * maxActivation;
+
+    (*hiddenValuesPrev)[address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))]), _hiddenSize)] = qTarget;
+}
+
+void Actor::learn(const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCsPrev,
     const IntBuffer* hiddenCsPrev,
-    const FloatBuffer* hiddenValuesPrev,
-    float q,
-    float g
+    const FloatBuffer* hiddenValuesPrev
 ) {
-    float tdErrorAction;
-
-    // --- Value Prev ---
-
-    {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, 0), Int3(_hiddenSize.x, _hiddenSize.y, 1));
-
-        float newValue = q + g * _hiddenValues[hiddenIndex];
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         _hiddenValues[hiddenIndex] = 0.0f;
 
@@ -107,67 +104,17 @@ void Actor::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._valueWeights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
+            vl._weights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
         }
 
-        float tdErrorValue = newValue - _hiddenValues[hiddenIndex];
-        tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenIndex];
-
-        _hiddenValues[hiddenIndex] = _alpha * tdErrorValue;
+        _hiddenValues[hiddenIndex] = _alpha * ((*hiddenValuesPrev)[hiddenIndex] - _hiddenValues[hiddenIndex]);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._valueWeights.deltaRuleRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
-        }
-    }
-
-    // --- Action ---
-
-    std::vector<float> activations(_hiddenSize.z);
-    float maxActivation = -999999.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        _hiddenActivations[hiddenIndex] = 0.0f;
-
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            vl._actionWeights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
-        }
-
-        activations[hc] = _hiddenActivations[hiddenIndex];
-
-        maxActivation = std::max(maxActivation, activations[hc]);
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-
-        total += activations[hc];
-    }
-
-    int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        _hiddenActivations[hiddenIndex] = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
-
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            vl._actionWeights.deltaRuleRangeOHVs(*inputCsPrev[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
+            vl._weights.deltaRuleRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
         }
     }
 }
@@ -197,21 +144,13 @@ void Actor::initRandom(
         int numVisible = numVisibleColumns * vld._size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, Int3(_hiddenSize.x, _hiddenSize.y, 1), vld._radius, vl._valueWeights);
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._actionWeights);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < vl._valueWeights._nonZeroValues.size(); x++)
-            fillFloat(x, cs._rng, &vl._valueWeights._nonZeroValues, 0.0f);
-#else
-        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._valueWeights._nonZeroValues, 0.0f), vl._valueWeights._nonZeroValues.size(), cs._rng, cs._batchSize1);
-#endif
-
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < vl._actionWeights._nonZeroValues.size(); x++)
+        for (int x = 0; x < vl._weights._nonZeroValues.size(); x++)
             init(x, cs._rng, vli);
 #else
-        runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), vl._actionWeights._nonZeroValues.size(), cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), vl._weights._nonZeroValues.size(), cs._rng, cs._batchSize1);
 #endif
     }
 
@@ -225,16 +164,14 @@ void Actor::initRandom(
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
-    _hiddenActivations = FloatBuffer(numHidden);
-
     // Hidden values
-    _hiddenValues = FloatBuffer(numHiddenColumns);
+    _hiddenValues = FloatBuffer(numHidden);
 
 #ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHiddenColumns; x++)
+    for (int x = 0; x < numHidden; x++)
         fillFloat(x, cs._rng, &_hiddenValues, 0.0f);
 #else
-    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, 0.0f), numHiddenColumns, cs._rng, cs._batchSize1);
+    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, 0.0f), numHidden, cs._rng, cs._batchSize1);
 #endif
 
     // Create (pre-allocated) history samples
@@ -256,7 +193,7 @@ void Actor::initRandom(
 
         _historySamples[i]->_hiddenCs = IntBuffer(numHiddenColumns);
 
-        _historySamples[i]->_hiddenValues = FloatBuffer(numHiddenColumns);
+        _historySamples[i]->_hiddenValues = FloatBuffer(numHidden);
     }
 }
 
@@ -269,17 +206,15 @@ const Actor &Actor::operator=(
 
     _hiddenCs = other._hiddenCs;
 
-    _hiddenActivations = other._hiddenActivations;
-
     _hiddenValues = other._hiddenValues;
 
     _visibleLayerDescs = other._visibleLayerDescs;
     _visibleLayers = other._visibleLayers;
 
     _alpha = other._alpha;
-    _beta = other._beta;
     _gamma = other._gamma;
     _epsilon = other._epsilon;
+    _historyIters = other._historyIters;
 
     _historySamples.resize(other._historySamples.size());
 
@@ -332,7 +267,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
             // Copy visible Cs
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < numVisibleColumns; x++)
-                copyInt(x, cs._rng, visibleCs[vli], &s._inputCs[vli]);
+                copyInt(x, cs._rng, visibleCs[vli], s._inputCs[vli].get());
 #else
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &s._inputCs[vli]), numVisibleColumns, cs._rng, cs._batchSize1);
 #endif
@@ -341,17 +276,17 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Copy hidden Cs
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, &_hiddenCs, &s._hiddenCs);
+            copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
 #else
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
         // Copy hidden values
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < numHiddenColumns; x++)
-            copyFloat(x, cs._rng, &_hiddenValues, &s._hiddenValues);
+        for (int x = 0; x < numHidden; x++)
+            copyFloat(x, cs._rng, &_hiddenValues, s._hiddenValues.get());
 #else
-        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, &s._hiddenValues), numHiddenColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, &s._hiddenValues), numHidden, cs._rng, cs._batchSize1);
 #endif
 
         s._reward = reward;
@@ -359,25 +294,38 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize > 2) {
-        const HistorySample &sPrev = *_historySamples[0];
+        // Propagate Q values
+        for (int t = _historySize - 2; t >= 0; t--) {
+            const HistorySample &s = *_historySamples[t + 1];
+            HistorySample &sPrev = *_historySamples[t];
 
-        // Compute (partial) Q value, rest is completed in the kernel
-        float q = 0.0f;
-
-        for (int t = _historySize - 1; t >= 1; t--)
-            q += _historySamples[t]->_reward * std::pow(_gamma, t - 1);
-
-        // Discount factor for remainder of Q value
-        float g = std::pow(_gamma, _historySize - 1);
-
-        // Learn kernel
+            // Learn kernel
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < _hiddenSize.x; x++)
-            for (int y = 0; y < _hiddenSize.y; y++)
-                learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenValues, q, g);
+            for (int x = 0; x < _hiddenSize.x; x++)
+                for (int y = 0; y < _hiddenSize.y; y++)
+                    valueUpdate(Int2(x, y), cs._rng, &sPrev._hiddenCs, &s._hiddenValues, &sPrev._hiddenValues, s._reward);
 #else
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenValues, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Actor::valueUpdateKernel, std::placeholders::_1, std::placeholders::_2, this, &sPrev._hiddenCs, &s._hiddenValues, &sPrev._hiddenValues, s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+        }
+
+        std::uniform_int_distribution<int> sampleDist(0, _historySamples.size() - 2);
+
+        for (int it = 0; it < _historyIters; it++) {
+            int t = sampleDist(cs._rng);
+
+            //const HistorySample &s = *_historySamples[t + 1];
+            const HistorySample &sPrev = *_historySamples[t];
+
+            // Learn kernel
+#ifdef KERNEL_DEBUG
+            for (int x = 0; x < _hiddenSize.x; x++)
+                for (int y = 0; y < _hiddenSize.y; y++)
+                    learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenValues,);
+#else
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenValues), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+        }
     }
 }
 
@@ -388,9 +336,9 @@ void Actor::writeToStream(std::ostream &os) const {
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
@@ -411,8 +359,7 @@ void Actor::writeToStream(std::ostream &os) const {
 
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
-        writeSMToStream(os, vl._valueWeights);
-        writeSMToStream(os, vl._actionWeights);
+        writeSMToStream(os, vl._weights);
     }
 
     int numHistorySamples = _historySamples.size();
@@ -439,9 +386,9 @@ void Actor::readFromStream(std::istream &is) {
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_epsilon), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
@@ -465,8 +412,7 @@ void Actor::readFromStream(std::istream &is) {
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        readSMFromStream(is, vl._valueWeights);
-        readSMFromStream(is, vl._actionWeights);
+        readSMFromStream(is, vl._weights);
     }
 
     int numHistorySamples;

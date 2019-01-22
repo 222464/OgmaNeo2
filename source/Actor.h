@@ -11,7 +11,7 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// A reinforcement learning layer
+// A reinforcement learning layer (Q learning)
 class Actor {
 public:
     // Visible layer descriptor
@@ -30,8 +30,7 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _valueWeights; // Value function weights
-        SparseMatrix _actionWeights; // Action function weights
+        SparseMatrix _weights;
     };
 
     // History sample for delayed updates
@@ -51,9 +50,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenActivations; // Activations of actions
-
-    FloatBuffer _hiddenValues; // Hidden value function output buffer
+    FloatBuffer _hiddenValues; // Activations
 
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
 
@@ -74,14 +71,20 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void learn(
+    void valueUpdate(
         const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCsPrev,
+        const FloatBuffer* hiddenValues,
+        FloatBuffer* hiddenValuesPrev,
+        float reward
+    );
+
+    void learn(const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
-        float q,
-        float g
+        const FloatBuffer* hiddenValuesPrev
     );
 
     static void initKernel(
@@ -102,32 +105,41 @@ private:
         a->forward(pos, rng, inputCs);
     }
 
+    static void valueUpdateKernel(
+        const Int2 &pos,
+        std::mt19937 &rng, Actor* a,
+        const IntBuffer* hiddenCsPrev,
+        const FloatBuffer* hiddenValues,
+        FloatBuffer* hiddenValuesPrev,
+        float reward
+    ) {
+        a->valueUpdate(pos, rng, hiddenCsPrev, hiddenValues, hiddenValuesPrev, reward);
+    }
+
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
-        float q,
-        float g
+        const FloatBuffer* hiddenValuesPrev
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev);
     }
 
 public:
-    float _alpha; // Value learning rate
-    float _beta; // Action learning rate
+    float _alpha; // Learning rate
     float _gamma; // Discount factor
     float _epsilon; // Exploration rate (e-greedy)
+    int _historyIters; // Number of update iterations on history
 
     // Defaults
     Actor()
     :
-    _alpha(0.001f),
-    _beta(0.01f),
+    _alpha(0.01f),
     _gamma(0.95f),
-    _epsilon(0.01f)
+    _epsilon(0.01f),
+    _historyIters(8)
     {}
 
     Actor(
@@ -195,18 +207,11 @@ public:
         return _hiddenSize;
     }
 
-    // Get the value weights for a visible layer
-    const SparseMatrix &getValueWeights(
-        int i // Index of layer
-    ) {
-        return _visibleLayers[i]._valueWeights;
-    }
-
-    // Get the action weights for a visible layer
+    // Get the weights for a visible layer
     const SparseMatrix &getActionWeights(
         int i // Index of layer
     ) {
-        return _visibleLayers[i]._actionWeights;
+        return _visibleLayers[i]._weights;
     }
 };
 } // namespace ogmaneo
