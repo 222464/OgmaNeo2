@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "SparseCoder.h"
 #include "Actor.h"
 
 #include <memory>
@@ -48,7 +47,7 @@ public:
     };
 private:
     // Layers
-    std::vector<SparseCoder> _scLayers;
+    std::vector<Actor> _scLayers;
     std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
     // Histories
@@ -148,14 +147,14 @@ public:
     }
 
     // Retrieve a sparse coding layer
-    SparseCoder &getSCLayer(
+    Actor &getSCLayer(
         int l // Layer index
     ) {
         return _scLayers[l];
     }
 
     // Retrieve a sparse coding layer, const version
-    const SparseCoder &getSCLayer(
+    const Actor &getSCLayer(
         int l // Layer index
     ) const {
         return _scLayers[l];
