@@ -45,6 +45,8 @@ private:
     FloatBuffer _hiddenStimulus; // Activations of input
     FloatBuffer _hiddenActivations; // Hidden activations combined
 
+    FloatBuffer _hiddenBiases; // Biases (for avoiding dead units)
+
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -61,7 +63,8 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        bool firstIter
+        int it,
+        bool learnEnabled
     );
 
     void backward(
@@ -71,7 +74,7 @@ private:
         int vli
     );
 
-    void learn(
+    void learnWeights(
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
@@ -92,9 +95,10 @@ private:
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
-        bool firstIter
+        int it,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputCs, firstIter);
+        sc->forward(pos, rng, inputCs, it, learnEnabled);
     }
 
     static void backwardKernel(
@@ -107,25 +111,27 @@ private:
         sc->backward(pos, rng, inputCs, vli);
     }
 
-    static void learnKernel(
+    static void learnWeightsKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->learnWeights(pos, rng, inputCs, vli);
     }
 
 public:
-    float _alpha; // Learning rate
+    float _alpha; // Weight learning rate
+    float _beta; // Bias learning rate
 
     int _explainIters; // Explaining-away iterations (part of iterative sparse coding)
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f),
+    _alpha(0.1f),
+    _beta(0.01f),
     _explainIters(4)
     {}
 
@@ -137,15 +143,10 @@ public:
     );
 
     // Activate the sparse coder (perform sparse coding)
-    void activate(
+    void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs // Input states
-    );
-
-    // Improve dictionary
-    void learn(
-        ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs // Input states
+        const std::vector<const IntBuffer*> &inputCs, // Input states
+        bool learnEnabled // Whether to learn
     );
 
     // Write to stream
