@@ -5,7 +5,6 @@
 #include <unordered_set>
 
 #include "SparseMatrix.h"
-#include "SparseCoder.h"
 #include "Helpers.h"
 
 #include <SFML/Graphics.hpp>
