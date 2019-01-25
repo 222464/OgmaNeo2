@@ -33,6 +33,8 @@ public:
         SparseMatrix _weights; // Weight matrix
 
         FloatBuffer _visibleActivations; // For reconstruction
+
+        IntBuffer _visibleCounts; // For reconstruction
     };
 
 private:
