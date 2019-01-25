@@ -45,8 +45,6 @@ private:
     FloatBuffer _hiddenStimulus; // Activations of input
     FloatBuffer _hiddenActivations; // Hidden activations combined
 
-    FloatBuffer _hiddenBiases; // Biases (for avoiding dead units)
-
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -123,7 +121,6 @@ private:
 
 public:
     float _alpha; // Weight learning rate
-    float _beta; // Bias learning rate
 
     int _explainIters; // Explaining-away iterations (part of iterative sparse coding)
 
@@ -131,7 +128,6 @@ public:
     SparseCoder()
     :
     _alpha(0.1f),
-    _beta(0.01f),
     _explainIters(4)
     {}
 

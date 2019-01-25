@@ -35,7 +35,7 @@ void SparseCoder::forward(
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            _hiddenStimulus[hiddenIndex] = _hiddenBiases[hiddenIndex];
+            _hiddenStimulus[hiddenIndex] = 0.0f;
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -82,14 +82,6 @@ void SparseCoder::forward(
     }
 
     _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
-
-    if (learnEnabled && it == _explainIters - 1) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-            _hiddenBiases[hiddenIndex] += _beta * (1.0f / _hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
-        }
-    }
 }
 
 void SparseCoder::backward(
@@ -202,16 +194,6 @@ void SparseCoder::initRandom(
 
     // Hidden activations
     _hiddenActivations = FloatBuffer(numHidden);
-
-    // Biases
-    _hiddenBiases = FloatBuffer(numHidden);
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHidden; x++)
-        fillFloat(x, cs._rng, &_hiddenBiases, 0.0f);
-#else
-    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenBiases, 0.0f), numHidden, cs._rng, cs._batchSize1);
-#endif
 }
 
 void SparseCoder::step(
@@ -275,12 +257,9 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_explainIters), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
-
-    writeBufferToStream(os, &_hiddenBiases);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -303,7 +282,6 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_explainIters), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
@@ -311,8 +289,6 @@ void SparseCoder::readFromStream(
     _hiddenStimulus = FloatBuffer(numHidden);
 
     _hiddenActivations = FloatBuffer(numHidden);
-
-    readBufferFromStream(is, &_hiddenBiases);
 
     int numVisibleLayers;
     
