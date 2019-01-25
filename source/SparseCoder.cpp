@@ -26,8 +26,7 @@ void SparseCoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs,
-    int it,
-    bool learnEnabled
+    int it
 ) {
     if (it == 0) {
         // --- Multiply Stimulus ---
@@ -130,6 +129,10 @@ void SparseCoder::learnWeights(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
+        vl._visibleActivations[visibleIndex] = 0.0f;
+    
+        vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
+
         vl._visibleActivations[visibleIndex] = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(vl._visibleActivations[visibleIndex]));
 
         vl._weights.deltaRuleRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
@@ -206,14 +209,12 @@ void SparseCoder::step(
 
     // Sparse coding iterations: forward, reconstruct, repeat
     for (int it = 0; it < _explainIters; it++) {
-        bool firstIter = it == 0;
-
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < _hiddenSize.x; x++)
             for (int y = 0; y < _hiddenSize.y; y++)
                 forward(Int2(x, y), cs._rng, visibleCs, it, learnEnabled);
 #else
-        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, it, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, it), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
         if (it != _explainIters - 1) {
