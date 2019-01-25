@@ -164,7 +164,7 @@ void ogmaneo::copyFloat(
 }
 
 std::vector<IntBuffer*> ogmaneo::get(
-    const std::vector<std::shared_ptr<IntBuffer>> &v
+    std::vector<std::shared_ptr<IntBuffer>> &v
 ) {
     std::vector<IntBuffer*> vp(v.size());
 
@@ -175,7 +175,7 @@ std::vector<IntBuffer*> ogmaneo::get(
 }
 
 std::vector<FloatBuffer*> ogmaneo::get(
-    const std::vector<std::shared_ptr<FloatBuffer>> &v
+    std::vector<std::shared_ptr<FloatBuffer>> &v
 ) {
     std::vector<FloatBuffer*> vp(v.size());
 
@@ -207,6 +207,50 @@ std::vector<const FloatBuffer*> ogmaneo::constGet(
     return vp;
 }
 
+std::vector<IntBuffer*> ogmaneo::get(
+    std::vector<IntBuffer> &v
+) {
+    std::vector<IntBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
+std::vector<FloatBuffer*> ogmaneo::get(
+    std::vector<FloatBuffer> &v
+) {
+    std::vector<FloatBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
+std::vector<const IntBuffer*> ogmaneo::constGet(
+    const std::vector<IntBuffer> &v
+) {
+    std::vector<const IntBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
+std::vector<const FloatBuffer*> ogmaneo::constGet(
+    const std::vector<FloatBuffer> &v
+) {
+    std::vector<const FloatBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
 void ogmaneo::initSMLocalRF(
     const Int3 &inSize,
     const Int3 &outSize,
@@ -228,11 +272,8 @@ void ogmaneo::initSMLocalRF(
     mat._nonZeroValues.reserve(weightsSize);
 
     mat._rowRanges.resize(numOut + 1);
-    mat._rowRanges[0] = 0;
 
     mat._columnIndices.reserve(weightsSize);
-
-    int ri = 0;
 
     // Initialize weight matrix
     for (int ox = 0; ox < outSize.x; ox++)
@@ -265,14 +306,25 @@ void ogmaneo::initSMLocalRF(
                         }
                     }
 
-                mat._rowRanges[ri + 1] = mat._rowRanges[ri] + nonZeroInRow;
-
-                ri++;
+                mat._rowRanges[address3C(outPos, outSize)] = nonZeroInRow;
             }
         }
 
     mat._nonZeroValues.shrink_to_fit();
     mat._columnIndices.shrink_to_fit();
+
+    // Convert rowRanges from counts to cumulative counts
+    int offset = 0;
+
+	for (int i = 0; i < numOut; i++) {
+		int temp = mat._rowRanges[i];
+
+		mat._rowRanges[i] = offset;
+
+		offset += temp;
+	}
+
+    mat._rowRanges[numOut] = offset;
 
     mat._rows = numOut;
     mat._columns = inSize.x * inSize.y * inSize.z;
