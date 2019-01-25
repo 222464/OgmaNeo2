@@ -245,11 +245,7 @@ void Hierarchy::step(
             _updates[l] = true;
             
             // Activate sparse coder
-            _scLayers[l].activate(cs, constGet(_histories[l]));
-
-            // Optionally learn sparse coding layer
-            if (learnEnabled)
-                _scLayers[l].learn(cs, constGet(_histories[l]));
+            _scLayers[l].step(cs, constGet(_histories[l]), learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
