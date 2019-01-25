@@ -25,8 +25,7 @@ void SparseCoder::init(
 void SparseCoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs,
-    int it
+    const std::vector<const IntBuffer*> &inputCs
 ) {
     int maxIndex = 0;
     float maxActivation = -999999.0f;
