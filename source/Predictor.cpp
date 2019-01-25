@@ -57,14 +57,14 @@ void Predictor::learn(
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs
 ) {
-    int targetIndex = (*hiddenTargetCs)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
+    int targetC = (*hiddenTargetCs)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
 
     // --- Delta Rule ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float target = (hc == targetIndex ? 1.0f : 0.0f);
+        float target = (hc == targetC ? 1.0f : 0.0f);
 
         _hiddenActivations[hiddenIndex] = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex])); // Delta
 
