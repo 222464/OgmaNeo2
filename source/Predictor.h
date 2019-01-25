@@ -41,7 +41,6 @@ private:
     IntBuffer _hiddenCs; // Hidden state
 
     FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
-    FloatBuffer _hiddenDeltas; // Hidden targets, used for interal computation
 
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;

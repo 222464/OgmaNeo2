@@ -129,6 +129,18 @@ void SparseMatrix::multiplyRange(
 	}
 }
 
+void SparseMatrix::counts(
+	std::vector<int> &out
+) {
+	int nextIndex;
+	
+	for (int i = 0; i < _rows; i = nextIndex) {
+		nextIndex = i + 1;
+
+		out[i] += _rowRanges[nextIndex] - _rowRanges[i];
+	}
+}
+
 void SparseMatrix::multiplyT(
 	const std::vector<float> &in,
 	std::vector<float> &out
@@ -161,6 +173,18 @@ void SparseMatrix::multiplyRangeT(
 
 		for (int j = _columnRanges[i]; j < _columnRanges[nextIndex]; j++)
 			out[i] += _nonZeroValues[_nonZeroValueIndices[j]] * in[_rowIndices[j]];
+	}
+}
+
+void SparseMatrix::countsT(
+	std::vector<int> &out
+) {
+	int nextIndex;
+	
+	for (int i = 0; i < _columns; i = nextIndex) {
+		nextIndex = i + 1;
+
+		out[i] += _columnRanges[nextIndex] - _columnRanges[i];
 	}
 }
 
@@ -445,7 +469,7 @@ void SparseMatrix::hebbRuleDecreasing(
 		_nonZeroValues[j] += alpha * std::min(0.0f, in[_columnIndices[j]] - _nonZeroValues[j]);
 }
 
-void SparseMatrix::hebbRuleOHVs(
+void SparseMatrix::hebbRuleDecreasingOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
 	int oneHotSize,
@@ -461,7 +485,7 @@ void SparseMatrix::hebbRuleOHVs(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
+			_nonZeroValues[j] += alpha * std::min(0.0f, target - _nonZeroValues[j]);
 		}
 	}
 }

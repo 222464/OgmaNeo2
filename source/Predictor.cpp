@@ -27,15 +27,13 @@ void Predictor::forward(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    // --- Clear Activations ---
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++)
-        _hiddenActivations[address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y))] = 0.0f;
-
-    // --- Multiply ---
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+        _hiddenActivations[hiddenIndex] = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -44,16 +42,6 @@ void Predictor::forward(
 
             vl._weights.multiplyRangeOHVs(*inputCs[vli], _hiddenActivations, hiddenIndex, 1, vld._size.z);
         }
-    }
-
-    // --- Find max ---
-
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
-    // For each hidden unit
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -61,7 +49,7 @@ void Predictor::forward(
         }
     }
 
-    _hiddenCs[address2R(pos, _hiddenSize.x)] = maxIndex;
+    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
 }
 
 void Predictor::learn(
@@ -69,31 +57,23 @@ void Predictor::learn(
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs
 ) {
-    int targetIndex = (*hiddenTargetCs)[address2R(pos, _hiddenSize.x)];
-
-    // --- Find Deltas ---
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        Int3 hiddenPosition(pos.x, pos.y, hc);
-
-        int hiddenIndex = address3R(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
-
-        float target = (hc == targetIndex ? 1.0f : 0.0f);
-
-        _hiddenDeltas[hiddenIndex] = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex])); // Delta
-    }
+    int targetIndex = (*hiddenTargetCs)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
 
     // --- Delta Rule ---
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3R(Int3(pos.x, pos.y, hc), Int2(_hiddenSize.x, _hiddenSize.y));
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+        float target = (hc == targetIndex ? 1.0f : 0.0f);
+
+        _hiddenActivations[hiddenIndex] = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex])); // Delta
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.deltaRuleRangeOHVs(vl._inputCsPrev, _hiddenDeltas, hiddenIndex, 1, vld._size.z); // Apply delta rule
+            vl._weights.deltaRuleRangeOHVs(vl._inputCsPrev, _hiddenActivations, hiddenIndex, 1, vld._size.z); // Apply delta rule
         }
     }
 }
@@ -157,15 +137,6 @@ void Predictor::initRandom(
         fillFloat(x, cs._rng, &_hiddenActivations, 0.0f);
 #else
     runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenActivations, 0.0f), numHidden, cs._rng, cs._batchSize1);
-#endif
-
-    _hiddenDeltas = FloatBuffer(numHidden);
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHidden; x++)
-        fillFloat(x, cs._rng, &_hiddenDeltas, 0.0f);
-#else
-    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenDeltas, 0.0f), numHidden, cs._rng, cs._batchSize1);
 #endif
 }
 
