@@ -268,7 +268,7 @@ void Actor::step(
             // Copy visible Cs
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < numVisibleColumns; x++)
-                copyInt(x, cs._rng, inputCs[vli], s._inputCs[vli].get());
+                copyInt(x, cs._rng, inputCs[vli], &s._inputCs[vli]);
 #else
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s._inputCs[vli]), numVisibleColumns, cs._rng, cs._batchSize1);
 #endif
@@ -277,7 +277,7 @@ void Actor::step(
         // Copy hidden Cs
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
+            copyInt(x, cs._rng, &_hiddenCs, &s._hiddenCs);
 #else
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
@@ -285,7 +285,7 @@ void Actor::step(
         // Copy hidden values
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHidden; x++)
-            copyFloat(x, cs._rng, &_hiddenValues, s._hiddenValues.get());
+            copyFloat(x, cs._rng, &_hiddenValues, &s._hiddenValues);
 #else
         runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, &s._hiddenValues), numHidden, cs._rng, cs._batchSize1);
 #endif
@@ -310,7 +310,7 @@ void Actor::step(
 #endif
         }
 
-        std::uniform_int_distribution<int> sampleDist(0, _historySamples.size() - 2);
+        std::uniform_int_distribution<int> sampleDist(0, _historySize - 2);
 
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
