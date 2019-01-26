@@ -83,7 +83,6 @@ private:
     void learn(const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const IntBuffer* hiddenCsPrev,
         const FloatBuffer* hiddenValuesPrev
     );
 
@@ -121,10 +120,9 @@ private:
         std::mt19937 &rng,
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const IntBuffer* hiddenCsPrev,
         const FloatBuffer* hiddenValuesPrev
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev);
+        a->learn(pos, rng, inputCsPrev, hiddenValuesPrev);
     }
 
 public:
@@ -137,9 +135,9 @@ public:
     Actor()
     :
     _alpha(0.01f),
-    _gamma(0.9f),
+    _gamma(0.98f),
     _epsilon(0.01f),
-    _historyIters(2)
+    _historyIters(3)
     {}
 
     Actor(
@@ -163,7 +161,7 @@ public:
     // Step (get actions and update)
     void step(
         ComputeSystem &cs,
-        const std::vector<const IntBuffer*> &visibleCs,
+        const std::vector<const IntBuffer*> &inputCs,
         float reward,
         bool learnEnabled
     );
