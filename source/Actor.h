@@ -82,6 +82,7 @@ private:
 
     void learn(const Int2 &pos,
         std::mt19937 &rng,
+        const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const FloatBuffer* hiddenValuesPrev
     );
@@ -119,10 +120,11 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
+        const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const FloatBuffer* hiddenValuesPrev
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenValuesPrev);
+        a->learn(pos, rng, hiddenCsPrev, inputCsPrev, hiddenValuesPrev);
     }
 
 public:
@@ -135,7 +137,7 @@ public:
     Actor()
     :
     _alpha(0.001f),
-    _gamma(0.9f),
+    _gamma(0.97f),
     _epsilon(0.01f),
     _historyIters(2)
     {}

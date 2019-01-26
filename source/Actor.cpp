@@ -87,31 +87,32 @@ void Actor::valueUpdate(
 
 void Actor::learn(const Int2 &pos,
     std::mt19937 &rng,
+    const IntBuffer* hiddenCsPrev,
     const std::vector<const IntBuffer*> &inputCsPrev,
     const FloatBuffer* hiddenValuesPrev
 ) {
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+    int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
 
-        _hiddenValues[hiddenIndex] = 0.0f;
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, targetC), _hiddenSize);
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    _hiddenValues[hiddenIndex] = 0.0f;
 
-            vl._weights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
-        }
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        _hiddenValues[hiddenIndex] = _alpha * ((*hiddenValuesPrev)[hiddenIndex] - _hiddenValues[hiddenIndex]);
+        vl._weights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
+    }
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    _hiddenValues[hiddenIndex] = _alpha * ((*hiddenValuesPrev)[hiddenIndex] - _hiddenValues[hiddenIndex]);
 
-            vl._weights.deltaRuleRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
-        }
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        vl._weights.deltaRuleRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
     }
 }
 
@@ -315,16 +316,15 @@ void Actor::step(
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
 
-            //const HistorySample &s = *_historySamples[t + 1];
             const HistorySample &sPrev = *_historySamples[t];
 
             // Learn kernel
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &sPrev._hiddenValues);
+                    learn(Int2(x, y), cs._rng, &sPrev._hiddenCs, constGet(sPrev._inputCs), &sPrev._hiddenValues);
 #else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &sPrev._hiddenValues), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &sPrev._hiddenCs, constGet(sPrev._inputCs), &sPrev._hiddenValues), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
         }
     }
