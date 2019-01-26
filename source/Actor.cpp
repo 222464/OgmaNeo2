@@ -223,7 +223,12 @@ const Actor &Actor::operator=(
     return *this;
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, float reward, bool learnEnabled) {
+void Actor::step(
+    ComputeSystem &cs,
+    const std::vector<const IntBuffer*> &inputCs,
+    float reward,
+    bool learnEnabled
+) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -325,7 +330,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs
     }
 }
 
-void Actor::writeToStream(std::ostream &os) const {
+void Actor::writeToStream(
+    std::ostream &os
+) const {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -375,7 +382,9 @@ void Actor::writeToStream(std::ostream &os) const {
     }
 }
 
-void Actor::readFromStream(std::istream &is) {
+void Actor::readFromStream(
+    std::istream &is
+) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
