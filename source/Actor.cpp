@@ -91,9 +91,7 @@ void Actor::learn(const Int2 &pos,
     const std::vector<const IntBuffer*> &inputCsPrev,
     const FloatBuffer* hiddenValuesPrev
 ) {
-    int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
-
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, targetC), _hiddenSize);
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))]), _hiddenSize);
 
     _hiddenValues[hiddenIndex] = 0.0f;
 
