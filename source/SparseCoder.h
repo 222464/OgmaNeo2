@@ -33,6 +33,8 @@ public:
         SparseMatrix _weights; // Weight matrix
 
         FloatBuffer _visibleActivations; // Reconstruction buffer for (visible) activations
+
+        IntBuffer _visibleCounts; // Number of units touching column
     };
 
 private:

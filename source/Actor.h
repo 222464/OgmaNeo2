@@ -52,6 +52,8 @@ private:
 
     FloatBuffer _hiddenValues; // Activations
 
+    IntBuffer _hiddenCounts; // Number of units touching hidden columns
+
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
 
     // Visible layers and descriptors

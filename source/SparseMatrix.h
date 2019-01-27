@@ -129,6 +129,12 @@ struct SparseMatrix {
 		bool negative = false
 	);
 
+	// Count number of elements in each row for a one-hot vector
+	void countsOHVs(
+		std::vector<int> &out,
+		int oneHotSize
+	);
+
 	// --- One-Hot Vectors Operations: Transpose ---
 
 	// Multiply by a one-hot-row matrix
@@ -147,6 +153,12 @@ struct SparseMatrix {
 		int columnCount,
 		int oneHotSize,
 		bool negative = false
+	);
+
+	// Count number of elements in each column for a one-hot vector
+	void countsOHVsT(
+		std::vector<int> &out,
+		int oneHotSize
 	);
 
 	// --- Delta Rules ---

@@ -45,6 +45,8 @@ void Actor::forward(
             vl._weights.multiplyRangeOHVs(*inputCs[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
         }
 
+        _hiddenValues[hiddenIndex] /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+
         if (_hiddenValues[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenValues[hiddenIndex];
 
@@ -91,7 +93,9 @@ void Actor::learn(const Int2 &pos,
     const std::vector<const IntBuffer*> &inputCsPrev,
     const FloatBuffer* hiddenValuesPrev
 ) {
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))]), _hiddenSize);
+    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
 
     _hiddenValues[hiddenIndex] = 0.0f;
 
@@ -103,7 +107,7 @@ void Actor::learn(const Int2 &pos,
         vl._weights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
     }
 
-    _hiddenValues[hiddenIndex] = _alpha * ((*hiddenValuesPrev)[hiddenIndex] - _hiddenValues[hiddenIndex]);
+    _hiddenValues[hiddenIndex] = _alpha * ((*hiddenValuesPrev)[hiddenIndex] - _hiddenValues[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]));
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -130,6 +134,8 @@ void Actor::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
+    _hiddenCounts = IntBuffer(numHiddenColumns, 0);
+
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -147,6 +153,8 @@ void Actor::initRandom(
 #else
         runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), vl._weights._nonZeroValues.size(), cs._rng, cs._batchSize1);
 #endif
+
+        vl._weights.countsOHVs(_hiddenCounts, _hiddenSize.z);
     }
 
     // Hidden Cs
@@ -202,6 +210,8 @@ const Actor &Actor::operator=(
     _hiddenCs = other._hiddenCs;
 
     _hiddenValues = other._hiddenValues;
+
+    _hiddenCounts = other._hiddenCounts;
 
     _visibleLayerDescs = other._visibleLayerDescs;
     _visibleLayers = other._visibleLayers;
@@ -347,6 +357,8 @@ void Actor::writeToStream(
 
     writeBufferToStream(os, &_hiddenValues);
 
+    writeBufferToStream(os, &_hiddenCounts);
+
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -398,6 +410,8 @@ void Actor::readFromStream(
     readBufferFromStream(is, &_hiddenCs);
 
     readBufferFromStream(is, &_hiddenValues);
+
+    readBufferFromStream(is, &_hiddenCounts);
 
     int numVisibleLayers;
     

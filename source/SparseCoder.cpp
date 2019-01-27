@@ -72,7 +72,7 @@ void SparseCoder::learnWeights(
     
         vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
 
-        vl._visibleActivations[visibleIndex] = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(vl._visibleActivations[visibleIndex]));
+        vl._visibleActivations[visibleIndex] = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(vl._visibleActivations[visibleIndex] / std::max(1, vl._visibleCounts[visibleColumnIndex])));
 
         vl._weights.deltaRuleRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
     }
@@ -116,6 +116,10 @@ void SparseCoder::initRandom(
 
         // Visible activations buffer
         vl._visibleActivations = FloatBuffer(numVisible);
+
+        vl._visibleCounts = IntBuffer(numVisibleColumns, 0);
+
+        vl._weights.countsOHVsT(vl._visibleCounts, vld._size.z);
     }
 
     // Hidden Cs
@@ -185,6 +189,8 @@ void SparseCoder::writeToStream(
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
         writeSMToStream(os, vl._weights);
+
+        writeBufferToStream(os, &vl._visibleCounts);
     }
 }
 
@@ -221,5 +227,7 @@ void SparseCoder::readFromStream(
         readSMFromStream(is, vl._weights);
 
         vl._visibleActivations = FloatBuffer(numVisible);
+
+        readBufferFromStream(is, &vl._visibleCounts);
     }
 }

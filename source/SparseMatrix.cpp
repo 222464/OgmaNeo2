@@ -260,6 +260,18 @@ void SparseMatrix::multiplyRangeOHVs(
 	}
 }
 
+void SparseMatrix::countsOHVs(
+	std::vector<int> &out,
+	int oneHotSize
+) {
+	for (int i = 0; i < out.size(); i++) {
+		int index = i * oneHotSize;
+		int nextIndex = index + 1;
+
+		out[i] += _rowRanges[nextIndex] - _rowRanges[index];
+	}
+}
+
 void SparseMatrix::multiplyOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	std::vector<float> &out,
@@ -329,6 +341,18 @@ void SparseMatrix::multiplyRangeOHVsT(
 				out[i] += _nonZeroValues[_nonZeroValueIndices[j]];
 			}
 		}
+	}
+}
+
+void SparseMatrix::countsOHVsT(
+	std::vector<int> &out,
+	int oneHotSize
+) {
+	for (int i = 0; i < out.size(); i++) {
+		int index = i * oneHotSize;
+		int nextIndex = index + 1;
+
+		out[i] += _columnRanges[nextIndex] - _columnRanges[index];
 	}
 }
 
