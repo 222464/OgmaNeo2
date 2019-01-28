@@ -61,8 +61,6 @@ void Actor::learn(
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
-
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -82,6 +80,8 @@ void Actor::learn(
 
         maxActivation = std::max(maxActivation, sum);
     }
+
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
 
     float sum = 0.0f;
 
@@ -139,7 +139,7 @@ void Actor::initRandom(
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
         for (int i = 0; i < numHiddenColumns; i++)
-            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z);
+            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
     }
 
     // Hidden Cs
