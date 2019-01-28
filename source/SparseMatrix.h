@@ -71,93 +71,41 @@ struct SparseMatrix {
 
 	// --- Dense ---
 
-	void multiply(
+	float multiply(
 		const std::vector<float> &in,
-		std::vector<float> &out
-	);
-
-	// The range specifies which elements of "out" are to be computed
-	void multiplyRange(
-		const std::vector<float> &in,
-		std::vector<float> &out,
-		int startRow,
-		int rowCount
+		int row
 	);
 
 	// Count number of elements in each row
-	void counts(
-		std::vector<int> &out
+	int counts(
+		int row
 	);
 
 	// --- Transpose ---
 
-	void multiplyT(
+	float multiplyT(
 		const std::vector<float> &in,
-		std::vector<float> &out
-	);
-
-	// The range specifies which elements of "out" are to be computed
-	void multiplyRangeT(
-		const std::vector<float> &in,
-		std::vector<float> &out,
-		int startColumn,
-		int columnCount
+		int column
 	);
 
 	// Count number of elements in each column
-	void countsT(
-		std::vector<int> &out
+	int countsT(
+		int column
 	);
 
 	// --- One-Hot Vectors Operations ---
 
 	// Multiply by a one-hot-row matrix
-	void multiplyOHVs(
+	float multiplyOHVs(
 		const std::vector<int> &nonZeroIndices,
-		std::vector<float> &out,
-		int oneHotSize,
-		bool negative = false
-	);
-
-	// Multiply a range of rows from a given one-hot-row matrix
-	void multiplyRangeOHVs(
-		const std::vector<int> &nonZeroIndices,
-		std::vector<float> &out,
-		int startRow,
-		int rowCount,
-		int oneHotSize,
-		bool negative = false
-	);
-
-	// Count number of elements in each row for a one-hot vector
-	void countsOHVs(
-		std::vector<int> &out,
+		int row,
 		int oneHotSize
 	);
 
-	// --- One-Hot Vectors Operations: Transpose ---
-
 	// Multiply by a one-hot-row matrix
-	void multiplyOHVsT(
+	float multiplyOHVsT(
 		const std::vector<int> &nonZeroIndices,
-		std::vector<float> &out,
-		int oneHotSize,
-		bool negative = false
-	);
-
-	// Multiply a range of rows from a given one-hot-row matrix
-	void multiplyRangeOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		std::vector<float> &out,
-		int startColumn,
-		int columnCount,
-		int oneHotSize,
-		bool negative = false
-	);
-
-	// Count number of elements in each column for a one-hot vector
-	void countsOHVsT(
-		std::vector<int> &out,
+		int column,
 		int oneHotSize
 	);
 
@@ -166,55 +114,17 @@ struct SparseMatrix {
 	// For dense deltas
 	void deltaRuleRangeOHVs(
 		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &deltas,
-		int startRow,
-		int rowCount,
+		float delta,
+		int row,
 		int oneHotSize
-	);
-
-	// For when deltas are also OHVs
-	void deltaOHVRuleOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int OHVIndex,
-		int inputOneHotSize,
-		int outputOneHotSize,
-		int positiveIndex,
-		int negativeIndex,
-		float alpha
 	);
 
 	// For dense deltas
 	void deltaRuleRangeOHVsT(
 		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &deltas,
-		int startColumn,
-		int columnCount,
+		float delta,
+		int column,
 		int oneHotSize
-	);
-
-	void deltaOHVRuleOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int OHVIndex,
-		int inputOneHotSize,
-		int outputOneHotSize,
-		int positiveIndex,
-		int negativeIndex,
-		float alpha
-	);
-
-	// -- Hebb Rules ---
-
-	void hebbRuleDecreasing(
-		const std::vector<float> &in,
-		int row,
-		float alpha
-	);
-	
-	void hebbRuleDecreasingOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float alpha
 	);
 };
 } // namespace ogmaneo

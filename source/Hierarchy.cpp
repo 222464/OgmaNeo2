@@ -13,6 +13,35 @@
 
 using namespace ogmaneo;
 
+void Hierarchy::forward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    int l,
+    const IntBuffer* inputCs
+) {
+    int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
+
+    _rLayers[l]._activations[hiddenColumnIndex] = 0.0f;
+
+    if (l == 0) {
+        float sum = 0.0f;
+
+        // For each visible layer
+        for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
+            if (!_rLayers[l]._weights[vli]._nonZeroValues.empty())
+                sum += _rLayers[l]._weights[vli].multiplyOHVs(*inputCs, hiddenIndex, _inputSizes[vli].z);
+        }
+
+        if (_hiddenActivations[hiddenIndex] > maxActivation) {
+            maxActivation = _hiddenActivations[hiddenIndex];
+            maxIndex = hc;
+        }
+    }
+}
+
 void Hierarchy::initRandom(
     ComputeSystem &cs,
     const std::vector<Int3> &inputSizes,
@@ -21,7 +50,7 @@ void Hierarchy::initRandom(
 ) {
     // Create layers
     _scLayers.resize(layerDescs.size());
-    _aLayers.resize(layerDescs.size());
+    _rLayers.resize(layerDescs.size());
 
     _ticks.assign(layerDescs.size(), 0);
 
@@ -33,15 +62,14 @@ void Hierarchy::initRandom(
     // Default update state is no update
     _updates.resize(layerDescs.size(), false);
 
-    _rewards.resize(layerDescs.size(), 0.0f);
-    _rewardCounts = _rewards;
-
     // Cache input sizes
     _inputSizes = inputSizes;
 
     // Determine ticks per update, first layer is always 1
     for (int l = 0; l < layerDescs.size(); l++)
         _ticksPerUpdate[l] = l == 0 ? 1 : layerDescs[l]._ticksPerUpdate; // First layer always 1
+
+    std::uniform_real_distribution<float> noiseDist(-0.0001f, 0.0001f);
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
@@ -57,12 +85,27 @@ void Hierarchy::initRandom(
         if (l == 0) {
             scVisibleLayerDescs.resize(inputSizes.size() * layerDescs[l]._temporalHorizon);
 
+            _inputActivations.resize(_inputSizes.size());
+            _actions.resize(_inputSizes.size());
+            _rLayers[l]._weights.resize(_inputSizes.size());
+
             for (int i = 0; i < inputSizes.size(); i++) {
                 for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                     int index = t + layerDescs[l]._temporalHorizon * i;
 
                     scVisibleLayerDescs[index]._size = inputSizes[i];
                     scVisibleLayerDescs[index]._radius = layerDescs[l]._scRadius;
+                }
+
+                if (inputTypes[i] == InputType::_act) {
+                    _inputActivations[i] = FloatBuffer(inputSizes[i].x * inputSizes[i].y * inputSizes[i].z, 0.0f);
+                    _actions[i] = IntBuffer(inputSizes[i].x * inputSizes[i].y, 0);
+
+                    initSMLocalRF(inputSizes[i], layerDescs[l]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[i]);
+
+                    // Init weights
+                    for (int j = 0; j < _rLayers[l]._weights[i]._nonZeroValues.size(); j++)
+                        _rLayers[l]._weights[i]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
                 }
             }
             
@@ -72,78 +115,33 @@ void Hierarchy::initRandom(
 
                 int inSize = inputSizes[i].x * inputSizes[i].y;
 				
-				_histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_DEBUG
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
-#endif
+				_histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 _historySizes[l][v] = inSize;
 			}
-
-            // Actors
-            _aLayers[l].resize(inputSizes.size());
-
-            // Actor visible layer descriptors
-            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(1);
-
-            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
-
-            if (l < _scLayers.size() - 1)
-                aVisibleLayerDescs.push_back(aVisibleLayerDescs[0]);
-
-            // Create actors
-            for (int p = 0; p < _aLayers[l].size(); p++) {
-                if (inputTypes[p] == InputType::_act) {
-                    _aLayers[l][p] = std::make_unique<Actor>();
-
-                    _aLayers[l][p]->initRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs);
-                }
-            }
         }
         else {
             scVisibleLayerDescs.resize(layerDescs[l]._temporalHorizon);
+
+            _rLayers[l]._weights.resize(1);
 
             for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                 scVisibleLayerDescs[t]._size = layerDescs[l - 1]._hiddenSize;
                 scVisibleLayerDescs[t]._radius = layerDescs[l]._scRadius;
             }
 
+            initSMLocalRF(layerDescs[l - 1]._hiddenSize, layerDescs[l]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[0]);
+
+            // Init weights
+            for (int j = 0; j < _rLayers[l]._weights[0]._nonZeroValues.size(); j++)
+                _rLayers[l]._weights[0]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
+
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
 			for (int v = 0; v < _histories[l].size(); v++) {
-                _histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_DEBUG
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
-#endif
+                _histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 _historySizes[l][v] = inSize;
-            }
-
-            _aLayers[l].resize(layerDescs[l]._ticksPerUpdate);
-
-            // Actor visible layer descriptors
-            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(1);
-
-            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
-
-            if (l < _scLayers.size() - 1)
-                aVisibleLayerDescs.push_back(aVisibleLayerDescs[0]);
-
-            // Create actors
-            for (int p = 0; p < _aLayers[l].size(); p++) {
-                _aLayers[l][p] = std::make_unique<Actor>();
-
-                _aLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs);
             }
         }
 		
@@ -157,6 +155,10 @@ const Hierarchy &Hierarchy::operator=(
 ) {
     // Layers
     _scLayers = other._scLayers;
+    _rLayers = other._rLayers;
+
+    _inputActivations = other._inputActivations;
+    _actions = other._actions;
 
     _historySizes = other._historySizes;
     _updates = other._updates;
@@ -164,22 +166,9 @@ const Hierarchy &Hierarchy::operator=(
     _ticksPerUpdate = other._ticksPerUpdate;
     _inputSizes = other._inputSizes;
 
-    _aLayers.resize(other._aLayers.size());
     _histories.resize(other._histories.size());
 
     for (int l = 0; l < _scLayers.size(); l++) {
-        _aLayers[l].resize(other._aLayers[l].size());
-
-        for (int v = 0; v < _aLayers[l].size(); v++) {
-            if (other._aLayers[l][v] != nullptr) {
-                _aLayers[l][v] = std::make_unique<Actor>();
-
-                (*_aLayers[l][v]) = (*other._aLayers[l][v]);
-            }
-            else
-                _aLayers[l][v] = nullptr;
-        }
-
         _histories[l].resize(other._histories[l].size());
 
         for (int v = 0; v < _histories[l].size(); v++) {
@@ -188,6 +177,8 @@ const Hierarchy &Hierarchy::operator=(
             (*_histories[l][v]) = (*other._histories[l][v]);
         }
     }
+
+    _historySamples = other._historySamples;
 
     return *this;
 }
@@ -238,11 +229,13 @@ void Hierarchy::step(
     _updates.clear();
     _updates.resize(_scLayers.size(), false);
 
+    HistorySample s;
+
+    s._states.resize(_scLayers.size());
+    s._reward = reward;
+
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
-        _rewards[l] += reward;
-        _rewardCounts[l] += 1.0f;
-
         // If is time for layer to tick
         if (l == 0 || _ticks[l] >= _ticksPerUpdate[l]) {
             // Reset tick
@@ -278,34 +271,18 @@ void Hierarchy::step(
                 _ticks[lNext]++;
             }
         }
+
+        s._states[l] = _scLayers[l].getHiddenCs();
     }
 
-    // Backward
-    for (int l = _scLayers.size() - 1; l >= 0; l--) {
-        if (_updates[l]) {
-            // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCs(l < _scLayers.size() - 1 ? 2 : 1);
+    // Add history sample
+    _historySamples.insert(_historySamples.begin(), s);
 
-            feedBackCs[0] = &_scLayers[l].getHiddenCs();
+    if (_historySamples.size() > _maxHistorySamples)
+        _historySamples.resize(_maxHistorySamples);
 
-            if (l < _scLayers.size() - 1) {
-                assert(_aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
-
-                feedBackCs[1] = &_aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
-            }
-
-            float r = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
-
-            _rewards[l] = 0.0f;
-            _rewardCounts[l] = 0.0f;
-
-            // Step actor layers
-            for (int p = 0; p < _aLayers[l].size(); p++) {
-                if (_aLayers[l][p] != nullptr)
-                    _aLayers[l][p]->step(cs, feedBackCs, r, learnEnabled);
-            }
-        }
-    }
+    // Determine Q
+    
 }
 
 void Hierarchy::writeToStream(
@@ -325,8 +302,8 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
     os.write(reinterpret_cast<const char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
 
-    os.write(reinterpret_cast<const char*>(_rewards.data()), _rewards.size() * sizeof(float));
-    os.write(reinterpret_cast<const char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
+    writeBufferToStream(os, &_inputActivations);
+    writeBufferToStream(os, &_actions);
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes = _historySizes[l].size();
@@ -340,15 +317,22 @@ void Hierarchy::writeToStream(
 
         _scLayers[l].writeToStream(os);
 
-        for (int v = 0; v < _aLayers[l].size(); v++) {
-            char exists = _aLayers[l][v] != nullptr;
+        writeBufferToStream(os, &_rLayers[l]._activations);
+
+        for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
+            char exists = !_rLayers[l]._weights[v]._nonZeroValues.empty();
 
             os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
 
             if (exists)
-                _aLayers[l][v]->writeToStream(os);
+                writeSMToStream(os, _rLayers[l]._weights[v]);
         }
     }
+
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_maxHistorySamples), sizeof(int));
+
+    // History samples
 }
 
 void Hierarchy::readFromStream(
@@ -366,7 +350,7 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(Int3));
 
     _scLayers.resize(numLayers);
-    _aLayers.resize(numLayers);
+    _rLayers.resize(numLayers);
 
     _ticks.resize(numLayers);
 
@@ -377,15 +361,12 @@ void Hierarchy::readFromStream(
 
     _updates.resize(numLayers);
 
-    _rewards.resize(numLayers);
-    _rewardCounts.resize(numLayers);
-
     is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
     is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
 
-    is.read(reinterpret_cast<char*>(_rewards.data()), _rewards.size() * sizeof(float));
-    is.read(reinterpret_cast<char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
+    readBufferFromStream(is, &_inputActivations);
+    readBufferFromStream(is, &_actions);
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes;
@@ -404,19 +385,18 @@ void Hierarchy::readFromStream(
 
         _scLayers[l].readFromStream(is);
 
-        _aLayers[l].resize(l == 0 ? _inputSizes.size() : _ticksPerUpdate[l]);
+        readBufferFromStream(is, &_rLayers[l]._activations);
 
-        for (int v = 0; v < _aLayers[l].size(); v++) {
+        for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
             char exists;
 
             is.read(reinterpret_cast<char*>(&exists), sizeof(char));
 
-            if (exists) {
-                _aLayers[l][v] = std::make_unique<Actor>();
-                _aLayers[l][v]->readFromStream(is);
-            }
-            else
-                _aLayers[l][v] = nullptr;
+            if (exists)
+                readSMFromStream(is, _rLayers[l]._weights[v]);
         }
     }
+
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_maxHistorySamples), sizeof(int));
 }

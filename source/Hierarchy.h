@@ -9,7 +9,6 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Actor.h"
 
 #include <memory>
 
@@ -28,7 +27,7 @@ public:
         Int3 _hiddenSize; // Size of hidden layer
 
         int _scRadius; // Sparse coder radius
-        int _aRadius; // Prediction Radius
+        int _rRadius; // Prediction Radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -40,16 +39,32 @@ public:
         :
         _hiddenSize(4, 4, 16),
         _scRadius(2),
-        _aRadius(2),
+        _rRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2),
         _historyCapacity(16)
         {}
     };
+
+    struct RouteLayer {
+        std::vector<SparseMatrix> _weights;
+
+        FloatBuffer _activations;
+    };
+
+    struct HistorySample {
+        std::vector<IntBuffer> _states;
+
+        float _reward;
+    };
+
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
+    std::vector<RouteLayer> _rLayers;
+
+    std::vector<FloatBuffer> _inputActivations;
+    std::vector<IntBuffer> _actions;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -61,15 +76,44 @@ private:
     std::vector<int> _ticks;
     std::vector<int> _ticksPerUpdate;
 
-    std::vector<float> _rewards;
-    std::vector<float> _rewardCounts;
-
     // Input dimensions
     std::vector<Int3> _inputSizes;
 
+    // History samples
+    std::vector<HistorySample> _historySamples;
+
+    // --- Kernels ---
+
+    void forward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int l,
+        const IntBuffer* inputCs
+    );
+
+    static void forwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Hierarchy* h,
+        const IntBuffer* hiddenCs,
+        int l,
+        const IntBuffer* inputCs
+    ) {
+        h->forward(pos, rng, hiddenCs, l, inputCs);
+    }
+
 public:
+    float _beta; // Routing learning rate
+
+    int _maxHistorySamples; // Maximum number of history samples
+
     // Default
-    Hierarchy() {}
+    Hierarchy()
+    :
+    _beta(0.01f),
+    _maxHistorySamples(256)
+    {}
 
     // Copy
     Hierarchy(
@@ -118,7 +162,7 @@ public:
     const IntBuffer &getActionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _aLayers.front()[i]->getHiddenCs();
+        return _actions[i];
     }
 
     // Whether this layer received on update this timestep
@@ -159,20 +203,6 @@ public:
         int l // Layer index
     ) const {
         return _scLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Actor>> &getALayer(
-        int l // Layer index
-    ) {
-        return _aLayers[l];
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Actor>> &getALayer(
-        int l // Layer index
-    ) const {
-        return _aLayers[l];
     }
 };
 } // namespace ogmaneo
