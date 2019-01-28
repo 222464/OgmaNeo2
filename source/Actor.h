@@ -104,10 +104,10 @@ public:
     // Defaults
     Actor()
     :
-    _alpha(0.5f),
-    _gamma(0.98f),
+    _alpha(0.1f),
+    _gamma(0.97f),
     _epsilon(0.01f),
-    _historyIters(2)
+    _historyIters(3)
     {}
 
     Actor(
