@@ -206,7 +206,7 @@ void Actor::step(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     // Forward kernel
-#ifdef KERNEL_DEBUG
+#ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
             forward(Int2(x, y), cs._rng, inputCs);
@@ -224,9 +224,7 @@ void Actor::step(
 
         _historySamples.back() = temp;
     }
-
-    // If not at cap, increment
-    if (_historySize < _historySamples.size())
+    else
         _historySize++;
     
     // Add new sample
@@ -239,7 +237,7 @@ void Actor::step(
             int numVisibleColumns = vld._size.x * vld._size.y;
 
             // Copy visible Cs
-#ifdef KERNEL_DEBUG
+#ifdef KERNEL_NOTHREAD
             for (int x = 0; x < numVisibleColumns; x++)
                 copyInt(x, cs._rng, inputCs[vli], &s._inputCs[vli]);
 #else
@@ -248,7 +246,7 @@ void Actor::step(
         }
 
         // Copy hidden Cs
-#ifdef KERNEL_DEBUG
+#ifdef KERNEL_NOTHREAD
         for (int x = 0; x < numHiddenColumns; x++)
             copyInt(x, cs._rng, &_hiddenCs, &s._hiddenCs);
 #else
@@ -269,7 +267,7 @@ void Actor::step(
             const HistorySample &sPrev = *_historySamples[t];
 
             // Learn kernel
-#ifdef KERNEL_DEBUG
+#ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
                     learn(Int2(x, y), cs._rng, constGet(s._inputCs), &sPrev._hiddenCs, constGet(sPrev._inputCs), s._reward);

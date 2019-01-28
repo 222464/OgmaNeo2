@@ -128,7 +128,7 @@ void ImageEncoder::step(
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
 
-#ifdef KERNEL_DEBUG
+#ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
             forward(Int2(x, y), cs._rng, inputActivations, learnEnabled);
@@ -145,7 +145,7 @@ void ImageEncoder::reconstruct(
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-#ifdef KERNEL_DEBUG
+#ifdef KERNEL_NOTHREAD
         for (int x = 0; x < vld._size.x; x++)
             for (int y = 0; y < vld._size.y; y++)
                 backward(Int2(x, y), cs._rng, hiddenCs, vli);
