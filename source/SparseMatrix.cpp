@@ -204,3 +204,36 @@ void SparseMatrix::deltaOHVsT(
 		_nonZeroValues[j] += delta;
 	}
 }
+
+
+void SparseMatrix::hebbDecreasing(
+	const std::vector<float> &in,
+	int row,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] += alpha * std::min(0.0f, in[_columnIndices[j]] - _nonZeroValues[j]);
+}
+
+void SparseMatrix::hebbDecreasingOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[j] += alpha * std::min(0.0f, target - _nonZeroValues[j]);
+		}
+	}
+}

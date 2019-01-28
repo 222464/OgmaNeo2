@@ -126,5 +126,20 @@ struct SparseMatrix {
 		int column,
 		int oneHotSize
 	);
+
+	// --- Hebb Rules ---
+
+	void hebbDecreasing(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbDecreasingOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
 };
 } // namespace ogmaneo

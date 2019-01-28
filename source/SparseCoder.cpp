@@ -98,7 +98,7 @@ void SparseCoder::initRandom(
         // Generate transpose (needed for reconstruction)
         vl._weights.initT();
 
-        vl._visibleCounts = IntBuffer(numVisibleColumns, 0);
+        vl._visibleCounts = IntBuffer(numVisibleColumns);
 
         for (int i = 0; i < numVisibleColumns; i++)
             vl._visibleCounts[i] = vl._weights.countsT(i * vld._size.z);

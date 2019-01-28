@@ -48,12 +48,6 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs; // Descs
 
     // --- Kernels ---
-    
-    void init(
-        int pos,
-        std::mt19937 &rng,
-        int vli
-    );
 
     void forward(
         const Int2 &pos,
@@ -68,15 +62,6 @@ private:
         const IntBuffer* hiddenCs,
         int vli
     );
-
-    static void initKernel(
-        int pos,
-        std::mt19937 &rng,
-        ImageEncoder* sc,
-        int vli
-    ) {
-        sc->init(pos, rng, vli);
-    }
 
     static void forwardKernel(
         const Int2 &pos,

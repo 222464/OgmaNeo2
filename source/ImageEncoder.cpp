@@ -10,61 +10,33 @@
 
 using namespace ogmaneo;
 
-// Kernels
-void ImageEncoder::init(
-    int pos,
-    std::mt19937 &rng,
-    int vli
-) {
-    // Initialize weights into uniform range
-	std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
-
-    _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
-}
-
 void ImageEncoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const FloatBuffer*> &inputActivations,
     bool learnEnabled
 ) {
-     // --- Clear Activations ---
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++)
-        _hiddenActivations[address3C(Int3(pos.x, pos.y, hc), _hiddenSize)] = 0.0f;
-
-    // --- Multiply ---
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+        float sum = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.multiplyRange(*inputActivations[vli], _hiddenActivations, hiddenIndex, 1);
+            sum += vl._weights.multiply(*inputActivations[vli], hiddenIndex);
         }
-    }
 
-    // --- Find max ---
-
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
-    // For each hidden unit
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        if (_hiddenActivations[hiddenIndex] > maxActivation) {
-            maxActivation = _hiddenActivations[hiddenIndex];
+        if (sum > maxActivation) {
+            maxActivation = sum;
             maxIndex = hc;
         }
     }
-
-    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
-
-    // --- Learn ---
 
     if (learnEnabled) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
@@ -74,7 +46,7 @@ void ImageEncoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebbRuleDecreasing(*inputActivations[vli], hiddenIndex, _alpha);
+            vl._weights.hebbDecreasing(*inputActivations[vli], hiddenIndex, _alpha);
         }
     }
 }
@@ -96,14 +68,8 @@ void ImageEncoder::backward(
     
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
-    
-        vl._weights.multiplyRangeOHVsT(_hiddenCs, vl._visibleActivations, visibleIndex, 1, _hiddenSize.z);
-    }
 
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
-
-        vl._visibleActivations[visibleIndex] = vl._visibleActivations[visibleIndex] * _hiddenSize.z / static_cast<float>(vl._visibleCounts[visibleIndex]);
+        vl._visibleActivations[visibleIndex] = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) * _hiddenSize.z / static_cast<float>(vl._visibleCounts[visibleIndex]);
     }
 }
 
@@ -122,6 +88,8 @@ void ImageEncoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
+    std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
+
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -133,46 +101,22 @@ void ImageEncoder::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < vl._weights._nonZeroValues.size(); x++)
-            init(x, cs._rng, vli);
-#else
-        runKernel1(cs, std::bind(ImageEncoder::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), vl._weights._nonZeroValues.size(), cs._rng, cs._batchSize1);
-#endif
+        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
+            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
         // Generate transpose (needed for reconstruction)
         vl._weights.initT();
 
-        vl._visibleActivations = FloatBuffer(numVisible);
-
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < numVisible; x++)
-            fillFloat(x, cs._rng, &vl._visibleActivations, 0.0f);
-#else
-        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._visibleActivations, 0.0f), numVisible, cs._rng, cs._batchSize1);
-#endif
+        vl._visibleActivations = FloatBuffer(numVisible, 0.0f);
 
         vl._visibleCounts = IntBuffer(numVisible);
 
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < numVisible; x++)
-            fillInt(x, cs._rng, &vl._visibleCounts, 0);
-#else
-        runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &vl._visibleCounts, 0), numVisible, cs._rng, cs._batchSize1);
-#endif
-
-        vl._weights.countsT(vl._visibleCounts);
+        for (int i = 0; i < numVisible; i++)
+            vl._visibleCounts[i] = vl._weights.countsT(i);
     }
 
     // Hidden Cs
-    _hiddenCs = IntBuffer(numHiddenColumns);
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHiddenColumns; x++)
-        fillInt(x, cs._rng, &_hiddenCs, 0);
-#else
-    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
-#endif
+    _hiddenCs = IntBuffer(numHiddenColumns, 0);
 
     _hiddenActivations = FloatBuffer(numHidden);
 }
