@@ -11,7 +11,7 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// A reinforcement learning layer (Q learning)
+// A reinforcement learning layer
 class Actor {
 public:
     // Visible layer descriptor
@@ -30,7 +30,7 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights;
+        SparseMatrix _weights; // Q weights
     };
 
     // History sample for delayed updates
@@ -49,7 +49,9 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    IntBuffer _hiddenCounts; // Number of units touching hidden columns
+    FloatBuffer _hiddenActivations; // Activations of actions
+
+    IntBuffer _hiddenCounts; // Number of units touching hidden column
 
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
 
@@ -68,10 +70,10 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        float reward
+        const IntBuffer* hiddenCsPrev,
+        float q,
+        float g
     );
 
     static void forwardKernel(
@@ -87,27 +89,25 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
-        const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        float reward
+        const IntBuffer* hiddenCsPrev,
+        float q,
+        float g
     ) {
-        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, reward);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
     }
 
 public:
-    float _alpha; // Learning rate
+    float _alpha; // Value learning rate
     float _gamma; // Discount factor
     float _epsilon; // Exploration rate (e-greedy)
-    int _historyIters; // Number of update iterations on history
 
     // Defaults
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.97f),
-    _epsilon(0.01f),
-    _historyIters(3)
+    _gamma(0.9f),
+    _epsilon(0.02f)
     {}
 
     Actor(
@@ -131,7 +131,7 @@ public:
     // Step (get actions and update)
     void step(
         ComputeSystem &cs,
-        const std::vector<const IntBuffer*> &inputCs,
+        const std::vector<const IntBuffer*> &visibleCs,
         float reward,
         bool learnEnabled
     );
@@ -176,7 +176,7 @@ public:
     }
 
     // Get the weights for a visible layer
-    const SparseMatrix &getActionWeights(
+    const SparseMatrix &getWeights(
         int i // Index of layer
     ) {
         return _visibleLayers[i]._weights;
