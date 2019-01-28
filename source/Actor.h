@@ -98,7 +98,6 @@ private:
 public:
     float _alpha; // Learning rate
     float _gamma; // Discount factor
-    float _epsilon; // Exploration rate (e-greedy)
     int _historyIters; // Number of update iterations on history
 
     // Defaults
@@ -106,8 +105,7 @@ public:
     :
     _alpha(0.1f),
     _gamma(0.9f),
-    _epsilon(0.01f),
-    _historyIters(3)
+    _historyIters(2)
     {}
 
     Actor(
@@ -132,6 +130,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenCs, // Action taken
         float reward,
         bool learnEnabled
     );
