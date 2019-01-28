@@ -93,7 +93,9 @@ void Actor::learn(
         sum += vl._weights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
     }
 
-    float delta = _alpha * (reward + _gamma * maxActivation - sum / std::max(1, _hiddenCounts[hiddenColumnIndex]));
+    sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+
+    float delta = _alpha * (reward + _gamma * maxActivation - sum);
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
