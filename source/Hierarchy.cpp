@@ -302,7 +302,7 @@ void Hierarchy::step(
             // Step actor layers
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 if (_aLayers[l][p] != nullptr)
-                    _aLayers[l][p]->step(cs, feedBackCs, r, learnEnabled);
+                    _aLayers[l][p]->step(cs, feedBackCs, l == 0 ? inputCs[p] : _histories[l][p].get(), r, learnEnabled);
             }
         }
     }

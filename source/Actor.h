@@ -100,14 +100,12 @@ private:
 public:
     float _alpha; // Value learning rate
     float _gamma; // Discount factor
-    float _epsilon; // Exploration rate (e-greedy)
 
     // Defaults
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.9f),
-    _epsilon(0.01f)
+    _gamma(0.9f)
     {}
 
     Actor(
@@ -132,6 +130,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &visibleCs,
+        const IntBuffer* hiddenCs, // Actions taken
         float reward,
         bool learnEnabled
     );
