@@ -173,6 +173,8 @@ float SparseMatrix::multiplyOHVsT(
 
 		sum += _nonZeroValues[_nonZeroValueIndices[j]];
 	}
+
+	return sum;
 }
 
 void SparseMatrix::deltaOHVs(
