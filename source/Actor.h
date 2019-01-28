@@ -37,7 +37,6 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> _inputCs;
         IntBuffer _hiddenCs;
-        FloatBuffer _hiddenValues;
         
         float _reward;
     };
@@ -49,8 +48,6 @@ private:
     int _historySize;
 
     IntBuffer _hiddenCs; // Hidden states
-
-    FloatBuffer _hiddenValues; // Activations
 
     IntBuffer _hiddenCounts; // Number of units touching hidden columns
 
@@ -68,20 +65,13 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void valueUpdate(
+    void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValues,
-        FloatBuffer* hiddenValuesPrev,
-        float reward
-    );
-
-    void learn(const Int2 &pos,
-        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const FloatBuffer* hiddenValuesPrev
+        float reward
     );
 
     static void forwardKernel(
@@ -93,26 +83,16 @@ private:
         a->forward(pos, rng, inputCs);
     }
 
-    static void valueUpdateKernel(
-        const Int2 &pos,
-        std::mt19937 &rng, Actor* a,
-        const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValues,
-        FloatBuffer* hiddenValuesPrev,
-        float reward
-    ) {
-        a->valueUpdate(pos, rng, hiddenCsPrev, hiddenValues, hiddenValuesPrev, reward);
-    }
-
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
+        const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const FloatBuffer* hiddenValuesPrev
+        float reward
     ) {
-        a->learn(pos, rng, hiddenCsPrev, inputCsPrev, hiddenValuesPrev);
+        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, reward);
     }
 
 public:
