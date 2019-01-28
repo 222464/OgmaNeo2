@@ -10,18 +10,6 @@
 
 using namespace ogmaneo;
 
-// Kernels
-void Actor::init(
-    int pos,
-    std::mt19937 &rng,
-    int vli
-) {
-    // Randomly initialize weights in range
-	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
-
-    _visibleLayers[vli]._weights._nonZeroValues[pos] = weightDist(rng);
-}
-
 void Actor::forward(
     const Int2 &pos,
     std::mt19937 &rng,
@@ -42,7 +30,7 @@ void Actor::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.multiplyRangeOHVs(*inputCs[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
+            _hiddenValues[hiddenIndex] += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
         _hiddenValues[hiddenIndex] /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
@@ -97,24 +85,24 @@ void Actor::learn(const Int2 &pos,
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
 
-    _hiddenValues[hiddenIndex] = 0.0f;
+    float sum = 0.0f;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.multiplyRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
+        sum += vl._weights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
     }
 
-    _hiddenValues[hiddenIndex] = _alpha * ((*hiddenValuesPrev)[hiddenIndex] - _hiddenValues[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]));
+    float delta = _alpha * ((*hiddenValuesPrev)[hiddenIndex] - sum / std::max(1, _hiddenCounts[hiddenColumnIndex]));
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.deltaRuleRangeOHVs(*inputCsPrev[vli], _hiddenValues, hiddenIndex, 1, vld._size.z);
+        vl._weights.deltaOHVs(*inputCsPrev[vli], delta, hiddenIndex, vld._size.z);
     }
 }
 
@@ -136,6 +124,8 @@ void Actor::initRandom(
 
     _hiddenCounts = IntBuffer(numHiddenColumns, 0);
 
+    std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
+
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -147,35 +137,18 @@ void Actor::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
-#ifdef KERNEL_DEBUG
-        for (int x = 0; x < vl._weights._nonZeroValues.size(); x++)
-            init(x, cs._rng, vli);
-#else
-        runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), vl._weights._nonZeroValues.size(), cs._rng, cs._batchSize1);
-#endif
+        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
+            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
-        vl._weights.countsOHVs(_hiddenCounts, _hiddenSize.z);
+        for (int i = 0; i < numHiddenColumns; i++)
+            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z);
     }
 
     // Hidden Cs
-    _hiddenCs = IntBuffer(numHiddenColumns);
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHiddenColumns; x++)
-        fillInt(x, cs._rng, &_hiddenCs, 0);
-#else
-    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
-#endif
+    _hiddenCs = IntBuffer(numHiddenColumns, 0);
 
     // Hidden values
-    _hiddenValues = FloatBuffer(numHidden);
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHidden; x++)
-        fillFloat(x, cs._rng, &_hiddenValues, 0.0f);
-#else
-    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, 0.0f), numHidden, cs._rng, cs._batchSize1);
-#endif
+    _hiddenValues = FloatBuffer(numHidden, 0.0f);
 
     // Create (pre-allocated) history samples
     _historySize = 0;

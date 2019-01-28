@@ -61,11 +61,6 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     // --- Kernels ---
-    void init(
-        int pos,
-        std::mt19937 &rng,
-        int vli
-    );
 
     void forward(
         const Int2 &pos,
@@ -88,15 +83,6 @@ private:
         const std::vector<const IntBuffer*> &inputCsPrev,
         const FloatBuffer* hiddenValuesPrev
     );
-
-    static void initKernel(
-        int pos,
-        std::mt19937 &rng,
-        Actor* a,
-        int vli
-    ) {
-        a->init(pos, rng, vli);
-    }
 
     static void forwardKernel(
         const Int2 &pos,

@@ -32,8 +32,6 @@ public:
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
 
-        FloatBuffer _visibleActivations; // Reconstruction buffer for (visible) activations
-
         IntBuffer _visibleCounts; // Number of units touching column
     };
 
@@ -42,19 +40,11 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenActivations; // Hidden activations combined
-
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-    
-    void init(
-        int pos,
-        std::mt19937 &rng,
-        int vli
-    );
 
     void forward(
         const Int2 &pos,
@@ -68,15 +58,6 @@ private:
         const std::vector<const IntBuffer*> &inputCs,
         int vli
     );
-
-    static void initKernel(
-        int pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        int vli
-    ) {
-        sc->init(pos, rng, vli);
-    }
 
     static void forwardKernel(
         const Int2 &pos,
