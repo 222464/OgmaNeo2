@@ -104,7 +104,7 @@ public:
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.98f),
+    _gamma(0.97f),
     _historyIters(2)
     {}
 
