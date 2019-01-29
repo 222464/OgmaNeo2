@@ -38,6 +38,8 @@ void ImageEncoder::forward(
         }
     }
 
+    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
+
     if (learnEnabled) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
 
@@ -60,16 +62,10 @@ void ImageEncoder::backward(
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    // Clear activations
-    for (int vc = 0; vc < vld._size.z; vc++)
-        vl._visibleActivations[address3C(Int3(pos.x, pos.y, vc), vld._size)] = 0.0f;
-
-    // --- Multiply ---
-    
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
-        vl._visibleActivations[visibleIndex] = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) * _hiddenSize.z / static_cast<float>(vl._visibleCounts[visibleIndex]);
+        vl._visibleActivations[visibleIndex] = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleIndex]);
     }
 }
 
@@ -112,13 +108,11 @@ void ImageEncoder::initRandom(
         vl._visibleCounts = IntBuffer(numVisible);
 
         for (int i = 0; i < numVisible; i++)
-            vl._visibleCounts[i] = vl._weights.countsT(i);
+            vl._visibleCounts[i] = vl._weights.countsT(i) / _hiddenSize.z;
     }
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    _hiddenActivations = FloatBuffer(numHidden);
 }
 
 void ImageEncoder::step(
@@ -218,6 +212,4 @@ void ImageEncoder::readFromStream(
 
         readBufferFromStream(is, &vl._visibleActivations);
     }
-
-    _hiddenActivations = FloatBuffer(numHidden);
 }
