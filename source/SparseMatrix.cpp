@@ -233,9 +233,9 @@ void SparseMatrix::hebbDecreasingOHVs(
 		for (int dj = 0; dj < oneHotSize; dj++) {
 			int j = jj + dj;
 
-			float target = (dj == targetDJ ? 1.0f : 0.0f);
+			float delta = (dj == targetDJ ? 0.0f : -alpha);
 
-			_nonZeroValues[j] += alpha * std::min(0.0f, target - _nonZeroValues[j]);
+			_nonZeroValues[j] = std::max(0.0f, _nonZeroValues[j] + delta);
 		}
 	}
 }
