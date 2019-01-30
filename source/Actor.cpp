@@ -241,12 +241,13 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 
         // Compute (partial) Q value, rest is completed in the kernel
         float q = 0.0f;
+        float g = 1.0f;
 
-        for (int t = _historySize - 1; t >= 1; t--)
-            q += _historySamples[t]->_reward * std::pow(_gamma, t - 1);
+        for (int t = 1; t < _historySize; t++) {
+            q += _historySamples[t]->_reward * g;
 
-        // Discount factor for remainder of Q value
-        float g = std::pow(_gamma, _historySize - 1);
+            g *= _gamma;
+        }
 
         // Learn kernel
 #ifdef KERNEL_NOTHREAD
