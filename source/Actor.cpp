@@ -118,7 +118,7 @@ void Actor::initRandom(
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
         for (int i = 0; i < numHiddenColumns; i++)
-            _hiddenCounts[i] += vl._weights.counts(i) / vld._size.z;
+            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
     }
 
     // Hidden Cs
