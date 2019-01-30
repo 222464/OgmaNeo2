@@ -129,6 +129,19 @@ struct SparseMatrix {
 
 	// --- Hebb Rules ---
 
+	void hebb(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
 	void hebbDecreasing(
 		const std::vector<float> &in,
 		int row,
