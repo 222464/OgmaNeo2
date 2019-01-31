@@ -196,12 +196,8 @@ void Actor::initRandom(
         for (int i = 0; i < vl._actionWeights._nonZeroValues.size(); i++)
             vl._actionWeights._nonZeroValues[i] = weightDist(cs._rng);
 
-        for (int x = 0; x < _hiddenSize.x; x++)
-            for (int y = 0; y < _hiddenSize.y; y++) {
-                int hiddenColumnIndex = address2C(Int2(x, y), Int2(_hiddenSize.x, _hiddenSize.y));
-
-                _hiddenCounts[hiddenColumnIndex] += vl._valueWeights.counts(address3C(Int3(x, y, 0), _hiddenSize)) / vld._size.z;
-            }
+        for (int i = 0; i < numHiddenColumns; i++)
+            _hiddenCounts[i] += vl._valueWeights.counts(i) / vld._size.z;
     }
 
     // Hidden Cs
