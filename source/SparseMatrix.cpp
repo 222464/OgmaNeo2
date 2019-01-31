@@ -203,7 +203,7 @@ void SparseMatrix::deltaOHVsT(
 	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
 		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
-		_nonZeroValues[j] += delta;
+		_nonZeroValues[_nonZeroValueIndices[j]] += delta;
 	}
 }
 
