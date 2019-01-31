@@ -23,7 +23,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4, 32 }),
+        _size({ 4, 4, 16 }),
         _radius(2)
         {}
     };
@@ -31,6 +31,10 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
+
+        FloatBuffer _visibleActivations; // Reconstruction buffer for (visible) activations
+
+        IntBuffer _reconCs; // Reconstruction states
     };
 
 private:
@@ -38,17 +42,34 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
+    FloatBuffer _hiddenStimulus; // Activations of input
+    FloatBuffer _hiddenActivations; // Hidden activations combined
+
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-
+    
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        int it
+    );
+
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    );
+
+    void learnWeights(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
     );
 
     static void forwardKernel(
@@ -56,18 +77,41 @@ private:
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        int it
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        sc->forward(pos, rng, inputCs, it);
+    }
+
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    ) {
+        sc->backward(pos, rng, inputCs, vli);
+    }
+
+    static void learnWeightsKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    ) {
+        sc->learnWeights(pos, rng, inputCs, vli);
     }
 
 public:
     float _alpha; // Weight learning rate
 
+    int _explainIters; // Explaining-away iterations (part of iterative sparse coding)
+
     // Defaults
     SparseCoder()
     :
-    _alpha(0.001f)
+    _alpha(0.1f),
+    _explainIters(4)
     {}
 
     // Create a sparse coding layer with random initialization
