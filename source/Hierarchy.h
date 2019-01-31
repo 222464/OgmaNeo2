@@ -38,7 +38,7 @@ public:
 
         LayerDesc()
         :
-        _hiddenSize(4, 4, 32),
+        _hiddenSize(4, 4, 16),
         _scRadius(2),
         _aRadius(2),
         _ticksPerUpdate(2),
