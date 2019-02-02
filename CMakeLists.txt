@@ -20,7 +20,12 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     message("Debug mode, enabling easier kernel debugging")
-    add_compile_definitions(KERNEL_DEBUG)
+    add_compile_definitions(KERNEL_NOTHREAD)
+endif()
+
+if(DISABLE_THREADING)
+    message("Threading disabled")
+    add_compile_definitions(KERNEL_NOTHREAD)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
