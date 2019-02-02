@@ -57,6 +57,8 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> _states;
 
+        std::vector<IntBuffer> _actions;
+
         float _reward;
     };
 
@@ -66,6 +68,8 @@ private:
     std::vector<RouteLayer> _rLayers;
 
     std::vector<IntBuffer> _actions;
+
+    FloatBuffer _q;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -90,7 +94,7 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
-        const IntBuffer* inputCs
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     void backward(
@@ -107,7 +111,7 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
-        const IntBuffer* inputCs
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void forwardKernel(
@@ -116,7 +120,7 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
-        const IntBuffer* inputCs
+        const std::vector<const IntBuffer*> &inputCs
     ) {
         h->forward(pos, rng, hiddenCs, l, inputCs);
     }
@@ -139,21 +143,25 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
-        const IntBuffer* inputCs
+        const std::vector<const IntBuffer*> &inputCs
     ) {
         h->learn(pos, rng, hiddenCs, l, inputCs);
     }
 
 public:
     float _beta; // Routing learning rate
+    float _gamma; // Discount factor
 
     int _maxHistorySamples; // Maximum number of history samples
+    int _historyIters; // Number of times to iterate over history
 
     // Default
     Hierarchy()
     :
     _beta(0.01f),
-    _maxHistorySamples(256)
+    _gamma(0.98f),
+    _maxHistorySamples(256),
+    _historyIters(3)
     {}
 
     // Copy
