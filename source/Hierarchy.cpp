@@ -184,7 +184,7 @@ void Hierarchy::initRandom(
 
                     _rLayers[l]._visibleCounts[i] = IntBuffer(_actions.size());
 
-                    for (int j = 0; j < _rLayers[l]._visibleCounts.size(); j++)
+                    for (int j = 0; j < _rLayers[l]._visibleCounts[i].size(); j++)
                         _rLayers[l]._visibleCounts[i][j] = _rLayers[l]._weights[i].countsT(j * inputSizes[i].z) / layerDescs[l]._hiddenSize.z;
                 }
             }
@@ -226,7 +226,7 @@ void Hierarchy::initRandom(
 
             _rLayers[l]._visibleCounts[0] = IntBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y);
 
-            for (int j = 0; j < _rLayers[l]._visibleCounts.size(); j++)
+            for (int j = 0; j < _rLayers[l]._visibleCounts[0].size(); j++)
                 _rLayers[l]._visibleCounts[0][j] = _rLayers[l]._weights[0].countsT(j * layerDescs[l - 1]._hiddenSize.z) / layerDescs[l]._hiddenSize.z;
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
