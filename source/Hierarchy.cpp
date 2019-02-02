@@ -558,7 +558,9 @@ void Hierarchy::writeToStream(
     }
 
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySamples), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
     int numHistorySamples = _historySamples.size();
 
@@ -641,7 +643,9 @@ void Hierarchy::readFromStream(
     }
 
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySamples), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
     int numHistorySamples;
 
