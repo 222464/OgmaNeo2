@@ -71,7 +71,7 @@ void Hierarchy::backward(
 
         int inputC = (*inputCs)[visibleColumnIndex];
 
-        int visibleIndex = address3C(Int3(pos.x, pos.y, inputC), _inputSizes[vli]);
+        int visibleIndex = address3C(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
         _rLayers[l - 1]._errors[visibleColumnIndex] = _rLayers[l]._weights[vli].multiplyScalarOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
     }
