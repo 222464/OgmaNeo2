@@ -33,23 +33,25 @@ public:
 
         int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
 
-        int _historyCapacity; // Maximum number of history samples
-
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
         _scRadius(2),
         _rRadius(2),
         _ticksPerUpdate(2),
-        _temporalHorizon(2),
-        _historyCapacity(16)
+        _temporalHorizon(2)
         {}
     };
 
     struct RouteLayer {
         std::vector<SparseMatrix> _weights;
+        std::vector<IntBuffer> _visibleCounts;
 
         FloatBuffer _activations;
+
+        FloatBuffer _errors;
+
+        IntBuffer _hiddenCounts;
     };
 
     struct HistorySample {
@@ -63,7 +65,6 @@ private:
     std::vector<SparseCoder> _scLayers;
     std::vector<RouteLayer> _rLayers;
 
-    std::vector<FloatBuffer> _inputActivations;
     std::vector<IntBuffer> _actions;
 
     // Histories
@@ -92,6 +93,23 @@ private:
         const IntBuffer* inputCs
     );
 
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int l,
+        int vli,
+        const IntBuffer* inputCs
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int l,
+        const IntBuffer* inputCs
+    );
+
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -101,6 +119,29 @@ private:
         const IntBuffer* inputCs
     ) {
         h->forward(pos, rng, hiddenCs, l, inputCs);
+    }
+
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Hierarchy* h,
+        const IntBuffer* hiddenCs,
+        int l,
+        int vli,
+        const IntBuffer* inputCs
+    ) {
+        h->backward(pos, rng, hiddenCs, l, vli, inputCs);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Hierarchy* h,
+        const IntBuffer* hiddenCs,
+        int l,
+        const IntBuffer* inputCs
+    ) {
+        h->learn(pos, rng, hiddenCs, l, inputCs);
     }
 
 public:

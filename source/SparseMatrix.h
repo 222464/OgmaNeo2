@@ -109,22 +109,79 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float multiplyScalarOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int row,
+		int oneHotSize
+	);
+
+	// Multiply by a one-hot-row matrix
+	float multiplyScalarOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int column,
+		int oneHotSize
+	);
+
 	// --- Delta Rules ---
 
-	// For dense deltas
-	void deltaRuleRangeOHVs(
+	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
 		int row,
 		int oneHotSize
 	);
 
-	// For dense deltas
-	void deltaRuleRangeOHVsT(
+	void deltaOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void deltaScalarOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaScalarOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize
+	);
+
+	// --- Hebb Rules ---
+
+	void hebb(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
+	void hebbDecreasing(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbDecreasingOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
 	);
 };
 } // namespace ogmaneo

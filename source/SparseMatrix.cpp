@@ -173,9 +173,51 @@ float SparseMatrix::multiplyOHVsT(
 
 		sum += _nonZeroValues[_nonZeroValueIndices[j]];
 	}
+
+	return sum;
 }
 
-void SparseMatrix::deltaRuleRangeOHVs(
+float SparseMatrix::multiplyScalarOHVs(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroScalars,
+	int row,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = _columnIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		sum += _nonZeroValues[j] * nonZeroScalars[i];
+	}
+
+	return sum;
+}
+
+float SparseMatrix::multiplyScalarOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroScalars,
+	int column,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int i = _rowIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		sum += _nonZeroValues[_nonZeroValueIndices[j]] * nonZeroScalars[i];
+	}
+
+	return sum;
+}
+
+void SparseMatrix::deltaOHVs(
 	const std::vector<int> &nonZeroIndices,
 	float delta,
 	int row,
@@ -190,7 +232,7 @@ void SparseMatrix::deltaRuleRangeOHVs(
 	}
 }
 
-void SparseMatrix::deltaRuleRangeOHVsT(
+void SparseMatrix::deltaOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	float delta,
 	int column,
@@ -201,6 +243,104 @@ void SparseMatrix::deltaRuleRangeOHVsT(
 	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
 		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
-		_nonZeroValues[j] += delta;
+		_nonZeroValues[_nonZeroValueIndices[j]] += delta;
+	}
+}
+
+void SparseMatrix::deltaScalarOHVs(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroValues,
+	float delta,
+	int row,
+	int oneHotSize
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = _columnIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		_nonZeroValues[j] += delta * nonZeroValues[i];
+	}
+}
+
+void SparseMatrix::deltaScalarOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroValues,
+	float delta,
+	int column,
+	int oneHotSize
+) {
+	int nextIndex = column + 1;
+
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int i = _rowIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		_nonZeroValues[_nonZeroValueIndices[j]] += delta * nonZeroValues[i];
+	}
+}
+
+void SparseMatrix::hebb(
+	const std::vector<float> &in,
+	int row,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] += alpha * (in[_columnIndices[j]] - _nonZeroValues[j]);
+}
+
+void SparseMatrix::hebbOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[j] += alpha * (target - _nonZeroValues[j]);
+		}
+	}
+}
+
+void SparseMatrix::hebbDecreasing(
+	const std::vector<float> &in,
+	int row,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] += alpha * std::min(0.0f, in[_columnIndices[j]] - _nonZeroValues[j]);
+}
+
+void SparseMatrix::hebbDecreasingOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float delta = (dj == targetDJ ? 0.0f : -alpha);
+
+			_nonZeroValues[j] = std::max(0.0f, _nonZeroValues[j] + delta);
+		}
 	}
 }
