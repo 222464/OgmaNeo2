@@ -18,11 +18,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    message("Debug mode, enabling easier kernel debugging")
-    add_compile_definitions(KERNEL_NOTHREAD)
-endif()
-
 if(DISABLE_THREADING)
     message("Threading disabled")
     add_compile_definitions(KERNEL_NOTHREAD)

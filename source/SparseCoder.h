@@ -32,7 +32,7 @@ public:
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
 
-        IntBuffer _visibleCounts; // Number of units touching column
+        IntBuffer _visibleCounts; // Number touching
     };
 
 private:
@@ -45,7 +45,7 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-
+    
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
