@@ -38,6 +38,7 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> _inputCs;
         IntBuffer _hiddenCs;
+        IntBuffer _hiddenCsExplore;
         FloatBuffer _hiddenValues;
         
         float _reward;
@@ -50,6 +51,7 @@ private:
     int _historySize;
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsExplore; // Hidden states exploratory
 
     FloatBuffer _hiddenValues; // Hidden value function output buffer
 
@@ -74,6 +76,7 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenCsExplorePrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
@@ -94,11 +97,12 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenCsExplorePrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenCsExplorePrev, hiddenValuesPrev, q, g);
     }
 
 public:
