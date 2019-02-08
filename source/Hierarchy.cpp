@@ -486,7 +486,7 @@ void Hierarchy::step(
 
                 targetQ += g * _q[i];
 
-                _rLayers.back()._errors[i] = targetQ - _rLayers.back()._activations[i];
+                _rLayers.back()._errors[i] = g * (targetQ - _rLayers.back()._activations[i]);
             }
 
             // Backward
