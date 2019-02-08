@@ -161,7 +161,7 @@ void Actor::initRandom(
 
     std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
 
-    _hiddenCounts = IntBuffer(numHiddenColumns);
+    _hiddenCounts = IntBuffer(numHiddenColumns, 0);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
