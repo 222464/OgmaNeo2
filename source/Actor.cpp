@@ -33,40 +33,39 @@ void Actor::forward(
 
     // --- Action ---
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        float sum = 0.0f;
-
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            sum += vl._actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-        }
-
-        if (sum > maxActivation) {
-            maxActivation = sum;
-
-            maxIndex = hc;
-        }
-    }
-
-    _hiddenCs[hiddenColumnIndex] = maxIndex;
-
     std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
     if (dist01(rng) < _epsilon) {
         std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
 
-        _hiddenCsExplore[hiddenColumnIndex] = columnDist(rng);
+        _hiddenCs[hiddenColumnIndex] = columnDist(rng);
     }
-    else
-        _hiddenCsExplore[hiddenColumnIndex] = maxIndex;
+    else {
+        int maxIndex = 0;
+        float maxActivation = -999999.0f;
+
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+            float sum = 0.0f;
+
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                sum += vl._actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            }
+
+            if (sum > maxActivation) {
+                maxActivation = sum;
+
+                maxIndex = hc;
+            }
+        }
+
+        _hiddenCs[hiddenColumnIndex] = maxIndex;
+    }
 }
 
 void Actor::learn(
@@ -74,7 +73,6 @@ void Actor::learn(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCsPrev,
     const IntBuffer* hiddenCsPrev,
-    const IntBuffer* hiddenCsExplorePrev,
     const FloatBuffer* hiddenValuesPrev,
     float q,
     float g
@@ -114,36 +112,33 @@ void Actor::learn(
 
     // --- Action ---
 
-    int targetC;
-    
-    if (tdErrorAction > 0.0f)
-        targetC = (*hiddenCsExplorePrev)[hiddenColumnIndex];
-    else
-        targetC = (*hiddenCsPrev)[hiddenColumnIndex];
+    if (tdErrorAction > 0.0f) {
+        int targetC = (*hiddenCsPrev)[hiddenColumnIndex];
 
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = 0.0f;
+            float sum = 0.0f;
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
-        }
+                sum += vl._actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
+            }
 
-        sum /= _hiddenCounts[hiddenColumnIndex];
+            sum /= _hiddenCounts[hiddenColumnIndex];
 
-        float deltaAction = _beta * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum));
+            float deltaAction = _beta * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum));
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
+                vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
+            }
         }
     }
 }
@@ -193,8 +188,6 @@ void Actor::initRandom(
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
 
-    _hiddenCsExplore = IntBuffer(numHiddenColumns, 0);
-
     // Hidden values
     _hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
 
@@ -217,8 +210,6 @@ void Actor::initRandom(
 
         _historySamples[i]->_hiddenCs = IntBuffer(numHiddenColumns);
 
-        _historySamples[i]->_hiddenCsExplore = IntBuffer(numHiddenColumns);
-
         _historySamples[i]->_hiddenValues = FloatBuffer(numHiddenColumns);
     }
 }
@@ -231,8 +222,6 @@ const Actor &Actor::operator=(
     _historySize = other._historySize;
 
     _hiddenCs = other._hiddenCs;
-
-    _hiddenCsExplore = other._hiddenCsExplore;
 
     _hiddenValues = other._hiddenValues;
 
@@ -310,13 +299,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, &_hiddenCsExplore, &s._hiddenCsExplore);
-#else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCsExplore, &s._hiddenCsExplore), numHiddenColumns, cs._rng, cs._batchSize1);
-#endif
-
         // Copy hidden values
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < numHiddenColumns; x++)
@@ -346,9 +328,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < _hiddenSize.x; x++)
             for (int y = 0; y < _hiddenSize.y; y++)
-                learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenCsExplore, &sPrev._hiddenValues, q, g);
+                learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenValues, q, g);
 #else
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenCsExplore, &sPrev._hiddenValues, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &sPrev._hiddenCs, &sPrev._hiddenValues, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
     }
 }
@@ -367,8 +349,6 @@ void Actor::writeToStream(std::ostream &os) const {
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
-
-    writeBufferToStream(os, &_hiddenCsExplore);
 
     writeBufferToStream(os, &_hiddenValues);
 
@@ -402,7 +382,6 @@ void Actor::writeToStream(std::ostream &os) const {
             writeBufferToStream(os, &s._inputCs[vli]);
 
         writeBufferToStream(os, &s._hiddenCs);
-        writeBufferToStream(os, &s._hiddenCsExplore);
         writeBufferToStream(os, &s._hiddenValues);
 
         os.write(reinterpret_cast<const char*>(&s._reward), sizeof(float));
@@ -423,8 +402,6 @@ void Actor::readFromStream(std::istream &is) {
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
-
-    readBufferFromStream(is, &_hiddenCsExplore);
 
     readBufferFromStream(is, &_hiddenValues);
 
@@ -467,7 +444,6 @@ void Actor::readFromStream(std::istream &is) {
             readBufferFromStream(is, &s._inputCs[vli]);
 
         readBufferFromStream(is, &s._hiddenCs);
-        readBufferFromStream(is, &s._hiddenCsExplore);
         readBufferFromStream(is, &s._hiddenValues);
 
         is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
