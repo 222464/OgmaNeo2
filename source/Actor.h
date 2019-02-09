@@ -23,7 +23,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4, 32 }),
+        _size({ 4, 4, 16 }),
         _radius(2)
         {}
     };
@@ -104,7 +104,7 @@ public:
     // Defaults
     Actor()
     :
-    _alpha(0.1f),
+    _alpha(0.01f),
     _gamma(0.9f)
     {}
 
