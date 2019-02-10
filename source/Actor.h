@@ -105,15 +105,13 @@ public:
     float _alpha; // Value learning rate
     float _beta; // Action learning rate
     float _gamma; // Discount factor
-    float _epsilon; // Exploration rate (e-greedy)
 
     // Defaults
     Actor()
     :
     _alpha(0.01f),
     _beta(1.0f),
-    _gamma(0.98f),
-    _epsilon(0.05f)
+    _gamma(0.95f)
     {}
 
     Actor(

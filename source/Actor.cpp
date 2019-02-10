@@ -35,37 +35,53 @@ void Actor::forward(
 
     std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
-    if (dist01(rng) < _epsilon) {
-        std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
+    std::vector<float> activations(_hiddenSize.z);
+    float maxActivation = -999999.0f;
 
-        _hiddenCs[hiddenColumnIndex] = columnDist(rng);
-    }
-    else {
-        int maxIndex = 0;
-        float maxActivation = -999999.0f;
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+        float sum = 0.0f;
 
-            float sum = 0.0f;
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-                sum += vl._actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-            }
-
-            if (sum > maxActivation) {
-                maxActivation = sum;
-
-                maxIndex = hc;
-            }
+            sum += vl._actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
-        _hiddenCs[hiddenColumnIndex] = maxIndex;
+        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+
+        activations[hc] = sum;
+
+        maxActivation = std::max(maxActivation, sum);
     }
+
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+        
+        total += activations[hc];
+    }
+
+    float cusp = dist01(rng) * total;
+
+    int selectIndex = 0;
+    float sumSoFar = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        sumSoFar += activations[hc];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = hc;
+
+            break;
+        }
+    }
+
+    _hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
 void Actor::learn(
@@ -112,16 +128,51 @@ void Actor::learn(
 
     // --- Action ---
 
-    int targetC = (*hiddenCsPrev)[hiddenColumnIndex];
+    if (tdErrorAction > 0.0f) {
+        std::vector<float> activations(_hiddenSize.z);
+        float maxActivation = -999999.0f;
 
-    int hiddenIndexTarget = address3C(Int3(pos.x, pos.y, targetC), _hiddenSize);
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+            float sum = 0.0f;
 
-        vl._actionWeights.deltaOHVs(*inputCsPrev[vli], _beta * tdErrorAction, hiddenIndexTarget, vld._size.z);
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                sum += vl._actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
+            }
+
+            activations[hc] = sum / _hiddenCounts[hiddenColumnIndex];
+
+            maxActivation = std::max(maxActivation, activations[hc]);
+        }
+
+        float total = 0.0f;
+
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            activations[hc] = std::exp(activations[hc] - maxActivation);
+
+            total += activations[hc];
+        }
+
+        int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
+
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+            float deltaAction = _beta * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
+
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
+            }
+        }
     }
 }
 
@@ -326,7 +377,6 @@ void Actor::writeToStream(std::ostream &os) const {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(float));
 
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
@@ -379,7 +429,6 @@ void Actor::readFromStream(std::istream &is) {
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(float));
 
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
