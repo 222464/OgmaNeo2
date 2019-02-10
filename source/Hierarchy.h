@@ -160,10 +160,10 @@ public:
     Hierarchy()
     :
     _beta(0.01f),
-    _gamma(0.98f),
-    _epsilon(0.02f),
-    _maxHistorySamples(8),
-    _historyIters(2)
+    _gamma(0.99f),
+    _epsilon(0.01f),
+    _maxHistorySamples(16),
+    _historyIters(3)
     {}
 
     // Copy
