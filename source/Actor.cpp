@@ -143,18 +143,16 @@ void Actor::learn(
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        float deltaAction = _beta * tdErrorAction / std::max(0.0001f, std::sqrt(_hiddenVariances[hiddenColumnIndex])) * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum));
+        float deltaAction = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
+            vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z, -_maxActionWeight, _maxActionWeight);
         }
     }
-
-    _hiddenVariances[hiddenColumnIndex] = _delta * _hiddenVariances[hiddenColumnIndex] + (1.0f - _delta) * tdErrorAction * tdErrorAction;
 }
 
 void Actor::initRandom(
@@ -205,8 +203,6 @@ void Actor::initRandom(
     // Hidden values
     _hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
 
-    _hiddenVariances = FloatBuffer(numHiddenColumns, 1.0f);
-
     // Create (pre-allocated) history samples
     _historySize = 0;
     _historySamples.resize(historyCapacity);
@@ -243,14 +239,13 @@ const Actor &Actor::operator=(
 
     _hiddenCounts = other._hiddenCounts;
 
-    _hiddenVariances = other._hiddenVariances;
-
     _visibleLayerDescs = other._visibleLayerDescs;
     _visibleLayers = other._visibleLayers;
 
     _alpha = other._alpha;
     _beta = other._beta;
     _gamma = other._gamma;
+    _maxActionWeight = other._maxActionWeight;
 
     _historySamples.resize(other._historySamples.size());
 
@@ -362,6 +357,7 @@ void Actor::writeToStream(std::ostream &os) const {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_maxActionWeight), sizeof(float));
 
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
@@ -370,8 +366,6 @@ void Actor::writeToStream(std::ostream &os) const {
     writeBufferToStream(os, &_hiddenValues);
 
     writeBufferToStream(os, &_hiddenCounts);
-
-    writeBufferToStream(os, &_hiddenVariances);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -416,6 +410,7 @@ void Actor::readFromStream(std::istream &is) {
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_maxActionWeight), sizeof(float));
 
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
@@ -424,8 +419,6 @@ void Actor::readFromStream(std::istream &is) {
     readBufferFromStream(is, &_hiddenValues);
 
     readBufferFromStream(is, &_hiddenCounts);
-
-    readBufferFromStream(is, &_hiddenVariances);
 
     int numVisibleLayers;
     

@@ -55,8 +55,6 @@ private:
 
     IntBuffer _hiddenCounts; // Number of cells touching
 
-    FloatBuffer _hiddenVariances; // TD error variances
-
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
 
     // Visible layers and descriptors
@@ -106,16 +104,16 @@ private:
 public:
     float _alpha; // Value learning rate
     float _beta; // Action learning rate
-    float _delta; // Variance decay
     float _gamma; // Discount factor
-
+    float _maxActionWeight; // Max action weight magnitude
+    
     // Defaults
     Actor()
     :
     _alpha(0.02f),
     _beta(0.5f),
-    _delta(0.9f),
-    _gamma(0.95f)
+    _gamma(0.95f),
+    _maxActionWeight(6.0f)
     {}
 
     Actor(

@@ -192,6 +192,23 @@ void SparseMatrix::deltaOHVs(
 	}
 }
 
+void SparseMatrix::deltaOHVs(
+	const std::vector<int> &nonZeroIndices,
+	float delta,
+	int row,
+	int oneHotSize,
+	float minValue,
+	float maxValue
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		_nonZeroValues[j] = std::min(maxValue, std::max(minValue, _nonZeroValues[j] + delta));
+	}
+}
+
 void SparseMatrix::deltaOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	float delta,
@@ -204,6 +221,23 @@ void SparseMatrix::deltaOHVsT(
 		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
 		_nonZeroValues[_nonZeroValueIndices[j]] += delta;
+	}
+}
+
+void SparseMatrix::deltaOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	float delta,
+	int column,
+	int oneHotSize,
+	float minValue,
+	float maxValue
+) {
+	int nextIndex = column + 1;
+
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		_nonZeroValues[_nonZeroValueIndices[j]] = std::min(maxValue, std::max(minValue, _nonZeroValues[_nonZeroValueIndices[j]] + delta));
 	}
 }
 
