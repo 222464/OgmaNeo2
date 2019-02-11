@@ -150,7 +150,7 @@ void Actor::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z, -_maxActionWeight, _maxActionWeight);
+            vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
         }
     }
 }
@@ -245,7 +245,6 @@ const Actor &Actor::operator=(
     _alpha = other._alpha;
     _beta = other._beta;
     _gamma = other._gamma;
-    _maxActionWeight = other._maxActionWeight;
 
     _historySamples.resize(other._historySamples.size());
 
@@ -357,7 +356,6 @@ void Actor::writeToStream(std::ostream &os) const {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_maxActionWeight), sizeof(float));
 
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
@@ -410,7 +408,6 @@ void Actor::readFromStream(std::istream &is) {
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_maxActionWeight), sizeof(float));
 
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 

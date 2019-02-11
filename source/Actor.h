@@ -105,15 +105,14 @@ public:
     float _alpha; // Value learning rate
     float _beta; // Action learning rate
     float _gamma; // Discount factor
-    float _maxActionWeight; // Max action weight magnitude
+    float _clip; // Max action weight magnitude
     
     // Defaults
     Actor()
     :
-    _alpha(0.02f),
-    _beta(0.5f),
-    _gamma(0.95f),
-    _maxActionWeight(16.0f)
+    _alpha(0.1f),
+    _beta(1.0f),
+    _gamma(0.95f)
     {}
 
     Actor(
