@@ -24,26 +24,27 @@ void Actor::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        _hiddenActivations[hiddenIndex] = 0.0f;
+        float sum = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            _hiddenActivations[hiddenIndex] += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
-        _hiddenActivations[hiddenIndex] /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        if (_hiddenActivations[hiddenIndex] > maxActivation) {
-            maxActivation = _hiddenActivations[hiddenIndex];
+        if (sum > maxActivation) {
+            maxActivation = sum;
 
             maxIndex = hc;
         }
     }
 
     _hiddenCs[hiddenColumnIndex] = maxIndex;
+    _hiddenActivations[hiddenColumnIndex] = maxActivation;
 }
 
 void Actor::learn(
@@ -124,7 +125,7 @@ void Actor::initRandom(
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
 
-    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
+    _hiddenActivations = FloatBuffer(numHiddenColumns, 0.0f);
 
     // Create (pre-allocated) history samples
     _historySize = 0;
