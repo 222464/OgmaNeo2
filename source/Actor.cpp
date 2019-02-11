@@ -155,12 +155,12 @@ void Actor::learn(
         total += activations[hc];
     }
 
-    int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
+    int targetC = (*hiddenCsPrev)[hiddenColumnIndex];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float deltaAction = _beta * std::tanh(tdErrorAction) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
+        float deltaAction = _beta * tdErrorAction / std::max(0.0001f, std::sqrt(_hiddenVariances[hiddenColumnIndex])) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -170,6 +170,8 @@ void Actor::learn(
             vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
         }
     }
+
+    _hiddenVariances[hiddenColumnIndex] = _delta * _hiddenVariances[hiddenColumnIndex] + (1.0f - _delta) * tdErrorAction * tdErrorAction;
 }
 
 void Actor::initRandom(
@@ -220,6 +222,8 @@ void Actor::initRandom(
     // Hidden values
     _hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
 
+    _hiddenVariances = FloatBuffer(numHiddenColumns, 1.0f);
+
     // Create (pre-allocated) history samples
     _historySize = 0;
     _historySamples.resize(historyCapacity);
@@ -255,6 +259,8 @@ const Actor &Actor::operator=(
     _hiddenValues = other._hiddenValues;
 
     _hiddenCounts = other._hiddenCounts;
+
+    _hiddenVariances = other._hiddenVariances;
 
     _visibleLayerDescs = other._visibleLayerDescs;
     _visibleLayers = other._visibleLayers;
@@ -382,6 +388,8 @@ void Actor::writeToStream(std::ostream &os) const {
 
     writeBufferToStream(os, &_hiddenCounts);
 
+    writeBufferToStream(os, &_hiddenVariances);
+
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -433,6 +441,8 @@ void Actor::readFromStream(std::istream &is) {
     readBufferFromStream(is, &_hiddenValues);
 
     readBufferFromStream(is, &_hiddenCounts);
+
+    readBufferFromStream(is, &_hiddenVariances);
 
     int numVisibleLayers;
     
