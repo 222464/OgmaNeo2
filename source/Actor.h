@@ -113,7 +113,7 @@ public:
     _alpha(0.02f),
     _beta(0.5f),
     _gamma(0.95f),
-    _maxActionWeight(6.0f)
+    _maxActionWeight(16.0f)
     {}
 
     Actor(
