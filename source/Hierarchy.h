@@ -57,7 +57,7 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> _states;
 
-        std::vector<IntBuffer> _actions;
+        std::vector<IntBuffer> _actionsPrev;
 
         float _reward;
     };
@@ -159,7 +159,7 @@ public:
     Hierarchy()
     :
     _beta(0.01f),
-    _gamma(0.99f),
+    _gamma(0.98f),
     _maxHistorySamples(16),
     _historyIters(3)
     {}
