@@ -53,8 +53,12 @@ void Actor::learn(
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
+    int targetC = (*hiddenCsPrev)[hiddenColumnIndex];
+
     float maxActivation = -999999.0f;
     float maxActivationPrev = -999999.0f;
+    float nextQActionPrev;
+    float qActionPrev;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -76,25 +80,19 @@ void Actor::learn(
 
         maxActivation = std::max(maxActivation, sum);
         maxActivationPrev = std::max(maxActivationPrev, sumPrev);
+
+        if (hc == targetC) {
+            nextQActionPrev = sum;
+            qActionPrev = sumPrev;
+        }
     }
 
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, targetC), _hiddenSize);
 
-    float sum = 0.0f;
-
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        sum += vl._weights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
-    }
-
-    sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
-    float dQ = reward + _gamma * maxActivation - sum;
-    float dAdv = dQ - _gap * (maxActivationPrev - sum);
-    float delta = _alpha * dAdv;
+    float dQ = reward + _gamma * maxActivation - qActionPrev;
+    float dAdv = dQ - _gap * (maxActivationPrev - qActionPrev);
+    float dPAL = std::max(dAdv, dQ - _gap * (maxActivation - nextQActionPrev));
+    float delta = _alpha * dPAL;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
