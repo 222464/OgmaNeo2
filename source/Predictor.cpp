@@ -44,7 +44,8 @@ void Predictor::forward(
 void Predictor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const IntBuffer* hiddenTargetCs
+    const IntBuffer* hiddenTargetCs,
+    const std::vector<const IntBuffer*> &inputCs
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -64,7 +65,7 @@ void Predictor::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.deltaOHVs(vl._inputCsPrev, delta, hiddenIndex, vld._size.z); // Apply delta rule
+            vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z); // Apply delta rule
         }
     }
 }
@@ -101,8 +102,6 @@ void Predictor::initRandom(
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
-        vl._inputCsPrev = IntBuffer(numVisibleColumns, 0);
-
         for (int i = 0; i < numHiddenColumns; i++)
             _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
     }
@@ -115,7 +114,7 @@ void Predictor::initRandom(
 
 void Predictor::activate(
     ComputeSystem &cs,
-    const std::vector<const IntBuffer*> &visibleCs
+    const std::vector<const IntBuffer*> &inputCs
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -124,41 +123,39 @@ void Predictor::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, visibleCs);
+            forward(Int2(x, y), cs._rng, inputCs);
 #else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-    // Copy to prevs
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        int numVisibleColumns = vld._size.x * vld._size.y;
-
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < numVisibleColumns; x++)
-            copyInt(x, cs._rng, visibleCs[vli], &vl._inputCsPrev);
-#else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &vl._inputCsPrev), numVisibleColumns, cs._rng, cs._batchSize1);
-#endif
-    }
 }
 
 void Predictor::learn(
     ComputeSystem &cs,
-    const IntBuffer* hiddenTargetCs
+    const IntBuffer* hiddenTargetCs,
+    const std::vector<const IntBuffer*> &inputCs
 ) {
     if (_alpha == 0.0f)
         return;
+
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    // Forward kernel
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            forward(Int2(x, y), cs._rng, inputCs);
+#else
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
 
     // Learn kernel
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            learn(Int2(x, y), cs._rng, hiddenTargetCs);
+            learn(Int2(x, y), cs._rng, hiddenTargetCs, inputCs);
 #else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
@@ -189,8 +186,6 @@ void Predictor::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
-
-        writeBufferToStream(os, &vl._inputCsPrev);
     }
 }
 
@@ -224,7 +219,5 @@ void Predictor::readFromStream(
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
         readSMFromStream(is, vl._weights);
-
-        readBufferFromStream(is, &vl._inputCsPrev);
     }
 }

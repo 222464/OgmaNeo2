@@ -294,11 +294,9 @@ void Hierarchy::step(
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
-                    if (learnEnabled) {
-                        _pLayers[l][p]->activate(cs, feedBackCsLearn);
-                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get());
+                    if (learnEnabled) 
+                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsLearn);
 
-                    }
                     _pLayers[l][p]->activate(cs, feedBackCsInfer);
                 }
             }

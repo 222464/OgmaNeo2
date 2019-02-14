@@ -31,8 +31,6 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-
-        IntBuffer _inputCsPrev; // Previous timestep (prev) input states
     };
 
 private:
@@ -59,7 +57,8 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenTargetCs
+        const IntBuffer* hiddenTargetCs,
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void forwardKernel(
@@ -75,9 +74,10 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const IntBuffer* hiddenTargetCs
+        const IntBuffer* hiddenTargetCs,
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        p->learn(pos, rng, hiddenTargetCs);
+        p->learn(pos, rng, hiddenTargetCs, inputCs);
     }
 
 public:
@@ -99,13 +99,14 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &visibleCs // Hidden/output/prediction size
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
-        const IntBuffer* hiddenTargetCs
+        const IntBuffer* hiddenTargetCs,
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     // Write to stream
