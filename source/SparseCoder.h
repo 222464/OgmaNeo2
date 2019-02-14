@@ -39,6 +39,7 @@ private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsPrev; // Hidden states from previous tick
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -133,6 +134,11 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
+    }
+
+    // Get the hidden states prev
+    const IntBuffer &getHiddenCsPrev() const {
+        return _hiddenCsPrev;
     }
 
     // Get the hidden size
