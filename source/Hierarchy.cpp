@@ -27,6 +27,8 @@ void Hierarchy::initRandom(
 
     _histories.resize(layerDescs.size());
     _historySizes.resize(layerDescs.size());
+
+    _feedBackCsPrev.resize(layerDescs.size());
     
     _ticksPerUpdate.resize(layerDescs.size());
 
@@ -144,6 +146,8 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
+
+        _feedBackCsPrev[l] = IntBuffer(_scLayers[l].getHiddenCs().size(), 0);
     }
 }
 
@@ -161,6 +165,8 @@ const Hierarchy &Hierarchy::operator=(
 
     _pLayers.resize(other._pLayers.size());
     _histories.resize(other._histories.size());
+
+    _feedBackCsPrev = other._feedBackCsPrev;
 
     for (int l = 0; l < _scLayers.size(); l++) {
         _pLayers[l].resize(other._pLayers[l].size());
@@ -277,9 +283,12 @@ void Hierarchy::step(
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
             std::vector<const IntBuffer*> feedBackCsInfer(2);
+            std::vector<const IntBuffer*> feedBackCsInferPrev(2);
             std::vector<const IntBuffer*> feedBackCsLearn(2);
 
             feedBackCsInfer[0] = &_scLayers[l].getHiddenCs();
+            feedBackCsInferPrev[0] = &_scLayers[l].getHiddenCsPrev();
+            feedBackCsInferPrev[1] = &_feedBackCsPrev[l];
             feedBackCsLearn[0] = &_scLayers[l].getHiddenCsPrev();
             feedBackCsLearn[1] = &_scLayers[l].getHiddenCs();
 
@@ -294,12 +303,21 @@ void Hierarchy::step(
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
-                    if (learnEnabled) 
+                    if (learnEnabled)  {
+                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsInferPrev);
                         _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsLearn);
+                    }
 
                     _pLayers[l][p]->activate(cs, feedBackCsInfer);
                 }
             }
+
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < _scLayers[l].getHiddenCs().size(); x++)
+                copyInt(x, cs._rng, feedBackCsInfer[1], &_feedBackCsPrev[l]);
+#else
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, feedBackCsInfer[1], &_feedBackCsPrev[l]), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+#endif
         }
     }
 }
@@ -341,6 +359,8 @@ void Hierarchy::writeToStream(
             if (exists)
                 _pLayers[l][v]->writeToStream(os);
         }
+
+        writeBufferToStream(os, &_feedBackCsPrev[l]);
     }
 }
 
@@ -365,6 +385,8 @@ void Hierarchy::readFromStream(
 
     _histories.resize(numLayers);
     _historySizes.resize(numLayers);
+
+    _feedBackCsPrev.resize(numLayers);
     
     _ticksPerUpdate.resize(numLayers);
 
@@ -405,5 +427,7 @@ void Hierarchy::readFromStream(
             else
                 _pLayers[l][v] = nullptr;
         }
+
+        readBufferToStream(is, &_feedBackCsPrev[l]);
     }
 }

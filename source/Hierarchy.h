@@ -52,6 +52,8 @@ private:
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
     std::vector<std::vector<int>> _historySizes;
 
+    std::vector<IntBuffer> _feedBackCsPrev;
+
     // Per-layer values
     std::vector<char> _updates;
 
