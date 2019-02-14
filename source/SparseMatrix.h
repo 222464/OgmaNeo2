@@ -127,6 +127,25 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int row,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	// For dense deltas
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int column,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
 	// --- Hebb Rules ---
 
 	void hebb(

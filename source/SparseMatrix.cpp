@@ -207,6 +207,40 @@ void SparseMatrix::deltaOHVsT(
 	}
 }
 
+void SparseMatrix::deltaOHVs(
+	const std::vector<int> &nonZeroIndices,
+	float delta,
+	int row,
+	int oneHotSize,
+	float lowerBound,
+	float upperBound
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		_nonZeroValues[j] = std::min(upperBound, std::max(lowerBound, _nonZeroValues[j] + delta));
+	}
+}
+
+void SparseMatrix::deltaOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	float delta,
+	int column,
+	int oneHotSize,
+	float lowerBound,
+	float upperBound
+) {
+	int nextIndex = column + 1;
+
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		_nonZeroValues[_nonZeroValueIndices[j]] = std::min(upperBound, std::max(lowerBound, _nonZeroValues[_nonZeroValueIndices[j]] + delta));
+	}
+}
+
 void SparseMatrix::hebb(
 	const std::vector<float> &in,
 	int row,
