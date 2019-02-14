@@ -18,7 +18,6 @@ void Predictor::forward(
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -36,13 +35,39 @@ void Predictor::forward(
 
         _hiddenActivations[hiddenIndex] /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        if (_hiddenActivations[hiddenIndex] > maxActivation) {
-            maxActivation = _hiddenActivations[hiddenIndex];
-            maxIndex = hc;
+        maxActivation = std::max(maxActivation, _hiddenActivations[hiddenIndex]);
+    }
+
+    // Boltzmann exploration
+    std::vector<float> activations(_hiddenSize.z);
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+        activations[hc] = std::exp(_hiddenActivations[hiddenIndex] - maxActivation);
+
+        total += activations[hc];
+    }
+
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    float cusp = dist01(rng) * total;
+
+    float sumSoFar = 0.0f;
+    int selectIndex = 0;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        sumSoFar += activations[hc];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = hc;
+
+            break;
         }
     }
 
-    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
+    _hiddenCsTemp[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = selectIndex;
 }
 
 void Predictor::learn(
@@ -110,6 +135,7 @@ void Predictor::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
+    _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
 
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
 }
@@ -128,6 +154,14 @@ void Predictor::activate(
             forward(Int2(x, y), cs._rng, inputCs);
 #else
     runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+
+    // Copy hidden
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < numHiddenColumns; x++)
+        copyInt(x, cs._rng, &_hiddenCsTemp, &_hiddenCs);
+#else
+    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCsTemp, &_hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 }
 
@@ -202,6 +236,8 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
+
+    _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
 
     readBufferFromStream(is, &_hiddenActivations);
 

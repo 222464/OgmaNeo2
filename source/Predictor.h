@@ -37,6 +37,7 @@ private:
     Int3 _hiddenSize; // Size of the output/hidden/prediction
 
     IntBuffer _hiddenCs; // Hidden state
+    IntBuffer _hiddenCsTemp; // Hidden state temporary
 
     FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
 
