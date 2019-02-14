@@ -53,24 +53,17 @@ void Hierarchy::backward(
         if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
             std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
-            if (dist01(rng) < _epsilon) {
-                std::uniform_int_distribution<int> actionDist(0, _inputSizes[vli].z - 1);
+            float maxValue = -999999.0f;
 
-                _actions[vli][visibleColumnIndex] = actionDist(rng);
-            }
-            else {
-                float maxValue = -999999.0f;
+            for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
+                int visibleIndex = address3C(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
 
-                for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
-                    int visibleIndex = address3C(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
+                float sum = _rLayers[l]._weights[vli].multiplyScalarOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+            
+                if (sum > maxValue) {
+                    maxValue = sum;
 
-                    float sum = _rLayers[l]._weights[vli].multiplyScalarOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-                
-                    if (sum > maxValue) {
-                        maxValue = sum;
-
-                        _actions[vli][visibleColumnIndex] = vc;
-                    }
+                    _actions[vli][visibleColumnIndex] = vc;
                 }
             }
         }
@@ -275,7 +268,6 @@ const Hierarchy &Hierarchy::operator=(
 
     _beta = other._beta;
     _gamma = other._gamma;
-    _epsilon = other._epsilon;
     _maxHistorySamples = other._maxHistorySamples;
     _historyIters = other._historyIters;
 
@@ -574,7 +566,6 @@ void Hierarchy::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySamples), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
@@ -660,7 +651,6 @@ void Hierarchy::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySamples), sizeof(int));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 

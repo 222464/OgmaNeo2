@@ -151,7 +151,6 @@ private:
 public:
     float _beta; // Routing learning rate
     float _gamma; // Discount factor
-    float _epsilon; // Exploration
 
     int _maxHistorySamples; // Maximum number of history samples
     int _historyIters; // Number of times to iterate over history
@@ -161,7 +160,6 @@ public:
     :
     _beta(0.01f),
     _gamma(0.99f),
-    _epsilon(0.01f),
     _maxHistorySamples(16),
     _historyIters(3)
     {}
