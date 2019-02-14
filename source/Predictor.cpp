@@ -16,6 +16,8 @@ void Predictor::forward(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs
 ) {
+    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
@@ -31,6 +33,8 @@ void Predictor::forward(
 
             _hiddenActivations[hiddenIndex] += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
+
+        _hiddenActivations[hiddenIndex] /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -58,7 +62,7 @@ void Predictor::learn(
 
         float target = (hc == targetC ? 1.0f : 0.0f);
 
-        float delta = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]))); // Delta
+        float delta = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex])); // Delta
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
