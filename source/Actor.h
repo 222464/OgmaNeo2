@@ -98,6 +98,7 @@ private:
 public:
     float _alpha; // Learning rate
     float _gamma; // Discount factor
+    float _gap; // Action gap size
     int _historyIters; // Number of update iterations on history
 
     // Defaults
@@ -105,6 +106,7 @@ public:
     :
     _alpha(0.1f),
     _gamma(0.95f),
+    _gap(0.5f),
     _historyIters(4)
     {}
 

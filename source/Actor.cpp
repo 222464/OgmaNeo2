@@ -54,11 +54,13 @@ void Actor::learn(
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     float maxActivation = -999999.0f;
+    float maxActivationPrev = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
+        float sumPrev = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -66,11 +68,14 @@ void Actor::learn(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sumPrev += vl._weights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
         }
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+        sumPrev /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
         maxActivation = std::max(maxActivation, sum);
+        maxActivationPrev = std::max(maxActivationPrev, sumPrev);
     }
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
@@ -87,7 +92,9 @@ void Actor::learn(
 
     sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-    float delta = _alpha * (reward + _gamma * maxActivation - sum);
+    float dQ = reward + _gamma * maxActivation - sum;
+    float dAdv = dQ - _gap * (maxActivationPrev - sum);
+    float delta = _alpha * dAdv;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -176,6 +183,7 @@ const Actor &Actor::operator=(
 
     _alpha = other._alpha;
     _gamma = other._gamma;
+    _gap = other._gap;
     _historyIters = other._historyIters;
 
     _historySamples.resize(other._historySamples.size());
@@ -282,6 +290,7 @@ void Actor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_gap), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
@@ -332,6 +341,7 @@ void Actor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_gap), sizeof(float));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
