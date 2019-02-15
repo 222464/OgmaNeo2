@@ -51,8 +51,6 @@ void Hierarchy::backward(
         int visibleColumnIndex = address2C(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
 
         if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
-            std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
-
             float maxValue = -999999.0f;
 
             for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
