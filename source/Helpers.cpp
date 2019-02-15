@@ -36,7 +36,7 @@ void ogmaneo::runKernel1(
             for (int x = 0; x < batchSize; x++)
                 func(pos + x, subRng);
         }, seedDist(rng), x * batchSize, itemBatchSize, func);
-
+        
         futures.push_back(std::move(f));
     }
 
