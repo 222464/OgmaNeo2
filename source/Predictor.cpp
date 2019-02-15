@@ -67,7 +67,7 @@ void Predictor::forward(
         }
     }
 
-    _hiddenCsTemp[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = selectIndex;
+    _hiddenCsTemp[hiddenColumnIndex] = selectIndex;
 }
 
 void Predictor::learn(
