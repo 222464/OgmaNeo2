@@ -164,6 +164,7 @@ void Actor::initRandom(
         }
 
         _historySamples[i]->_hiddenCs = IntBuffer(numHiddenColumns);
+        _historySamples[i]->_feedBackCs = IntBuffer(numHiddenColumns);
     }
 }
 
