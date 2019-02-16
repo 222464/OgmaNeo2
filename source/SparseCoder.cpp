@@ -60,9 +60,7 @@ void SparseCoder::learnWeights(
 
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        float s = sigmoid(sum);
-
-        float delta = _alpha * (target - s) * s * (1.0f - s);
+        float delta = _alpha * (target - sigmoid(sum));
 
         vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
