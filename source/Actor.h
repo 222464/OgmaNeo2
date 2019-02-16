@@ -37,8 +37,7 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> _inputCs;
         IntBuffer _hiddenCs;
-        
-        float _reward;
+        IntBuffer _feedBackCs;
     };
 
 private:
@@ -70,8 +69,8 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrev,
-        float reward
+        const IntBuffer* feedBackCsPrev,
+        const std::vector<const IntBuffer*> &inputCsPrev
     );
 
     static void forwardKernel(
@@ -89,10 +88,10 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrev,
-        float reward
+        const IntBuffer* feedBackCsPrev,
+        const std::vector<const IntBuffer*> &inputCsPrev
     ) {
-        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, reward);
+        a->learn(pos, rng, inputCs, hiddenCsPrev, feedBackCsPrev, inputCsPrev);
     }
 
 public:
@@ -133,7 +132,7 @@ public:
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCs,
-        float reward,
+        const IntBuffer* feedBackCs,
         bool learnEnabled
     );
 

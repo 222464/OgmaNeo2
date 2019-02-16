@@ -14,12 +14,6 @@
 #include <memory>
 
 namespace ogmaneo {
-// Type of hierarchy input layer
-enum InputType {
-    _none = 0,
-    _act = 1
-};
-
 // A SPH
 class Hierarchy {
 public:
@@ -63,6 +57,7 @@ private:
 
     // Input dimensions
     std::vector<Int3> _inputSizes;
+    int _inputTemporalHorizon;
 
 public:
     // Default
@@ -84,7 +79,6 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const std::vector<Int3> &inputSizes, // Sizes of input layers
-        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
         const std::vector<LayerDesc> &layerDescs // Descriptors for layers
     );
 
@@ -115,7 +109,7 @@ public:
     const IntBuffer &getActionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _aLayers.front()[i]->getHiddenCs();
+        return _scLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._reconCs;
     }
 
     // Whether this layer received on update this timestep
@@ -158,15 +152,15 @@ public:
         return _scLayers[l];
     }
 
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Actor>> &getALayer(
+    // Retrieve predictor layer
+    Actor &getALayer(
         int l // Layer index
     ) {
         return _aLayers[l];
     }
 
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Actor>> &getALayer(
+    // Retrieve predictor layer, const version
+    const Actor &getALayer(
         int l // Layer index
     ) const {
         return _aLayers[l];

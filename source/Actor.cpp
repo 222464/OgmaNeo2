@@ -48,8 +48,8 @@ void Actor::learn(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs,
     const IntBuffer* hiddenCsPrev,
-    const std::vector<const IntBuffer*> &inputCsPrev,
-    float reward
+    const IntBuffer* feedBackCsPrev,
+    const std::vector<const IntBuffer*> &inputCsPrev
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -88,6 +88,8 @@ void Actor::learn(
     }
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, targetC), _hiddenSize);
+
+    float reward = (targetC == (*feedBackCsPrev)[hiddenColumnIndex] ? 1.0f : 0.0f);
 
     float dQ = reward + _gamma * maxActivation - qActionPrev;
     float dAdv = dQ - _gap * (maxActivationPrev - qActionPrev);
@@ -199,7 +201,7 @@ void Actor::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
     const IntBuffer* hiddenCs,
-    float reward,
+    const IntBuffer* feedBackCs,
     bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
@@ -252,8 +254,13 @@ void Actor::step(
 #else
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
-
-        s._reward = reward;
+        // Copy feed back Cs
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < numHiddenColumns; x++)
+            copyInt(x, cs._rng, feedBackCs, &s._feedBackCs);
+#else
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, feedBackCs, &s._feedBackCs), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
     }
 
     // Learn (if have sufficient samples)
@@ -270,9 +277,9 @@ void Actor::step(
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, constGet(s._inputCs), &s._hiddenCs, constGet(sPrev._inputCs), s._reward);
+                    learn(Int2(x, y), cs._rng, constGet(s._inputCs), &s._hiddenCs, &s._feedBackCs, constGet(sPrev._inputCs));
 #else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._inputCs), &s._hiddenCs, constGet(sPrev._inputCs), s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._inputCs), &s._hiddenCs, &s._feedBackCs, constGet(sPrev._inputCs)), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
         }
     }
@@ -324,8 +331,7 @@ void Actor::writeToStream(
             writeBufferToStream(os, &s._inputCs[vli]);
 
         writeBufferToStream(os, &s._hiddenCs);
-
-        os.write(reinterpret_cast<const char*>(&s._reward), sizeof(float));
+        writeBufferToStream(os, &s._feedBackCs);
     }
 }
 
@@ -384,7 +390,6 @@ void Actor::readFromStream(
             readBufferFromStream(is, &s._inputCs[vli]);
 
         readBufferFromStream(is, &s._hiddenCs);
- 
-        is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
+        readBufferFromStream(is, &s._feedBackCs);
     }
 }
