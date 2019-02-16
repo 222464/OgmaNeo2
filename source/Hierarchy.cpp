@@ -51,7 +51,7 @@ void Hierarchy::initRandom(
         _historySizes[l].resize(_histories[l].size());
 		
         // Create sparse coder visible layer descriptors
-        std::vector<SparseCoder::VisibleLayerDesc> scVisibleLayerDescs;
+        std::vector<Actor::VisibleLayerDesc> scVisibleLayerDescs;
 
         // If first layer
         if (l == 0) {
@@ -148,7 +148,7 @@ void Hierarchy::initRandom(
         }
 		
         // Create the sparse coding layer
-        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
+        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._historyCapacity, scVisibleLayerDescs);
     }
 }
 
@@ -251,8 +251,10 @@ void Hierarchy::step(
             // Updated
             _updates[l] = true;
             
+            float r = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
+
             // Activate sparse coder
-            _scLayers[l].step(cs, constGet(_histories[l]), learnEnabled);
+            _scLayers[l].step(cs, constGet(_histories[l]), &_scLayers[l].getHiddenCs(), r, learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {

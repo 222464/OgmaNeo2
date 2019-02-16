@@ -182,15 +182,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    // Forward kernel
-#ifdef KERNEL_NOTHREAD
-    for (int x = 0; x < _hiddenSize.x; x++)
-        for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, visibleCs);
-#else
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-#endif
-
     // Add sample
     if (_historySize == _historySamples.size()) {
         // Circular buffer swap
@@ -259,6 +250,16 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &s._hiddenCs, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
     }
+
+    // Forward kernel
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            forward(Int2(x, y), cs._rng, visibleCs);
+#else
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+
 }
 
 void Actor::writeToStream(std::ostream &os) const {
