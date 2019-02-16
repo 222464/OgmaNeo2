@@ -103,9 +103,9 @@ public:
     // Defaults
     Actor()
     :
-    _alpha(0.02f),
-    _gamma(0.98f),
-    _gap(0.5f),
+    _alpha(0.1f),
+    _gamma(0.9f),
+    _gap(0.1f),
     _historyIters(8)
     {}
 
