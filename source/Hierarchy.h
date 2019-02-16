@@ -49,7 +49,7 @@ public:
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
+    std::vector<Actor> _aLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -60,9 +60,6 @@ private:
 
     std::vector<int> _ticks;
     std::vector<int> _ticksPerUpdate;
-
-    std::vector<float> _rewards;
-    std::vector<float> _rewardCounts;
 
     // Input dimensions
     std::vector<Int3> _inputSizes;
@@ -95,7 +92,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        float reward, // Reinforcement signal
+        const IntBuffer* topFeedBackCs, // Goals
         bool learnEnabled = true // Whether learning is enabled
     );
 
