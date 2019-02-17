@@ -13,12 +13,6 @@
 #include <memory>
 
 namespace ogmaneo {
-// Type of hierarchy input layer
-enum InputType {
-    _none = 0,
-    _act = 1
-};
-
 // A SPH
 class Hierarchy {
 public:
@@ -44,8 +38,8 @@ public:
     };
 
     struct RouteLayer {
-        std::vector<SparseMatrix> _weights;
-        std::vector<IntBuffer> _visibleCounts;
+        SparseMatrix _weights;
+        IntBuffer _visibleCounts;
 
         FloatBuffer _activations;
 
@@ -57,7 +51,7 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> _states;
 
-        std::vector<IntBuffer> _actionsPrev;
+        std::vector<IntBuffer> _actions;
 
         float _reward;
     };
@@ -67,6 +61,8 @@ private:
     std::vector<SparseCoder> _scLayers;
     std::vector<RouteLayer> _rLayers;
 
+    std::vector<Int3> _actionSizes;
+    std::vector<RouteLayer> _actionLayers;
     std::vector<IntBuffer> _actions;
 
     FloatBuffer _q;
@@ -92,60 +88,46 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenCs,
-        int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int l
     );
 
     void backward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenCs,
-        int l,
-        int vli,
-        const IntBuffer* inputCs
+        int l
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenCs,
-        int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int l
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
-        const IntBuffer* hiddenCs,
-        int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int l
     ) {
-        h->forward(pos, rng, hiddenCs, l, inputCs);
+        h->forward(pos, rng, l);
     }
 
     static void backwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
-        const IntBuffer* hiddenCs,
-        int l,
-        int vli,
-        const IntBuffer* inputCs
+        int l
     ) {
-        h->backward(pos, rng, hiddenCs, l, vli, inputCs);
+        h->backward(pos, rng, l);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
-        const IntBuffer* hiddenCs,
-        int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int l
     ) {
-        h->learn(pos, rng, hiddenCs, l, inputCs);
+        h->learn(pos, rng, l);
     }
 
 public:
@@ -159,8 +141,8 @@ public:
     Hierarchy()
     :
     _beta(0.1f),
-    _gamma(0.95f),
-    _maxHistorySamples(16),
+    _gamma(0.98f),
+    _maxHistorySamples(32),
     _historyIters(4)
     {}
 
@@ -180,7 +162,7 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const std::vector<Int3> &inputSizes, // Sizes of input layers
-        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
+        const std::vector<Int3> &actionSizes, // Sizes of action layers
         const std::vector<LayerDesc> &layerDescs // Descriptors for layers
     );
 
