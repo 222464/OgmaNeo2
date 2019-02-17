@@ -33,32 +33,25 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
     "${SOURCE_PATH}/Helpers.cpp"
-    "${SOURCE_PATH}/SparseCoder.cpp"
     "${SOURCE_PATH}/Actor.cpp"
+    "${SOURCE_PATH}/SparseCoder.cpp"
     "${SOURCE_PATH}/Hierarchy.cpp"
     "${SOURCE_PATH}/ImageEncoder.cpp"
 	"${SOURCE_PATH}/SparseMatrix.cpp"
 )
 
 set(HEADERS
+    "${SOURCE_PATH}/ThreadPool.h"
+    "${SOURCE_PATH}/ComputeSystem.h"
 	"${SOURCE_PATH}/Helpers.h"
-    "${SOURCE_PATH}/SparseCoder.h"
     "${SOURCE_PATH}/Actor.h"
+    "${SOURCE_PATH}/SparseCoder.h"
     "${SOURCE_PATH}/Hierarchy.h"
     "${SOURCE_PATH}/ImageEncoder.h"
 	"${SOURCE_PATH}/SparseMatrix.h"
 )
 
 add_library(OgmaNeo ${SOURCES} ${HEADERS})
-
-add_executable(neo "${SOURCE_PATH}/Main.cpp")
-target_link_libraries(neo OgmaNeo)
-
-find_package(SFML 2.5 COMPONENTS system window graphics network audio REQUIRED)
-
-include_directories(${SFML_INCLUDE_DIR})
-
-target_link_libraries(neo sfml-system sfml-graphics)
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin
