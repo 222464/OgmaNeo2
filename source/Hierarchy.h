@@ -97,6 +97,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<IntBuffer> &hiddenStates,
+        const std::vector<IntBuffer> &actions,
         int l
     );
 
@@ -104,6 +105,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<IntBuffer> &hiddenStates,
+        const std::vector<IntBuffer> &actions,
         int l,
         int a
     );
@@ -124,9 +126,10 @@ private:
         std::mt19937 &rng,
         Hierarchy* h,
         const std::vector<IntBuffer> &hiddenStates,
+        const std::vector<IntBuffer> &actions,
         int l
     ) {
-        h->backward(pos, rng, hiddenStates, l);
+        h->backward(pos, rng, hiddenStates, actions, l);
     }
 
     static void learnKernel(
@@ -134,10 +137,11 @@ private:
         std::mt19937 &rng,
         Hierarchy* h,
         const std::vector<IntBuffer> &hiddenStates,
+        const std::vector<IntBuffer> &actions,
         int l,
         int a
     ) {
-        h->learn(pos, rng, hiddenStates, l, a);
+        h->learn(pos, rng, hiddenStates, actions, l, a);
     }
 
 public:
