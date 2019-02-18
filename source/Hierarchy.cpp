@@ -235,7 +235,7 @@ void Hierarchy::initRandom(
             }
         }
 
-        if (l < _rLayers.size() - 1) { // Not topmost
+        if (l < _rLayers.size()) { // Not topmost
             int lNext = l + 1;
 
             _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[lNext]._hiddenSize.x * layerDescs[lNext]._hiddenSize.y, 0);
