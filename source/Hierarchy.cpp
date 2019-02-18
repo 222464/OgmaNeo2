@@ -458,7 +458,11 @@ void Hierarchy::step(
     }
 
     // Keep predicted Q values
-    _q = _rLayers.back()._activations;
+    if (_qs.size() != _actionLayers.size())
+        _qs.resize(_actionLayers.size());
+
+    for (int a = 0; a < _actionLayers.size(); a++)
+        _qs[a] = _actionLayers[a]._activations;
 
     // Action into replay buffer
     ns._actions = _actions;
@@ -518,7 +522,7 @@ void Hierarchy::step(
                         g *= _gamma;
                     }
 
-                    targetQ += g * _q[i];
+                    targetQ += g * _qs[a][i];
 
                     _actionLayers[a]._errors[i] = (targetQ - _actionLayers[a]._activations[i]) * g;
                 }

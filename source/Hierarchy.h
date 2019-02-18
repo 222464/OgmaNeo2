@@ -65,7 +65,7 @@ private:
     std::vector<RouteLayer> _actionLayers;
     std::vector<IntBuffer> _actions;
 
-    FloatBuffer _q;
+    std::vector<FloatBuffer> _qs;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -159,7 +159,7 @@ public:
     // Default
     Hierarchy()
     :
-    _beta(0.01f),
+    _beta(0.001f),
     _gamma(0.98f),
     _epsilon(0.01f),
     _maxHistorySamples(32),
