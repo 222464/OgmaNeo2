@@ -74,12 +74,8 @@ void Hierarchy::backward(
 
         r._errors[visibleColumnIndex] = 0.0f;
 
-        for (int a = 0; a < _actionLayers.size(); a++) {
-            
-            float sum = _rLayers[l]._weights.multiplyT(_rLayers[lNext]._errors, visibleIndex);
-
-            r._errors[visibleColumnIndex] += sum;
-        }
+        for (int a = 0; a < _actionLayers.size(); a++)
+            r._errors[visibleColumnIndex] += _rLayers[l]._weights.multiplyT(_rLayers[lNext]._errors, visibleIndex);
 
         r._errors[visibleColumnIndex] /= std::max(1, _rLayers[lNext]._visibleCounts[visibleColumnIndex]) * _actionLayers.size();
     }
@@ -99,37 +95,43 @@ void Hierarchy::backward(
 void Hierarchy::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    int l
+    int l,
+    int a
 ) {
-    int lNext = l + 1;
-
-    int hiddenColumnIndex = address2C(pos, Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y));
-    
     if (l == _rLayers.size()) { // Last layers
-        for (int a = 0; a < _actionLayers.size(); a++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, _scLayers[lNext].getHiddenCs()[hiddenColumnIndex]), _scLayers[lNext].getHiddenSize());
+        int maxIndex = 0;
+        float maxActivation = -999999.0f;
+
+        int hiddenColumnIndex = address2C(pos, Int2(_actionSizes[a].x, _actionSizes[a].y));
+
+        for (int hc = 0; hc < _actionSizes[a].z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _actionSizes[a]);
 
             RouteLayer &r = _actionLayers[a];
 
-            float delta = _alpha * r._errors[hiddenColumnIndex];
+            float delta = _beta * r._errors[hiddenColumnIndex];
     
-            float sum = (l == 0 ? r._weights.multiplyOHVs(_scLayers[l].getHiddenCs(), hiddenIndex, _scLayers[l].getHiddenSize().z) :
-                r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
-
-            r._activations[hiddenColumnIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
-
-            // Find max per column
+            if (l == 0)
+                r._weights.deltaOHVs(_scLayers[l].getHiddenCs(), delta, hiddenIndex, _scLayers[l].getHiddenSize().z);
+            else
+                r._weights.deltaScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l].getHiddenSize().z);
         }
+
+        _actions[a][hiddenColumnIndex] = maxIndex;
     }
     else { // Hidden layer
+        int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+    
         RouteLayer &r = _rLayers[l];
 
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, _scLayers[lNext].getHiddenCs()[hiddenColumnIndex]), _scLayers[lNext].getHiddenSize());
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, _scLayers[l].getHiddenCs()[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
     
-        float sum = (l == 0 ? r._weights.multiplyOHVs(_scLayers[l].getHiddenCs(), hiddenIndex, _scLayers[l].getHiddenSize().z) :
-            r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
+        float delta = _beta * r._errors[hiddenColumnIndex];
 
-        r._activations[hiddenColumnIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
+        if (l == 0)
+            r._weights.deltaOHVs(_scLayers[l].getHiddenCs(), delta, hiddenIndex, _scLayers[l].getHiddenSize().z);
+        else
+            r._weights.deltaScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l].getHiddenSize().z);
     }
 }
 
