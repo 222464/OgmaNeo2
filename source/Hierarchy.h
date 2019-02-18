@@ -16,6 +16,10 @@ namespace ogmaneo {
 // A SPH
 class Hierarchy {
 public:
+    enum class ForwardType {
+        _determineActions, _determineMax, _atActions
+    };
+
     // Describes a layer for construction
     struct LayerDesc {
         Int3 _hiddenSize; // Size of hidden layer
@@ -90,7 +94,7 @@ private:
         const std::vector<IntBuffer> &actions,
         int l,
         int a,
-        bool determineActions
+        ForwardType type
     );
 
     void backward(
@@ -118,9 +122,9 @@ private:
         const std::vector<IntBuffer> &actions,
         int l,
         int a,
-        bool determineActions
+        ForwardType type
     ) {
-        h->forward(pos, rng, hiddenStates, actions, l, a, determineActions);
+        h->forward(pos, rng, hiddenStates, actions, l, a, type);
     }
 
     static void backwardKernel(
