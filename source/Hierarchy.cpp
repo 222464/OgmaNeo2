@@ -29,24 +29,33 @@ void Hierarchy::forward(
         int hiddenColumnIndex = address2C(pos, Int2(_actionSizes[a].x, _actionSizes[a].y));
 
         if (determineActions) {
-            for (int hc = 0; hc < _actionSizes[a].z; hc++) {
-                int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _actionSizes[a]);
+            std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
-                RouteLayer &r = _actionLayers[a];
-        
-                float sum = (l == 0 ? r._weights.multiplyOHVs(hiddenStates[l], hiddenIndex, _scLayers[l].getHiddenSize().z) :
-                    r._weights.multiplyScalarOHVs(hiddenStates[l], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
+            if (dist01(rng) < _epsilon) {
+                std::uniform_int_distribution<int> actionDist(0, _actionSizes[a].z - 1);
 
-                sum /= std::max(1, r._hiddenCounts[hiddenColumnIndex]);
-
-                if (sum > maxActivation) {
-                    maxActivation = sum;
-
-                    maxIndex = hc;
-                }
+                _actions[a][hiddenColumnIndex] = actionDist(rng);
             }
+            else {
+                for (int hc = 0; hc < _actionSizes[a].z; hc++) {
+                    int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _actionSizes[a]);
 
-            _actions[a][hiddenColumnIndex] = maxIndex;
+                    RouteLayer &r = _actionLayers[a];
+            
+                    float sum = (l == 0 ? r._weights.multiplyOHVs(hiddenStates[l], hiddenIndex, _scLayers[l].getHiddenSize().z) :
+                        r._weights.multiplyScalarOHVs(hiddenStates[l], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
+
+                    sum /= std::max(1, r._hiddenCounts[hiddenColumnIndex]);
+
+                    if (sum > maxActivation) {
+                        maxActivation = sum;
+
+                        maxIndex = hc;
+                    }
+                }
+
+                _actions[a][hiddenColumnIndex] = maxIndex;
+            }
         }
         else { // Partial recompute
             int hiddenIndex = address3C(Int3(pos.x, pos.y, actions[a][hiddenColumnIndex]), _actionSizes[a]);
