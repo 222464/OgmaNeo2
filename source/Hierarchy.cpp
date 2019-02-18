@@ -660,7 +660,7 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(_actionSizes.data()), numActions * sizeof(Int3));
 
     _scLayers.resize(numLayers);
-    _rLayers.resize(numLayers);
+    _rLayers.resize(numLayers - 1);
 
     _ticks.resize(numLayers);
 
