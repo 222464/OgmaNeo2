@@ -240,6 +240,11 @@ public:
         return _inputSizes;
     }
 
+    // Get input sizes
+    const std::vector<Int3> &getActionSizes() const {
+        return _actionSizes;
+    }
+
     // Retrieve a sparse coding layer
     SparseCoder &getSCLayer(
         int l // Layer index

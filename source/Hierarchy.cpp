@@ -424,24 +424,26 @@ void Hierarchy::step(
 
     // Find Q values
     for (int l = 0; l < _scLayers.size(); l++) {
-        if (l == _scLayers.size() - 1) {
+        if (l == _rLayers.size()) {
             for (int a = 0; a < _actionLayers.size(); a++) {
 #ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
-                    for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
+                for (int x = 0; x < _actionSizes[a].x; x++)
+                    for (int y = 0; y < _actionSizes[a].y; y++)
                         forward(Int2(x, y), cs._rng, ns._states, ns._actions, l, a, true);
 #else
-                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, a, true), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, a, true), Int2(_actionSizes[a].x, _actionSizes[a].y), cs._rng, cs._batchSize2);
 #endif
             }
         }
         else {
+            int lNext = l + 1;
+            
 #ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
-                for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
+            for (int x = 0; x < _scLayers[lNext].getHiddenSize().x; x++)
+                for (int y = 0; y < _scLayers[lNext].getHiddenSize().y; y++)
                     forward(Int2(x, y), cs._rng, ns._states, ns._actions, l, 0, true);
 #else
-            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, 0, true), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, 0, true), Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
         }
     }
@@ -493,21 +495,23 @@ void Hierarchy::step(
                 if (l == _scLayers.size() - 1) {
                     for (int a = 0; a < _actionLayers.size(); a++) {
 #ifdef KERNEL_NOTHREAD
-                        for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
-                            for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
+                        for (int x = 0; x < _actionSizes[a].x; x++)
+                            for (int y = 0; y < _actionSizes[a].y; y++)
                                 forward(Int2(x, y), cs._rng, s._states, s._actions, l, a, false);
 #else
-                        runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l, a, false), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                        runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l, a, false), Int2(_actionSizes[a].x, _actionSizes[a].y), cs._rng, cs._batchSize2);
 #endif
                     }
                 }
                 else {
+                    int lNext = l + 1;
+
 #ifdef KERNEL_NOTHREAD
-                    for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
-                        for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
+                    for (int x = 0; x < _scLayers[lNext].getHiddenSize().x; x++)
+                        for (int y = 0; y < _scLayers[lNext].getHiddenSize().y; y++)
                             forward(Int2(x, y), cs._rng, s._states, s._actions, l, 0, false);
 #else
-                    runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l, 0, false), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                    runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l, 0, false), Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
                 }
             }
