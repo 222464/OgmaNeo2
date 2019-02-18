@@ -54,6 +54,8 @@ void Hierarchy::forward(
                     }
                 }
 
+                _actionLayers[a]._activations[hiddenColumnIndex] = maxActivation;
+
                 _actions[a][hiddenColumnIndex] = maxIndex;
             }
         }
@@ -456,13 +458,6 @@ void Hierarchy::step(
         }
     }
 
-    // Keep predicted Q values
-    if (_qs.size() != _actionLayers.size())
-        _qs.resize(_actionLayers.size());
-
-    for (int a = 0; a < _actionLayers.size(); a++)
-        _qs[a] = _actionLayers[a]._activations;
-
     // Action into replay buffer
     ns._actions = _actions;
 
@@ -480,6 +475,33 @@ void Hierarchy::step(
             int t = sampleDist(cs._rng);
 
             const HistorySample &s = _historySamples[t];
+            const HistorySample &sNext = _historySamples[t - 1];
+
+            // Find next Q values
+            for (int l = 0; l < _scLayers.size(); l++) {
+                if (l == _scLayers.size() - 1) {
+                    for (int a = 0; a < _actionLayers.size(); a++) {
+#ifdef KERNEL_NOTHREAD
+                        for (int x = 0; x < _actionSizes[a].x; x++)
+                            for (int y = 0; y < _actionSizes[a].y; y++)
+                                forward(Int2(x, y), cs._rng, sNext._states, sNext._actions, l, a, false);
+#else
+                        runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, sNext._states, sNext._actions, l, a, false), Int2(_actionSizes[a].x, _actionSizes[a].y), cs._rng, cs._batchSize2);
+#endif
+                    }
+                }
+                else {
+                    int lNext = l + 1;
+
+#ifdef KERNEL_NOTHREAD
+                    for (int x = 0; x < _scLayers[lNext].getHiddenSize().x; x++)
+                        for (int y = 0; y < _scLayers[lNext].getHiddenSize().y; y++)
+                            forward(Int2(x, y), cs._rng, sNext._states, sNext._actions, l, 0, false);
+#else
+                    runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, sNext._states, sNext._actions, l, 0, false), Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y), cs._rng, cs._batchSize2);
+#endif
+                }
+            }
 
             // Find Q values
             for (int l = 0; l < _scLayers.size(); l++) {

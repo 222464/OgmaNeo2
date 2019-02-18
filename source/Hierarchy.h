@@ -65,8 +65,6 @@ private:
     std::vector<RouteLayer> _actionLayers;
     std::vector<IntBuffer> _actions;
 
-    std::vector<FloatBuffer> _qs;
-
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
     std::vector<std::vector<int>> _historySizes;
@@ -159,11 +157,11 @@ public:
     // Default
     Hierarchy()
     :
-    _beta(0.01f),
+    _beta(0.05f),
     _gamma(0.98f),
     _epsilon(0.02f),
-    _maxHistorySamples(32),
-    _historyIters(4)
+    _maxHistorySamples(256),
+    _historyIters(5)
     {}
 
     // Copy
