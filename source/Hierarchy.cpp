@@ -71,7 +71,7 @@ void Hierarchy::forward(
     else { // Hidden layer
         int lNext = l + 1;
 
-        int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+        int hiddenColumnIndex = address2C(pos, Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y));
     
         RouteLayer &r = _rLayers[l];
 
@@ -129,9 +129,6 @@ void Hierarchy::learn(
     int a
 ) {
     if (l == _rLayers.size()) { // Last layers
-        int maxIndex = 0;
-        float maxActivation = -999999.0f;
-
         int hiddenColumnIndex = address2C(pos, Int2(_actionSizes[a].x, _actionSizes[a].y));
 
         int hiddenIndex = address3C(Int3(pos.x, pos.y, actions[a][hiddenColumnIndex]), _actionSizes[a]);
@@ -148,7 +145,7 @@ void Hierarchy::learn(
     else { // Hidden layer
         int lNext = l + 1;
 
-        int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+        int hiddenColumnIndex = address2C(pos, Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y));
     
         RouteLayer &r = _rLayers[l];
 
@@ -481,7 +478,6 @@ void Hierarchy::step(
             int t = sampleDist(cs._rng);
 
             const HistorySample &s = _historySamples[t];
-            const HistorySample &sNext = _historySamples[t - 1];
 
             // Find Q values
             for (int l = 0; l < _scLayers.size(); l++) {
@@ -529,12 +525,14 @@ void Hierarchy::step(
             }
 
             for (int l = _rLayers.size() - 1; l >= 0; l--) {
+                int lNext = l + 1;
+
 #ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
-                    for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
+                for (int x = 0; x < _scLayers[lNext].getHiddenSize().x; x++)
+                    for (int y = 0; y < _scLayers[lNext].getHiddenSize().y; y++)
                         backward(Int2(x, y), cs._rng, s._states, s._actions, l);
 #else
-                runKernel2(cs, std::bind(Hierarchy::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                runKernel2(cs, std::bind(Hierarchy::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l), Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
             }
 
