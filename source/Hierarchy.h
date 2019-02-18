@@ -88,6 +88,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
+        const std::vector<IntBuffer> &hiddenStates,
         int l,
         int a
     );
@@ -95,12 +96,14 @@ private:
     void backward(
         const Int2 &pos,
         std::mt19937 &rng,
+        const std::vector<IntBuffer> &hiddenStates,
         int l
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
+        const std::vector<IntBuffer> &hiddenStates,
         int l,
         int a
     );
@@ -109,29 +112,32 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
+        const std::vector<IntBuffer> &hiddenStates,
         int l,
         int a
     ) {
-        h->forward(pos, rng, l, a);
+        h->forward(pos, rng, hiddenStates, l, a);
     }
 
     static void backwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
+        const std::vector<IntBuffer> &hiddenStates,
         int l
     ) {
-        h->backward(pos, rng, l);
+        h->backward(pos, rng, hiddenStates, l);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
+        const std::vector<IntBuffer> &hiddenStates,
         int l,
         int a
     ) {
-        h->learn(pos, rng, l, a);
+        h->learn(pos, rng, hiddenStates, l, a);
     }
 
 public:
