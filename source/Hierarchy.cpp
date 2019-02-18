@@ -17,8 +17,10 @@ void Hierarchy::forward(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<IntBuffer> &hiddenStates,
+    std::vector<IntBuffer> &actions,
     int l,
-    int a
+    int a,
+    bool determineActions
 ) {
     if (l == _rLayers.size()) { // Last layers
         int maxIndex = 0;
@@ -26,24 +28,36 @@ void Hierarchy::forward(
 
         int hiddenColumnIndex = address2C(pos, Int2(_actionSizes[a].x, _actionSizes[a].y));
 
-        for (int hc = 0; hc < _actionSizes[a].z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _actionSizes[a]);
+        if (determineActions) {
+            for (int hc = 0; hc < _actionSizes[a].z; hc++) {
+                int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _actionSizes[a]);
+
+                RouteLayer &r = _actionLayers[a];
+        
+                float sum = (l == 0 ? r._weights.multiplyOHVs(hiddenStates[l], hiddenIndex, _scLayers[l].getHiddenSize().z) :
+                    r._weights.multiplyScalarOHVs(hiddenStates[l], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
+
+                sum /= std::max(1, r._hiddenCounts[hiddenColumnIndex]);
+
+                if (sum > maxActivation) {
+                    maxActivation = sum;
+
+                    maxIndex = hc;
+                }
+            }
+
+            _actions[a][hiddenColumnIndex] = maxIndex;
+        }
+        else { // Partial recompute
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, actions[a][hiddenColumnIndex]), _actionSizes[a]);
 
             RouteLayer &r = _actionLayers[a];
     
             float sum = (l == 0 ? r._weights.multiplyOHVs(hiddenStates[l], hiddenIndex, _scLayers[l].getHiddenSize().z) :
                 r._weights.multiplyScalarOHVs(hiddenStates[l], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
 
-            r._activations[hiddenIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
-
-            if (r._activations[hiddenIndex] > maxActivation) {
-                maxActivation = r._activations[hiddenIndex];
-
-                maxIndex = hc;
-            }
+            r._activations[hiddenColumnIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
         }
-
-        _actions[a][hiddenColumnIndex] = maxIndex;
     }
     else { // Hidden layer
         int lNext = l + 1;
@@ -241,10 +255,10 @@ void Hierarchy::initRandom(
 
             for (int j = 0; j < _rLayers[l]._visibleCounts.size(); j++)
                 _rLayers[l]._visibleCounts[j] = _rLayers[l]._weights.countsT(j * layerDescs[l]._hiddenSize.z) / layerDescs[lNext]._hiddenSize.z;
-        }
 
-        _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
-        _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 0.0f);
+            _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
+            _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 0.0f);
+        }
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
@@ -271,6 +285,9 @@ void Hierarchy::initRandom(
 
         for (int j = 0; j < _actionLayers[a]._visibleCounts.size(); j++)
             _actionLayers[a]._visibleCounts[j] = _actionLayers[a]._weights.countsT(j * layerDescs.back()._hiddenSize.z) / _actionSizes[a].z;
+
+        _actionLayers[a]._activations = FloatBuffer(_actionSizes[a].x * _actionSizes[a].y, 1.0f);
+        _actionLayers[a]._errors = FloatBuffer(_actionLayers[a]._activations.size(), 0.0f);
 
         _actions[a] = IntBuffer(_actionSizes[a].x * _actionSizes[a].y, 0);
     }
@@ -412,9 +429,9 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
                 for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
                     for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
-                        forward(Int2(x, y), cs._rng, ns._states, l, a);
+                        forward(Int2(x, y), cs._rng, ns._states, ns._actions, l, a, true);
 #else
-                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, l, a), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, a, true), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
             }
         }
@@ -422,15 +439,18 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
                 for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
-                    forward(Int2(x, y), cs._rng, ns._states, l, 0);
+                    forward(Int2(x, y), cs._rng, ns._states, ns._actions, l, 0, true);
 #else
-            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, l, 0), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, 0, true), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
         }
     }
 
     // Keep predicted Q values
     _q = _rLayers.back()._activations;
+
+    // Action into replay buffer
+    ns._actions = _actions;
 
     // Determine actions by setting errors to 1 and propagating
     for (int a = 0; a < _actionLayers.size(); a++) {
@@ -446,14 +466,11 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < _scLayers[l - 1].getHiddenSize().x; x++)
             for (int y = 0; y < _scLayers[l - 1].getHiddenSize().y; y++)
-                backward(Int2(x, y), cs._rng, ns._states, l);
+                backward(Int2(x, y), cs._rng, ns._states, ns._actions, l);
 #else
-        runKernel2(cs, std::bind(Hierarchy::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, l), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Hierarchy::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
     }
-
-    // Action into replay buffer
-    ns._actions = _actions;
 
     // Add history sample
     _historySamples.insert(_historySamples.begin(), ns);
@@ -478,9 +495,9 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
                         for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
                             for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
-                                forward(Int2(x, y), cs._rng, ns._states, l, a);
+                                forward(Int2(x, y), cs._rng, s._states, s._actions, l, a);
 #else
-                        runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, l, a), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                        runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l, a, false), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
                     }
                 }
@@ -488,59 +505,62 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
                     for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
                         for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
-                            forward(Int2(x, y), cs._rng, ns._states, l, 0);
+                            forward(Int2(x, y), cs._rng, s._states, s._actions, l, 0);
 #else
-                    runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, l, 0), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                    runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l, 0, false), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
                 }
             }
 
             // Errors
-            for (int i = 0; i < _rLayers.back()._errors.size(); i++) {
-                // Determine target
-                float targetQ = 0.0f;
-                float g = 1.0f;
-                
-                for (int t2 = t - 1; t2 >= 0; t2--) {
-                    targetQ += g * _historySamples[t2]._reward;
+            for (int a = 0; a < _actionLayers.size(); a++) {
+                for (int i = 0; i < _actionLayers[a]._errors.size(); i++) {
+                    // Determine target
+                    float targetQ = 0.0f;
+                    float g = 1.0f;
+                    
+                    for (int t2 = t - 1; t2 >= 0; t2--) {
+                        targetQ += g * _historySamples[t2]._reward;
 
-                    g *= _gamma;
+                        g *= _gamma;
+                    }
+
+                    targetQ += g * _q[i];
+
+                    _actionLayers[a]._errors[i] = (targetQ - _actionLayers[a]._activations[i]) * g;
                 }
-
-                targetQ += g * _q[i];
-
-                _actionLayers[a].back()._errors[i] = (targetQ - _rLayers.back()._activations[i]) * g;
             }
 
-            // Backward
-            for (int l = _scLayers.size() - 1; l >= 1; l--) {
+            for (int l = _scLayers.size() - 1; l >= 0; l--) {
 #ifdef KERNEL_NOTHREAD
                 for (int x = 0; x < _scLayers[l - 1].getHiddenSize().x; x++)
                     for (int y = 0; y < _scLayers[l - 1].getHiddenSize().y; y++)
-                        backward(Int2(x, y), cs._rng, &s._states[l], l, 0, &s._states[l - 1]);
+                        backward(Int2(x, y), cs._rng, s._states, s._actions, l);
 #else
-                runKernel2(cs, std::bind(Hierarchy::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, 0, &s._states[l - 1]), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
+                runKernel2(cs, std::bind(Hierarchy::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, s._states, s._actions, l), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
             }
 
             // learn
             for (int l = 0; l < _scLayers.size(); l++) {
-                if (l == 0) {
+                if (l == _scLayers.size() - 1) {
+                    for (int a = 0; a < _actionLayers.size(); a++) {
 #ifdef KERNEL_NOTHREAD
-                    for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
-                        for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
-                            learn(Int2(x, y), cs._rng, &s._states[l], l, constGet(sNext._actionsPrev));
+                        for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
+                            for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
+                                learn(Int2(x, y), cs._rng, ns._states, ns._actions, l, a);
 #else
-                    runKernel2(cs, std::bind(Hierarchy::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, constGet(sNext._actionsPrev)), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                        runKernel2(cs, std::bind(Hierarchy::learnKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, a), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
+                    }
                 }
                 else {
 #ifdef KERNEL_NOTHREAD
                     for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
                         for (int y = 0; y < _scLayers[l].getHiddenSize().y; y++)
-                            learn(Int2(x, y), cs._rng, &s._states[l], l, std::vector<const IntBuffer*>{ &s._states[l - 1] });
+                            learn(Int2(x, y), cs._rng, ns._states, ns._actions, l, 0);
 #else
-                    runKernel2(cs, std::bind(Hierarchy::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, std::vector<const IntBuffer*>{ &s._states[l - 1] }), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
+                    runKernel2(cs, std::bind(Hierarchy::learnKernel, std::placeholders::_1, std::placeholders::_2, this, ns._states, ns._actions, l, 0), Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
                 }
             }
@@ -556,16 +576,17 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(&numLayers), sizeof(int));
 
     int numInputs = _inputSizes.size();
+    int numActions = _actionSizes.size();
 
     os.write(reinterpret_cast<const char*>(&numInputs), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&numActions), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(_inputSizes.data()), numInputs * sizeof(Int3));
-
+    os.write(reinterpret_cast<const char*>(_actionSizes.data()), numActions * sizeof(Int3));
+    
     os.write(reinterpret_cast<const char*>(_updates.data()), _updates.size() * sizeof(char));
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
     os.write(reinterpret_cast<const char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
-
-    writeBufferToStream(os, &_actions);
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes = _historySizes[l].size();
@@ -578,22 +599,25 @@ void Hierarchy::writeToStream(
             writeBufferToStream(os, _histories[l][i].get());
 
         _scLayers[l].writeToStream(os);
+    }
 
+    for (int l = 0; l < _rLayers.size(); l++) {
         writeBufferToStream(os, &_rLayers[l]._activations);
         writeBufferToStream(os, &_rLayers[l]._errors);
         writeBufferToStream(os, &_rLayers[l]._hiddenCounts);
-
-        for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
-            char exists = !_rLayers[l]._weights[v]._nonZeroValues.empty();
-
-            os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
-
-            if (exists) {
-                writeSMToStream(os, _rLayers[l]._weights[v]);
-                writeBufferToStream(os, &_rLayers[l]._visibleCounts[v]);
-            }
-        }
+        writeSMToStream(os, _rLayers[l]._weights);
+        writeBufferToStream(os, &_rLayers[l]._visibleCounts);
     }
+
+    for (int a = 0; a < _actionLayers.size(); a++) {
+        writeBufferToStream(os, &_actionLayers[a]._activations);
+        writeBufferToStream(os, &_actionLayers[a]._errors);
+        writeBufferToStream(os, &_actionLayers[a]._hiddenCounts);
+        writeSMToStream(os, _actionLayers[a]._weights);
+        writeBufferToStream(os, &_actionLayers[a]._visibleCounts);
+    }
+
+    writeBufferToStream(os, &_actions);
 
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
@@ -622,12 +646,16 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
 
     int numInputs;
+    int numActions;
 
     is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
+    is.read(reinterpret_cast<char*>(&numActions), sizeof(int));
 
     _inputSizes.resize(numInputs);
+    _actionSizes.resize(numActions);
 
     is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(Int3));
+    is.read(reinterpret_cast<char*>(_actionSizes.data()), numActions * sizeof(Int3));
 
     _scLayers.resize(numLayers);
     _rLayers.resize(numLayers);
@@ -645,8 +673,6 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
     is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
 
-    readBufferFromStream(is, &_actions);
-
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes;
         
@@ -663,22 +689,25 @@ void Hierarchy::readFromStream(
         }
 
         _scLayers[l].readFromStream(is);
+    }
 
+    for (int l = 0; l < _rLayers.size(); l++) {
         readBufferFromStream(is, &_rLayers[l]._activations);
         readBufferFromStream(is, &_rLayers[l]._errors);
         readBufferFromStream(is, &_rLayers[l]._hiddenCounts);
-
-        for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
-            char exists;
-
-            is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-            if (exists) {
-                readSMFromStream(is, _rLayers[l]._weights[v]);
-                readBufferFromStream(is, &_rLayers[l]._visibleCounts);
-            }
-        }
+        readSMFromStream(is, _rLayers[l]._weights);
+        readBufferFromStream(is, &_rLayers[l]._visibleCounts);
     }
+
+    for (int a = 0; a < _actionLayers.size(); a++) {
+        readBufferFromStream(is, &_actionLayers[a]._activations);
+        readBufferFromStream(is, &_actionLayers[a]._errors);
+        readBufferFromStream(is, &_actionLayers[a]._hiddenCounts);
+        readSMFromStream(is, _actionLayers[a]._weights);
+        readBufferFromStream(is, &_actionLayers[a]._visibleCounts);
+    }
+
+    readBufferFromStream(is, &_actions);
 
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
