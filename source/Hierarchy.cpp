@@ -92,11 +92,13 @@ void Hierarchy::backward(
     int l
 ) {
     if (l == _rLayers.size() - 1) {
+        int lNext = l + 1;
+
         RouteLayer &r = _rLayers[l];
 
-        int visibleColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+        int visibleColumnIndex = address2C(pos, Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y));
 
-        int visibleIndex = address3C(Int3(pos.x, pos.y, hiddenStates[l][visibleColumnIndex]), _scLayers[l].getHiddenSize());
+        int visibleIndex = address3C(Int3(pos.x, pos.y, hiddenStates[lNext][visibleColumnIndex]), _scLayers[lNext].getHiddenSize());
 
         r._errors[visibleColumnIndex] = 0.0f;
 
@@ -110,9 +112,9 @@ void Hierarchy::backward(
 
         RouteLayer &r = _rLayers[l];
 
-        int visibleColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+        int visibleColumnIndex = address2C(pos, Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y));
 
-        int visibleIndex = address3C(Int3(pos.x, pos.y, hiddenStates[l][visibleColumnIndex]), _scLayers[lNext].getHiddenSize());
+        int visibleIndex = address3C(Int3(pos.x, pos.y, hiddenStates[lNext][visibleColumnIndex]), _scLayers[lNext].getHiddenSize());
 
         float sum = _rLayers[lNext]._weights.multiplyScalarOHVsT(hiddenStates[lNext], _rLayers[lNext]._errors, visibleIndex, _scLayers[lNext].getHiddenSize().z);
 
