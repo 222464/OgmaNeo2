@@ -70,7 +70,7 @@ void Hierarchy::backward(
 ) {
     int lNext = l + 1;
 
-    if (l == _rLayers.size()) {
+    if (l == _rLayers.size() - 1) {
         RouteLayer &r = _rLayers[l];
 
         int visibleColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
