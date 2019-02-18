@@ -17,7 +17,7 @@ void Hierarchy::forward(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<IntBuffer> &hiddenStates,
-    std::vector<IntBuffer> &actions,
+    const std::vector<IntBuffer> &actions,
     int l,
     int a,
     bool determineActions
@@ -635,6 +635,8 @@ void Hierarchy::writeToStream(
         for (int l = 0; l < _scLayers.size(); l++)
             writeBufferToStream(os, &s._states[l]);
         
+        writeBufferToStream(os, &s._actions);
+        
         os.write(reinterpret_cast<const char*>(&s._reward), sizeof(float));
     }
 }
@@ -728,6 +730,8 @@ void Hierarchy::readFromStream(
 
         for (int l = 0; l < _scLayers.size(); l++)
             readBufferFromStream(is, &s._states[l]);
+
+        readBufferFromStream(is, &s._actions);
         
         is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
     }

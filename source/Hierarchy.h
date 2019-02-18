@@ -89,7 +89,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<IntBuffer> &hiddenStates,
-        std::vector<IntBuffer> &actions,
+        const std::vector<IntBuffer> &actions,
         int l,
         int a,
         bool determineActions
@@ -117,7 +117,7 @@ private:
         std::mt19937 &rng,
         Hierarchy* h,
         const std::vector<IntBuffer> &hiddenStates,
-        std::vector<IntBuffer> &actions,
+        const std::vector<IntBuffer> &actions,
         int l,
         int a,
         bool determineActions
