@@ -143,7 +143,7 @@ void Hierarchy::initRandom(
 ) {
     // Create layers
     _scLayers.resize(layerDescs.size());
-    _rLayers.resize(layerDescs.size());
+    _rLayers.resize(layerDescs.size() - 1);
 
     _ticks.assign(layerDescs.size(), 0);
 
@@ -179,39 +179,12 @@ void Hierarchy::initRandom(
         if (l == 0) {
             scVisibleLayerDescs.resize(inputSizes.size() * layerDescs[l]._temporalHorizon);
 
-            _actions.resize(_inputSizes.size());
-
-            _rLayers[l]._weights.resize(_inputSizes.size());
-            _rLayers[l]._visibleCounts.resize(_inputSizes.size());
-
-            _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
-
             for (int i = 0; i < inputSizes.size(); i++) {
                 for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                     int index = t + layerDescs[l]._temporalHorizon * i;
 
                     scVisibleLayerDescs[index]._size = inputSizes[i];
                     scVisibleLayerDescs[index]._radius = layerDescs[l]._scRadius;
-                }
-
-                if (inputTypes[i] == InputType::_act) {
-                    _actions[i] = IntBuffer(inputSizes[i].x * inputSizes[i].y, 0);
-
-                    initSMLocalRF(inputSizes[i], layerDescs[l]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[i]);
-
-                    _rLayers[l]._weights[i].initT();
-
-                    // Init weights
-                    for (int j = 0; j < _rLayers[l]._weights[i]._nonZeroValues.size(); j++)
-                        _rLayers[l]._weights[i]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
-
-                    for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
-                        _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[i].counts(j * layerDescs[l]._hiddenSize.z) / inputSizes[i].z;
-
-                    _rLayers[l]._visibleCounts[i] = IntBuffer(_actions.size());
-
-                    for (int j = 0; j < _rLayers[l]._visibleCounts[i].size(); j++)
-                        _rLayers[l]._visibleCounts[i][j] = _rLayers[l]._weights[i].countsT(j * inputSizes[i].z) / layerDescs[l]._hiddenSize.z;
                 }
             }
             
@@ -229,31 +202,10 @@ void Hierarchy::initRandom(
         else {
             scVisibleLayerDescs.resize(layerDescs[l]._temporalHorizon);
 
-            _rLayers[l]._weights.resize(1);
-            _rLayers[l]._visibleCounts.resize(1);
-
-            _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
-
             for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                 scVisibleLayerDescs[t]._size = layerDescs[l - 1]._hiddenSize;
                 scVisibleLayerDescs[t]._radius = layerDescs[l]._scRadius;
             }
-
-            initSMLocalRF(layerDescs[l - 1]._hiddenSize, layerDescs[l]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[0]);
-
-            _rLayers[l]._weights[0].initT();
-
-            // Init weights
-            for (int j = 0; j < _rLayers[l]._weights[0]._nonZeroValues.size(); j++)
-                _rLayers[l]._weights[0]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
-
-            for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
-                _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[0].counts(j * layerDescs[l]._hiddenSize.z) / layerDescs[l - 1]._hiddenSize.z;
-
-            _rLayers[l]._visibleCounts[0] = IntBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y);
-
-            for (int j = 0; j < _rLayers[l]._visibleCounts[0].size(); j++)
-                _rLayers[l]._visibleCounts[0][j] = _rLayers[l]._weights[0].countsT(j * layerDescs[l - 1]._hiddenSize.z) / layerDescs[l]._hiddenSize.z;
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
@@ -264,11 +216,56 @@ void Hierarchy::initRandom(
             }
         }
 
+        if (l < _rLayers.size() - 1) { // Not topmost
+            int lNext = l + 1;
+
+            _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[lNext]._hiddenSize.x * layerDescs[lNext]._hiddenSize.y, 0);
+
+            initSMLocalRF(layerDescs[l]._hiddenSize, layerDescs[lNext]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights);
+
+            _rLayers[l]._weights.initT();
+
+            // Init weights
+            for (int j = 0; j < _rLayers[l]._weights._nonZeroValues.size(); j++)
+                _rLayers[l]._weights._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
+
+            for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
+                _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights.counts(j * layerDescs[lNext]._hiddenSize.z) / layerDescs[l]._hiddenSize.z;
+
+            _rLayers[l]._visibleCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y);
+
+            for (int j = 0; j < _rLayers[l]._visibleCounts.size(); j++)
+                _rLayers[l]._visibleCounts[j] = _rLayers[l]._weights.countsT(j * layerDescs[l]._hiddenSize.z) / layerDescs[lNext]._hiddenSize.z;
+        }
+
         _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
         _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 0.0f);
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
+    }
+
+    _actionLayers.resize(_actionSizes.size());
+    _actions.resize(_actionSizes.size());
+
+    for (int a = 0; a < _actionSizes.size(); a++) {
+        _actionLayers[a]._hiddenCounts = IntBuffer(_actionSizes[a].x * _actionSizes[a].y, 0);
+
+        initSMLocalRF(layerDescs.back()._hiddenSize, _actionSizes[a], layerDescs.back()._rRadius, _actionLayers[a]._weights);
+
+        _actionLayers[a]._weights.initT();
+
+        // Init weights
+        for (int j = 0; j < _actionLayers[a]._weights._nonZeroValues.size(); j++)
+            _actionLayers[a]._weights._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
+
+        for (int j = 0; j < _actionLayers[a]._hiddenCounts.size(); j++)
+            _actionLayers[a]._hiddenCounts[j] += _actionLayers[a]._weights.counts(j * _actionSizes[a].z) / layerDescs.back()._hiddenSize.z;
+
+        _actionLayers[a]._visibleCounts = IntBuffer(layerDescs.back()._hiddenSize.x * layerDescs.back()._hiddenSize.y);
+
+        for (int j = 0; j < _actionLayers[a]._visibleCounts.size(); j++)
+            _actionLayers[a]._visibleCounts[j] = _actionLayers[a]._weights.countsT(j * layerDescs.back()._hiddenSize.z) / _actionSizes[a].z;
     }
 }
 
