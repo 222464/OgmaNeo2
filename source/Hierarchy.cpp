@@ -16,30 +16,105 @@ using namespace ogmaneo;
 void Hierarchy::forward(
     const Int2 &pos,
     std::mt19937 &rng,
+    int l,
+    int a
+) {
+    if (l == _rLayers.size()) { // Last layers
+        int maxIndex = 0;
+        float maxActivation = -999999.0f;
+
+        int hiddenColumnIndex = address2C(pos, Int2(_actionSizes[a].x, _actionSizes[a].y));
+
+        for (int hc = 0; hc < _actionSizes[a].z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _actionSizes[a]);
+
+            RouteLayer &r = _actionLayers[a];
+    
+            float sum = (l == 0 ? r._weights.multiplyOHVs(_scLayers[l].getHiddenCs(), hiddenIndex, _scLayers[l].getHiddenSize().z) :
+                r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
+
+            r._activations[hiddenIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
+
+            if (r._activations[hiddenIndex] > maxActivation) {
+                maxActivation = r._activations[hiddenIndex];
+
+                maxIndex = hc;
+            }
+        }
+
+        _actions[a][hiddenColumnIndex] = maxIndex;
+    }
+    else { // Hidden layer
+        int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+    
+        RouteLayer &r = _rLayers[l];
+
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, _scLayers[l].getHiddenCs()[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
+    
+        float sum = (l == 0 ? r._weights.multiplyOHVs(_scLayers[l].getHiddenCs(), hiddenIndex, _scLayers[l].getHiddenSize().z) :
+            r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
+
+        r._activations[hiddenColumnIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
+    }
+}
+
+void Hierarchy::backward(
+    const Int2 &pos,
+    std::mt19937 &rng,
     int l
 ) {
-    assert(l > 0);
+    int lNext = l + 1;
 
+    if (l == _rLayers.size()) {
+        RouteLayer &r = _rLayers[l];
+
+        int visibleColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+
+        int visibleIndex = address3C(Int3(pos.x, pos.y, _scLayers[l].getHiddenCs()[visibleColumnIndex]), _scLayers[l].getHiddenSize());
+
+        r._errors[visibleColumnIndex] = 0.0f;
+
+        for (int a = 0; a < _actionLayers.size(); a++) {
+            
+            float sum = _rLayers[l]._weights.multiplyT(_rLayers[lNext]._errors, visibleIndex);
+
+            r._errors[visibleColumnIndex] += sum;
+        }
+
+        r._errors[visibleColumnIndex] /= std::max(1, _rLayers[lNext]._visibleCounts[visibleColumnIndex]) * _actionLayers.size();
+    }
+    else {
+        RouteLayer &r = _rLayers[l];
+
+        int visibleColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+
+        int visibleIndex = address3C(Int3(pos.x, pos.y, _scLayers[l].getHiddenCs()[visibleColumnIndex]), _scLayers[l].getHiddenSize());
+
+        float sum = _rLayers[l]._weights.multiplyScalarOHVsT(_scLayers[lNext].getHiddenCs(), _rLayers[lNext]._errors, visibleIndex, _scLayers[l].getHiddenSize().z);
+
+        r._errors[visibleColumnIndex] = sum / std::max(1, _rLayers[lNext]._visibleCounts[visibleColumnIndex]);
+    }
+}
+
+void Hierarchy::learn(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    int l
+) {
     int lNext = l + 1;
 
     int hiddenColumnIndex = address2C(pos, Int2(_scLayers[lNext].getHiddenSize().x, _scLayers[lNext].getHiddenSize().y));
     
-    if (l == 0) { // First layer
-        RouteLayer &r = _rLayers[l];
-
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, _scLayers[lNext].getHiddenCs()[hiddenColumnIndex]), _scLayers[lNext].getHiddenSize());
-    
-        float sum = r._weights.multiplyOHVs(_scLayers[l].getHiddenCs(), hiddenIndex, _scLayers[l].getHiddenSize().z);
-
-        r._activations[hiddenColumnIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
-    }
-    else if (l == _rLayers.size()) { // Last layers
+    if (l == _rLayers.size()) { // Last layers
         for (int a = 0; a < _actionLayers.size(); a++) {
             int hiddenIndex = address3C(Int3(pos.x, pos.y, _scLayers[lNext].getHiddenCs()[hiddenColumnIndex]), _scLayers[lNext].getHiddenSize());
 
             RouteLayer &r = _actionLayers[a];
+
+            float delta = _alpha * r._errors[hiddenColumnIndex];
     
-            float sum = r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z);
+            float sum = (l == 0 ? r._weights.multiplyOHVs(_scLayers[l].getHiddenCs(), hiddenIndex, _scLayers[l].getHiddenSize().z) :
+                r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
 
             r._activations[hiddenColumnIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
 
@@ -51,72 +126,11 @@ void Hierarchy::forward(
 
         int hiddenIndex = address3C(Int3(pos.x, pos.y, _scLayers[lNext].getHiddenCs()[hiddenColumnIndex]), _scLayers[lNext].getHiddenSize());
     
-        float sum = r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z);
+        float sum = (l == 0 ? r._weights.multiplyOHVs(_scLayers[l].getHiddenCs(), hiddenIndex, _scLayers[l].getHiddenSize().z) :
+            r._weights.multiplyScalarOHVs(_scLayers[l].getHiddenCs(), _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l].getHiddenSize().z));
 
         r._activations[hiddenColumnIndex] = sum / std::max(1, r._hiddenCounts[hiddenColumnIndex]);
     }
-}
-
-void Hierarchy::backward(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const IntBuffer* hiddenCs,
-    int l,
-    int vli,
-    const IntBuffer* inputCs
-) {
-    if (l == 0) {
-        int visibleColumnIndex = address2C(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
-
-        if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
-            float maxValue = -999999.0f;
-
-            for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
-                int visibleIndex = address3C(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
-
-                float sum = _rLayers[l]._weights[vli].multiplyScalarOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-            
-                if (sum > maxValue) {
-                    maxValue = sum;
-
-                    _actions[vli][visibleColumnIndex] = vc;
-                }
-            }
-        }
-    }
-    else {
-        int visibleColumnIndex = address2C(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
-
-        int inputC = (*inputCs)[visibleColumnIndex];
-
-        int visibleIndex = address3C(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
-
-        _rLayers[l - 1]._errors[visibleColumnIndex] = _rLayers[l]._weights[vli].multiplyScalarOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-    }
-}
-
-void Hierarchy::learn(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const IntBuffer* hiddenCs,
-    int l,
-    const std::vector<const IntBuffer*> &inputCs
-) {
-    int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
-
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
-
-    float delta = _beta * _rLayers[l]._errors[hiddenColumnIndex];
-
-    if (l == 0) {
-        // For each visible layer
-        for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
-            if (!_rLayers[l]._weights[vli]._nonZeroValues.empty())
-                _rLayers[l]._weights[vli].deltaOHVs(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
-        }
-    }
-    else
-        _rLayers[l]._weights[0].deltaScalarOHVs(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 }
 
 void Hierarchy::initRandom(

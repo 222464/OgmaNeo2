@@ -88,7 +88,8 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        int l
+        int l,
+        int a
     );
 
     void backward(
@@ -100,16 +101,18 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        int l
+        int l,
+        int a
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
-        int l
+        int l,
+        int a
     ) {
-        h->forward(pos, rng, l);
+        h->forward(pos, rng, l, a);
     }
 
     static void backwardKernel(
@@ -125,9 +128,10 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Hierarchy* h,
-        int l
+        int l,
+        int a
     ) {
-        h->learn(pos, rng, l);
+        h->learn(pos, rng, l, a);
     }
 
 public:
