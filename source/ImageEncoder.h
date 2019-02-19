@@ -34,6 +34,8 @@ public:
 
         FloatBuffer _visibleActivations; // For reconstruction
 
+        FloatBuffer _inputActivationsPrev;
+
         IntBuffer _visibleCounts; // For reconstruction
     };
 
@@ -87,7 +89,7 @@ public:
     // Initialize defaults
     ImageEncoder()
     :
-    _alpha(0.5f)
+    _alpha(0.0f)
     {}
 
     // Create a randomly initialized image encoder
