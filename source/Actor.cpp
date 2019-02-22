@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "Actor.h"
-#include <iostream>
+
 using namespace ogmaneo;
 
 void Actor::forward(
@@ -86,8 +86,6 @@ void Actor::learn(
     }
 
     sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
-    //std::cout << sum << std::endl;
 
     float delta = _alpha * (reward + _gamma * maxActivation - sum);
 
