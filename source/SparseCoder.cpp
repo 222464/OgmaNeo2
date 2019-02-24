@@ -15,6 +15,8 @@ void SparseCoder::forward(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs
 ) {
+    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
@@ -38,6 +40,16 @@ void SparseCoder::forward(
     }
 
     _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
+
+    // Normalize
+    int hiddenIndex = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
+    
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        vl._weights.normalize(hiddenIndex);
+    }
 }
 
 void SparseCoder::learnWeights(
@@ -62,7 +74,7 @@ void SparseCoder::learnWeights(
 
         float delta = _alpha * (target - sum);
 
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+        //vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 

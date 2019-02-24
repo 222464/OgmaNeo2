@@ -9,7 +9,7 @@
 #pragma once
 
 #include <vector>
-
+#include <math.h>
 #include <assert.h>
 
 namespace ogmaneo {
@@ -123,6 +123,16 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	// --- Normalization ---
+
+	void normalize(
+		int row
+	);
+
+	void normalizeT(
+		int column
 	);
 
 	// --- Hebb Rules ---
