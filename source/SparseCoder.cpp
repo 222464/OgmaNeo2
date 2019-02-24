@@ -40,16 +40,6 @@ void SparseCoder::forward(
     }
 
     _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
-
-    // Normalize
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
-    
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        vl._weights.normalize(hiddenIndex);
-    }
 }
 
 void SparseCoder::learnWeights(
@@ -74,7 +64,7 @@ void SparseCoder::learnWeights(
 
         float delta = _alpha * (target - sum);
 
-        //vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 
@@ -93,7 +83,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> weightDist(1.0f, 1.0001f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {

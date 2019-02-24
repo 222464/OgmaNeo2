@@ -109,7 +109,6 @@ struct SparseMatrix {
 
 	// --- Delta Rules ---
 
-	// For dense deltas
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
@@ -117,7 +116,6 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// For dense deltas
 	void deltaOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
