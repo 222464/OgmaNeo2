@@ -95,15 +95,27 @@ struct SparseMatrix {
 
 	// --- One-Hot Vectors Operations ---
 
-	// Multiply by a one-hot-row matrix
 	float multiplyOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize
 	);
 
-	// Multiply by a one-hot-row matrix
 	float multiplyOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	// --- Min Max ---
+
+	float maxOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float maxOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize
