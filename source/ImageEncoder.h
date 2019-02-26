@@ -34,8 +34,6 @@ public:
 
         FloatBuffer _visibleActivations; // For reconstruction
 
-        FloatBuffer _inputActivationsPrev;
-
         IntBuffer _visibleCounts; // For reconstruction
     };
 

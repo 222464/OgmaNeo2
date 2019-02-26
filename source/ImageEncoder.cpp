@@ -30,7 +30,6 @@ void ImageEncoder::forward(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiply(*inputActivations[vli], hiddenIndex);
-            sum -= vl._weights.multiply(vl._inputActivationsPrev, hiddenIndex);
         }
 
         if (sum > maxActivation) {
@@ -49,7 +48,7 @@ void ImageEncoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebb(*inputActivations[vli], hiddenIndex, _alpha);
+            vl._weights.hebbDecreasing(*inputActivations[vli], hiddenIndex, _alpha);
         }
     }
 }
@@ -110,8 +109,6 @@ void ImageEncoder::initRandom(
 
         for (int i = 0; i < numVisible; i++)
             vl._visibleCounts[i] = vl._weights.countsT(i) / _hiddenSize.z;
-
-        vl._inputActivationsPrev = FloatBuffer(numVisible, 0.0f);
     }
 
     // Hidden Cs
@@ -132,18 +129,6 @@ void ImageEncoder::step(
 #else
     runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < vl._inputActivationsPrev.size(); x++)
-            copyFloat(x, cs._rng, inputActivations[vli], &vl._inputActivationsPrev);
-#else
-        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, inputActivations[vli], &vl._inputActivationsPrev), vl._inputActivationsPrev.size(), cs._rng, cs._batchSize1);
-#endif
-    }
 }
 
 void ImageEncoder::reconstruct(
@@ -192,8 +177,6 @@ void ImageEncoder::writeToStream(
         writeSMToStream(os, vl._weights);
 
         writeBufferToStream(os, &vl._visibleActivations);
-
-        writeBufferToStream(os, &vl._inputActivationsPrev);
     }
 }
 
@@ -228,7 +211,5 @@ void ImageEncoder::readFromStream(
         readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._visibleActivations);
-
-        readBufferFromStream(is, &vl._inputActivationsPrev);
     }
 }
