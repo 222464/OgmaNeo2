@@ -18,11 +18,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    message("Debug mode, enabling easier kernel debugging")
-    add_compile_definitions(KERNEL_NOTHREAD)
-endif()
-
 if(DISABLE_THREADING)
     message("Threading disabled")
     add_compile_definitions(KERNEL_NOTHREAD)
@@ -55,15 +50,6 @@ set(HEADERS
 )
 
 add_library(OgmaNeo ${SOURCES} ${HEADERS})
-
-add_executable(neo "${SOURCE_PATH}/Main.cpp")
-target_link_libraries(neo OgmaNeo)
-
-find_package(SFML 2.5 COMPONENTS system window graphics network audio REQUIRED)
-
-include_directories(${SFML_INCLUDE_DIR})
-
-target_link_libraries(neo sfml-system sfml-graphics)
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin
