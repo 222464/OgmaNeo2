@@ -9,7 +9,7 @@
 #pragma once
 
 #include <vector>
-
+#include <math.h>
 #include <assert.h>
 
 namespace ogmaneo {
@@ -107,15 +107,13 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// --- Min Max ---
-
-	float maxOHVs(
+	float distanceOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize
 	);
 
-	float maxOHVsT(
+	float distanceOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize
@@ -123,7 +121,6 @@ struct SparseMatrix {
 
 	// --- Delta Rules ---
 
-	// For dense deltas
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
@@ -131,12 +128,21 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// For dense deltas
 	void deltaOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	// --- Normalization ---
+
+	void normalize(
+		int row
+	);
+
+	void normalizeT(
+		int column
 	);
 
 	// --- Hebb Rules ---

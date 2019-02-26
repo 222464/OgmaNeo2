@@ -177,40 +177,48 @@ float SparseMatrix::multiplyOHVsT(
 	return sum;
 }
 
-float SparseMatrix::maxOHVs(
+float SparseMatrix::distanceOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
 	int oneHotSize
 ) {
-	float m = -999999.0f;
+	float dist = 0.0f;
 
 	int nextIndex = row + 1;
 	
 	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
-		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
 
-		m = std::max(m, _nonZeroValues[j]);
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			float delta = (dj == targetDJ ? 1.0f : 0.0f) - _nonZeroValues[jj + dj];
+
+			dist += delta * delta;
+		}
 	}
 
-	return m;
+	return dist;
 }
 
-float SparseMatrix::maxOHVsT(
+float SparseMatrix::distanceOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	int column,
 	int oneHotSize
 ) {
-	float m = -999999.0f;
+	float dist = 0.0f;
 
 	int nextIndex = column + 1;
 	
 	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
-		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+		int targetDJ = nonZeroIndices[_rowIndices[jj] / oneHotSize];
 
-		m = std::max(m, _nonZeroValues[_nonZeroValueIndices[j]]);
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			float delta = (dj == targetDJ ? 1.0f : 0.0f) - _nonZeroValues[_nonZeroValueIndices[jj + dj]];
+
+			dist += delta * delta;
+		}
 	}
 
-	return m;
+	return dist;
 }
 
 void SparseMatrix::deltaOHVs(
@@ -241,6 +249,38 @@ void SparseMatrix::deltaOHVsT(
 
 		_nonZeroValues[_nonZeroValueIndices[j]] += delta;
 	}
+}
+
+void SparseMatrix::normalize(
+	int row
+) {
+	int nextIndex = row + 1;
+
+	float sum = 0.0f;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += _nonZeroValues[j] * _nonZeroValues[j];
+
+	float scale = 1.0f / std::max(0.0001f, std::sqrt(sum));
+
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] *= scale;
+}
+
+void SparseMatrix::normalizeT(
+	int column
+) {
+	int nextIndex = column + 1;
+
+	float sum = 0.0f;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		sum += _nonZeroValues[_nonZeroValueIndices[j]] * _nonZeroValues[_nonZeroValueIndices[j]];
+
+	float scale = 1.0f / std::max(0.0001f, std::sqrt(sum));
+
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		_nonZeroValues[_nonZeroValueIndices[j]] *= scale;
 }
 
 void SparseMatrix::hebb(
