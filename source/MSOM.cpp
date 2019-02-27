@@ -79,6 +79,7 @@ void MSOM::blur(
 void MSOM::backward(
     const Int2 &pos,
     std::mt19937 &rng,
+    const FloatBuffer* hiddenStates,
     int vli
 ) {
     VisibleLayer &vl = _visibleLayers[vli];
@@ -86,7 +87,7 @@ void MSOM::backward(
 
     int visibleIndex = address2C(pos, vld._size);
 
-    vl._recons[visibleIndex] = vl._weights.multiplyT(_hiddenStates, visibleIndex);
+    vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(0.0001f, vl._weights.countT(*hiddenStates, visibleIndex));
 }
 
 void MSOM::learn(
@@ -135,6 +136,8 @@ void MSOM::initRandom(
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
+        vl._weights.initT();
+
         vl._recons = FloatBuffer(numVisible, 0.0f);
     }
 
@@ -165,6 +168,47 @@ void MSOM::activate(
 #else
     runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            blur(Int2(x, y), cs._rng);
+#else
+    runKernel2(cs, std::bind(MSOM::blurKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+}
+
+void MSOM::learn(
+    ComputeSystem &cs,
+    const std::vector<const FloatBuffer*> &inputs
+) {
+    int numHidden = _hiddenSize.x * _hiddenSize.y;
+
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            learn(Int2(x, y), cs._rng, inputs);
+#else
+    runKernel2(cs, std::bind(MSOM::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+}
+
+void reconstruct(
+    ComputeSystem &cs,
+    const FloatBuffer* hiddenStates
+) {
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < vld._size.x; x++)
+            for (int y = 0; y < vld._size.y; y++)
+                backward(Int2(x, y), cs._rng, hiddenStates, vli);
+#else
+        runKernel2(cs, std::bind(MSOM::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenStates, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+#endif
+    }
 }
 
 void MSOM::writeToStream(

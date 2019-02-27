@@ -73,6 +73,7 @@ private:
     void backward(
         const Int2 &pos,
         std::mt19937 &rng,
+        const FloatBuffer* hiddenStates,
         int vli
     );
 
@@ -114,9 +115,10 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         MSOM* p,
+        const FloatBuffer* hiddenStates,
         int vli
     ) {
-        p->backward(pos, rng, vli);
+        p->backward(pos, rng, hiddenStates, vli);
     }
 
 public:
