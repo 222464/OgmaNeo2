@@ -45,6 +45,7 @@ private:
     FloatBuffer _hiddenBlurs;
     FloatBuffer _hiddenPredictions;
 
+    FloatBuffer _hiddenRates;
 
     FloatBuffer _hiddenStatesPrev;
     FloatBuffer _feedBackStatesPrev;
@@ -150,16 +151,14 @@ private:
     }
 
 public:
-    float _alpha; // Feed learning rate
-    float _beta; // Prediction learning rate
+    float _alpha; // Decay rate
     int _inhibitRadius; // Max activation radius
     int _blurRadius; // Radius of learning
 
     // Defaults
     MSOM()
     :
-    _alpha(0.1f),
-    _beta(0.01f),
+    _alpha(0.5f),
     _inhibitRadius(2),
     _blurRadius(1)
     {}

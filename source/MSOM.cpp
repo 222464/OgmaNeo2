@@ -103,17 +103,19 @@ void MSOM::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebb(*inputs[vli], hiddenIndex, _alpha * _hiddenBlurs[hiddenIndex]);
+            vl._weights.hebb(*inputs[vli], hiddenIndex, _hiddenBlurs[hiddenIndex]);
         }
 
-        _crossWeights.hebb(_hiddenStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
+        _crossWeights.hebb(_hiddenStatesPrev, hiddenIndex, _hiddenBlurs[hiddenIndex]);
     
         if (!_feedBackStatesPrev.empty()) {
             assert(!_feedBackWeights._nonZeroValues.empty());
 
-            _feedBackWeights.hebb(_feedBackStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
+            _feedBackWeights.hebb(_feedBackStatesPrev, hiddenIndex, _hiddenBlurs[hiddenIndex]);
         }
     }
+
+    _hiddenRates[hiddenIndex] *= 1.0f - _alpha * _hiddenBlurs[hiddenIndex];
 }
 
 void MSOM::predict(
@@ -175,6 +177,8 @@ void MSOM::initRandom(
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
     _hiddenBlurs = FloatBuffer(numHidden, 0.0f);
     _hiddenPredictions = FloatBuffer(numHidden, 0.0f);
+
+    _hiddenRates = FloatBuffer(numHidden, 1.0f);
 
     _hiddenStatesPrev = FloatBuffer(numHidden, 0.0f);
 
@@ -308,6 +312,10 @@ void MSOM::writeToStream(
     writeBufferToStream(os, &_hiddenStates);
     writeBufferToStream(os, &_hiddenBlurs);
     writeBufferToStream(os, &_hiddenPredictions);
+    writeBufferToStream(os, &_hiddenRates);
+
+    writeBufferToStream(os, &_hiddenStatesPrev);
+    writeBufferToStream(os, &_feedBackStatesPrev);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -337,6 +345,10 @@ void MSOM::readFromStream(
     readBufferFromStream(is, &_hiddenStates);
     readBufferFromStream(is, &_hiddenBlurs);
     readBufferFromStream(is, &_hiddenPredictions);
+    readBufferFromStream(is, &_hiddenRates);
+
+    readBufferFromStream(is, &_hiddenStatesPrev);
+    readBufferFromStream(is, &_feedBackStatesPrev);
 
     int numVisibleLayers;
     
