@@ -159,7 +159,7 @@ public:
     MSOM()
     :
     _alpha(0.1f),
-    _beta(0.1f),
+    _beta(0.01f),
     _inhibitRadius(2),
     _blurRadius(1)
     {}

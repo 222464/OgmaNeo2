@@ -150,7 +150,7 @@ void MSOM::initRandom(
     // Pre-compute dimensions
     int numHidden = _hiddenSize.x * _hiddenSize.y;
 
-    std::uniform_real_distribution<float> weightDist(0.0f, 0.01f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 0.0001f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
