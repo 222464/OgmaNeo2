@@ -224,7 +224,6 @@ void Hierarchy::step(
             _scLayers[l].predict(cs, feedBackStates);
 
             _scLayers[l].reconstruct(cs, &_scLayers[l].getHiddenPredictions());
-
         }
     }
 }

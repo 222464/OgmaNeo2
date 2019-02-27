@@ -159,9 +159,9 @@ public:
     MSOM()
     :
     _alpha(0.01f),
-    _beta(0.01f),
-    _inhibitRadius(3),
-    _blurRadius(3)
+    _beta(0.1f),
+    _inhibitRadius(2),
+    _blurRadius(2)
     {}
 
     // Create a sparse coding layer with random initialization
