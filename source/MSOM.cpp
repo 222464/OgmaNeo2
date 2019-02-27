@@ -108,10 +108,10 @@ void MSOM::learn(
 
         _crossWeights.hebb(_hiddenStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
     
-        if (_feedBackStatesPrev != nullptr) {
+        if (!_feedBackStatesPrev.empty()) {
             assert(!_feedBackWeights._nonZeroValues.empty());
 
-            _feedBackWeights.hebb(*_feedBackStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
+            _feedBackWeights.hebb(_feedBackStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
         }
     }
 }
@@ -181,7 +181,7 @@ void MSOM::initRandom(
     initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _crossWeights);
 
     if (hasFeedBack) {
-        _feedBackStatesPrev = std::make_unique<FloatBuffer>(numHidden, 0.0f);
+        _feedBackStatesPrev = FloatBuffer(numHidden, 0.0f);
 
         initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _feedBackWeights);
     }
@@ -276,14 +276,14 @@ void MSOM::predict(
     runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenStates, &_hiddenStatesPrev), numHidden, cs._rng, cs._batchSize1);
 #endif
 
-    if (_feedBackStatesPrev != nullptr) {
+    if (!_feedBackStatesPrev.empty()) {
         assert(feedBackStates != nullptr);
 
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < numHidden; x++)
-            copyFloat(x, cs._rng, feedBackStates, _feedBackStatesPrev.get());
+            copyFloat(x, cs._rng, feedBackStates, &_feedBackStatesPrev);
 #else
-        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, feedBackStates, _feedBackStatesPrev.get()), numHidden, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, feedBackStates, &_feedBackStatesPrev), numHidden, cs._rng, cs._batchSize1);
 #endif
     }
 }

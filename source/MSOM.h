@@ -47,7 +47,7 @@ private:
 
 
     FloatBuffer _hiddenStatesPrev;
-    std::unique_ptr<FloatBuffer> _feedBackStatesPrev;
+    FloatBuffer _feedBackStatesPrev;
 
     // Prediction weights
     SparseMatrix _crossWeights;
