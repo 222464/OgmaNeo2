@@ -130,7 +130,7 @@ private:
         p->learn(pos, rng, inputs);
     }
 
-    void backwardKernel(
+    static void backwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         MSOM* p,
@@ -140,7 +140,7 @@ private:
         p->backward(pos, rng, hiddenStates, vli);
     }
 
-    void predictKernel(
+    static void predictKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         MSOM* p,
