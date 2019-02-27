@@ -8,27 +8,20 @@
 
 #pragma once
 
-#include "SparseCoder.h"
-#include "Predictor.h"
+#include "MSOM.h"
 
 #include <memory>
 
 namespace ogmaneo {
-// Type of hierarchy input layer
-enum InputType {
-    _none = 0,
-    _predict = 1
-};
-
 // A SPH
 class Hierarchy {
 public:
     // Describes a layer for construction
     struct LayerDesc {
-        Int3 _hiddenSize; // Size of hidden layer
+        Int2 _hiddenSize; // Size of hidden layer
 
         int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction Radius
+        int _pRadius; // Prediction radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -36,20 +29,19 @@ public:
 
         LayerDesc()
         :
-        _hiddenSize(4, 4, 16),
-        _scRadius(2),
-        _pRadius(2),
+        _hiddenSize(4, 4),
+        _scRadius(4),
+        _pRadius(4),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}
     };
 private:
     // Layers
-    std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+    std::vector<MSOM> _scLayers;
 
     // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
+    std::vector<std::vector<std::shared_ptr<FloatBuffer>>> _histories;
     std::vector<std::vector<int>> _historySizes;
 
     // Per-layer values
@@ -59,7 +51,8 @@ private:
     std::vector<int> _ticksPerUpdate;
 
     // Input dimensions
-    std::vector<Int3> _inputSizes;
+    std::vector<Int2> _inputSizes;
+    int _inputTemporalHorizon;
 
 public:
     // Default
@@ -80,15 +73,14 @@ public:
     // Create a randomly initialized hierarchy
     void initRandom(
         ComputeSystem &cs, // Compute system
-        const std::vector<Int3> &inputSizes, // Sizes of input layers
-        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
+        const std::vector<Int2> &inputSizes, // Sizes of input layers
         const std::vector<LayerDesc> &layerDescs // Descriptors for layers
     );
 
     // Simulation step/tick
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        const std::vector<const FloatBuffer*> &inputs, // Input layer column states
         bool learnEnabled = true // Whether learning is enabled
     );
 
@@ -108,10 +100,10 @@ public:
     }
 
     // Retrieve predictions
-    const IntBuffer &getPredictionCs(
+    const FloatBuffer &getPredictions(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front()[i]->getHiddenCs();
+        return _scLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._recons;
     }
 
     // Whether this layer received on update this timestep
@@ -136,36 +128,22 @@ public:
     }
 
     // Get input sizes
-    const std::vector<Int3> &getInputSizes() const {
+    const std::vector<Int2> &getInputSizes() const {
         return _inputSizes;
     }
 
     // Retrieve a sparse coding layer
-    SparseCoder &getSCLayer(
+    MSOM &getSCLayer(
         int l // Layer index
     ) {
         return _scLayers[l];
     }
 
     // Retrieve a sparse coding layer, const version
-    const SparseCoder &getSCLayer(
+    const MSOM &getSCLayer(
         int l // Layer index
     ) const {
         return _scLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
-    ) {
-        return _pLayers[l];
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
-    ) const {
-        return _pLayers[l];
     }
 };
 } // namespace ogmaneo

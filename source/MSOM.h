@@ -45,6 +45,10 @@ private:
     FloatBuffer _hiddenBlurs;
     FloatBuffer _hiddenPredictions;
 
+
+    FloatBuffer _hiddenStatesPrev;
+    std::unique_ptr<FloatBuffer> _feedBackStatesPrev;
+
     // Prediction weights
     SparseMatrix _crossWeights;
     SparseMatrix _feedBackWeights; // This one is optional, may not be initialized
@@ -123,7 +127,7 @@ private:
         MSOM* p,
         const std::vector<const FloatBuffer*> &inputs
     ) {
-        p->forward(pos, rng, inputs);
+        p->learn(pos, rng, inputs);
     }
 
     void backwardKernel(
@@ -155,6 +159,7 @@ public:
     MSOM()
     :
     _alpha(0.01f),
+    _beta(0.01f),
     _inhibitRadius(3),
     _blurRadius(3)
     {}
@@ -176,7 +181,8 @@ public:
 
     void learn(
         ComputeSystem &cs,
-        const std::vector<const FloatBuffer*> &inputs // Input states
+        const std::vector<const FloatBuffer*> &inputs, // Input states
+        const FloatBuffer* feedBackStates
     );
 
     void reconstruct(
@@ -221,6 +227,11 @@ public:
     // Get the hidden states
     const FloatBuffer &getHiddenStates() const {
         return _hiddenStates;
+    }
+
+    // Get the hidden predictions
+    const FloatBuffer &getHiddenPredictions() const {
+        return _hiddenPredictions;
     }
 
     // Get the hidden size

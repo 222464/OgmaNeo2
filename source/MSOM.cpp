@@ -105,6 +105,14 @@ void MSOM::learn(
 
             vl._weights.hebb(*inputs[vli], hiddenIndex, _alpha * _hiddenBlurs[hiddenIndex]);
         }
+
+        _crossWeights.hebb(_hiddenStatePrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
+    
+        if (_feedBackStatesPrev != nullptr) {
+            assert(!_feedBackWeights._nonZeroValues.empty());
+
+            _feedBackWeights.hebb(*_feedBackStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
+        }
     }
 }
 
@@ -168,10 +176,15 @@ void MSOM::initRandom(
     _hiddenBlurs = FloatBuffer(numHidden, 0.0f);
     _hiddenPredictions = FloatBuffer(numHidden, 0.0f);
 
+    _hiddenStatesPrev = FloatBuffer(numHidden, 0.0f);
+
     initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _crossWeights);
 
-    if (hasFeedBack)
+    if (hasFeedBack) {
+        _feedBackStatesPrev = std::make_unique(numHidden, 0.0f);
+
         initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _feedBackWeights);
+    }
 }
 
 void MSOM::activate(
@@ -238,6 +251,8 @@ void predict(
     ComputeSystem &cs,
     const FloatBuffer* feedBackStates
 ) {
+    int numHidden = _hiddenSize.x * _hiddenSize.y;
+
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
@@ -253,6 +268,24 @@ void predict(
 #else
     runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenPredictions), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < numHidden; x++)
+        copyFloat(x, cs._rng, &_hiddenStates, &_hiddenStatesPrev);
+#else
+    runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenStates, &_hiddenStatesPrev), numHidden, cs._rng, cs._batchSize1);
+#endif
+
+    if (_feedBackStatesPrev != nullptr) {
+        assert(feedBackStates != nullptr);
+
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < numHidden; x++)
+            copyFloat(x, cs._rng, feedBackStates, _feedBackStatesPrev.get());
+#else
+        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, feedBackStates, _feedBackStatesPrev.get()), numHidden, cs._rng, cs._batchSize1);
+#endif
+    }
 }
 
 void MSOM::writeToStream(
@@ -261,6 +294,7 @@ void MSOM::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_blurs), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_inhibitRadius), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_blurRadius), sizeof(int));
 
@@ -289,6 +323,7 @@ void MSOM::readFromStream(
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_blurs), sizeof(float));
     is.read(reinterpret_cast<char*>(&_inhibitRadius), sizeof(int));
     is.read(reinterpret_cast<char*>(&_blurRadius), sizeof(int));
 
