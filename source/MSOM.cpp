@@ -30,6 +30,32 @@ void MSOM::forward(
     _hiddenActivations[hiddenIndex] = sum;
 }
 
+void MSOM::inhibit(
+    const Int2 &pos,
+    std::mt19937 &rng
+) {
+    int hiddenIndex = address2C(pos, _hiddenSize);
+
+    float 
+
+    for (int dx = -_inhibitRadius; dx <= _inhibitRadius; dx++)
+        for (int dy = -_inhibitRadius; dy <= _inhibitRadius; dy++) {
+
+        }
+    
+    float sum = 0.0f;
+
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        sum -= vl._weights.distance(*inputs[vli], hiddenIndex);
+    }
+
+    _hiddenActivations[hiddenIndex] = sum;
+}
+
 void MSOM::initRandom(
     ComputeSystem &cs,
     const Int2 &hiddenSize,
@@ -78,6 +104,14 @@ void MSOM::step(
             forward(Int2(x, y), cs._rng, inputs);
 #else
     runKernel2(cs, std::bind(MSOM::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            inhibit(Int2(x, y), cs._rng);
+#else
+    runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
