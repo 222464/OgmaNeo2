@@ -12,18 +12,18 @@
 
 namespace ogmaneo {
 // Sparse coder
-class SparseCoder {
+class MSOM {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size; // Size of input
+        Int2 _size; // Size of input
 
         int _radius; // Radius onto input
 
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4, 16 }),
+        _size({ 4, 4 }),
         _radius(2)
         {}
     };
@@ -34,9 +34,10 @@ public:
     };
 
 private:
-    Int3 _hiddenSize; // Size of hidden/output layer
+    Int2 _hiddenSize; // Size of hidden/output layer
 
-    IntBuffer _hiddenCs; // Hidden states
+    FloatBuffer _hiddenActivations;
+    FloatBuffer _hiddenStates;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -47,44 +48,85 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputs
+    );
+
+    void inhibit(
+        const Int2 &pos,
+        std::mt19937 &rng
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const FloatBuffer*> &inputs
+    );
+
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        int vli
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        MSOM* p,
+        const std::vector<const FloatBuffer*> &inputs
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        p->forward(pos, rng, inputs);
+    }
+
+    static void inhibitKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        MSOM* p
+    ) {
+        p->inhibit(pos, rng);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        MSOM* p,
+        const std::vector<const FloatBuffer*> &inputs
+    ) {
+        p->forward(pos, rng, inputs);
+    }
+
+    void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        MSOM* p,
+        int vli
+    ) {
+        p->backward(pos, rng, vli);
     }
 
 public:
     float _alpha; // Weight learning rate
-    float _gamma; // Gaussian falloff
-    float _cutoff; // Falloff cutoff
+    int _inhibitRadius; // Max activation radius
+    int _learnRadius; // Radius of learning
 
     // Defaults
-    SparseCoder()
+    MSOM()
     :
     _alpha(0.01f),
-    _gamma(0.2f),
-    _cutoff(0.02f)
+    _inhibitRadius(3),
+    _learnRadius(2)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
-        const Int3 &hiddenSize, // Hidden/output size
+        const Int2 &hiddenSize, // Hidden/output size
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
     // Activate the sparse coder (perform sparse coding)
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input states
+        const std::vector<const FloatBuffer*> &inputs, // Input states
         bool learnEnabled // Whether to learn
     );
 
@@ -118,12 +160,12 @@ public:
     }
 
     // Get the hidden states
-    const IntBuffer &getHiddenCs() const {
-        return _hiddenCs;
+    const FloatBuffer &getHiddenStates() const {
+        return _hiddenStates;
     }
 
     // Get the hidden size
-    const Int3 &getHiddenSize() const {
+    const Int2 &getHiddenSize() const {
         return _hiddenSize;
     }
 

@@ -111,12 +111,43 @@ float SparseMatrix::multiply(
 	return sum;
 }
 
+float SparseMatrix::distance(
+	const std::vector<float> &in,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++) {
+		float delta = in[_columnIndices[j]] - _nonZeroValues[j];
+
+		sum += delta * delta;
+	}
+
+	return sum;
+}
+
 int SparseMatrix::counts(
 	int row
 ) {
 	int nextIndex = row + 1;
 	
 	return _rowRanges[nextIndex] - _rowRanges[row];
+}
+
+float SparseMatrix::counts(
+	const std::vector<float> &in,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += in[_columnIndices[j]];
+
+	return sum;
 }
 
 float SparseMatrix::multiplyT(
@@ -133,12 +164,43 @@ float SparseMatrix::multiplyT(
 	return sum;
 }
 
+float SparseMatrix::distanceT(
+	const std::vector<float> &in,
+	int column
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++) {
+		float delta = in[_rowIndices[j]] - _nonZeroValues[_nonZeroValueIndices[j]];
+	
+		sum += delta * delta;
+	}
+
+	return sum;
+}
+
 int SparseMatrix::countsT(
 	int column
 ) {
 	int nextIndex = column + 1;
 	
 	return _columnRanges[nextIndex] - _columnRanges[column];
+}
+
+float SparseMatrix::countsT(
+	const std::vector<float> &in,
+	int column
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		sum += in[_rowIndices[j]];
+
+	return sum;
 }
 
 float SparseMatrix::multiplyOHVs(

@@ -307,7 +307,13 @@ void readBufferFromStream(
 
 // --- Sparse Matrix Generation ---
 
-// Sparse matrix init
+void initSMLocalRF(
+    const Int2 &inSize, // Size of input field
+    const Int2 &outSize, // Size of output field
+    int radius, // Radius of output onto input
+    SparseMatrix &mat // Matrix to fill
+);
+
 void initSMLocalRF(
     const Int3 &inSize, // Size of input field
     const Int3 &outSize, // Size of output field
