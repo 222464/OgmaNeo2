@@ -180,10 +180,16 @@ void MSOM::initRandom(
 
     initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _crossWeights);
 
+    for (int i = 0; i < _crossWeights._nonZeroValues.size(); i++)
+        _crossWeights._nonZeroValues[i] = weightDist(cs._rng);
+
     if (hasFeedBack) {
         _feedBackStatesPrev = FloatBuffer(numHidden, 0.0f);
 
         initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _feedBackWeights);
+
+        for (int i = 0; i < _feedBackWeights._nonZeroValues.size(); i++)
+            _feedBackWeights._nonZeroValues[i] = weightDist(cs._rng);
     }
 }
 
