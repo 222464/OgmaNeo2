@@ -107,14 +107,35 @@ void MSOM::learn(
     }
 }
 
+void MSOM::predict(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const FloatBuffer* feedBackStates
+) {
+    int hiddenIndex = address2C(pos, _hiddenSize);
+
+    if (_hiddenBlurs[hiddenIndex] != 0.0f) {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            vl._weights.hebb(*inputs[vli], hiddenIndex, _alpha * _hiddenBlurs[hiddenIndex]);
+        }
+    }
+}
+
 void MSOM::initRandom(
     ComputeSystem &cs,
     const Int2 &hiddenSize,
+    int predRadius,
+    bool hasFeedBack,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs
 ) {
     _visibleLayerDescs = visibleLayerDescs;
 
     _hiddenSize = hiddenSize;
+
+    _predRadius = predRadius;
 
     _visibleLayers.resize(_visibleLayerDescs.size());
 
@@ -145,14 +166,17 @@ void MSOM::initRandom(
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
     _hiddenBlurs = FloatBuffer(numHidden, 0.0f);
+
+    initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _crossWeights);
+
+    if (hasFeedBack)
+        initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _feedBackWeights);
 }
 
 void MSOM::activate(
     ComputeSystem &cs,
     const std::vector<const FloatBuffer*> &inputs
 ) {
-    int numHidden = _hiddenSize.x * _hiddenSize.y;
-
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
@@ -182,8 +206,6 @@ void MSOM::learn(
     ComputeSystem &cs,
     const std::vector<const FloatBuffer*> &inputs
 ) {
-    int numHidden = _hiddenSize.x * _hiddenSize.y;
-
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
@@ -209,6 +231,19 @@ void reconstruct(
         runKernel2(cs, std::bind(MSOM::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenStates, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
     }
+}
+
+void predict(
+    ComputeSystem &cs,
+    const FloatBuffer* feedBackStates
+) {
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            predict(Int2(x, y), cs._rng, feedBackStates);
+#else
+    runKernel2(cs, std::bind(MSOM::predictKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
 }
 
 void MSOM::writeToStream(

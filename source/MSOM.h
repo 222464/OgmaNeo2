@@ -38,9 +38,16 @@ public:
 private:
     Int2 _hiddenSize; // Size of hidden/output layer
 
+    int _predRadius;
+
     FloatBuffer _hiddenActivations;
     FloatBuffer _hiddenStates;
     FloatBuffer _hiddenBlurs;
+    FloatBuffer _hiddenPredictions;
+
+    // Prediction weights
+    SparseMatrix _crossWeights;
+    SparseMatrix _feedBackWeights; // This one is optional, may not be initialized
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -75,6 +82,12 @@ private:
         std::mt19937 &rng,
         const FloatBuffer* hiddenStates,
         int vli
+    );
+
+    void predict(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const FloatBuffer* feedBackStates
     );
 
     static void forwardKernel(
@@ -121,8 +134,18 @@ private:
         p->backward(pos, rng, hiddenStates, vli);
     }
 
+    void predictKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        MSOM* p,
+        const FloatBuffer* feedBackStates
+    ) {
+        p->predict(pos, rng, feedBackStates);
+    }
+
 public:
-    float _alpha; // Weight learning rate
+    float _alpha; // Feed learning rate
+    float _beta; // Prediction learning rate
     int _inhibitRadius; // Max activation radius
     int _blurRadius; // Radius of learning
 
@@ -138,6 +161,8 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int2 &hiddenSize, // Hidden/output size
+        int predRadius, // Prediction radius
+        bool hasFeedBack, // Whether this layer can receive feed back
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
@@ -155,6 +180,11 @@ public:
     void reconstruct(
         ComputeSystem &cs,
         const FloatBuffer* hiddenStates
+    );
+
+    void predict(
+        ComputeSystem &cs,
+        const FloatBuffer* feedBackStates
     );
 
     // Write to stream
