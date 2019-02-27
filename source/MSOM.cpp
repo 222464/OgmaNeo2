@@ -123,12 +123,12 @@ void MSOM::predict(
 ) {
     int hiddenIndex = address2C(pos, _hiddenSize);
 
-    _hiddenActivations[hiddenIndex] = _crossWeights.multiply(_hiddenStates, hiddenIndex);
+    _hiddenActivations[hiddenIndex] = -_crossWeights.distance(_hiddenStates, hiddenIndex);
 
     if (feedBackStates != nullptr) {
         assert(!_feedBackWeights._nonZeroValues.empty());
 
-        _hiddenActivations[hiddenIndex] += _feedBackWeights.multiply(*feedBackStates, hiddenIndex);
+        _hiddenActivations[hiddenIndex] += -_feedBackWeights.distance(*feedBackStates, hiddenIndex);
     }
 }
 
