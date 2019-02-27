@@ -43,8 +43,8 @@ private:
     FloatBuffer _hiddenActivations;
     FloatBuffer _hiddenStates;
     FloatBuffer _hiddenBlurs;
+    FloatBuffer _hiddenPredictionActivations;
     FloatBuffer _hiddenPredictions;
-
 
     FloatBuffer _hiddenStatesPrev;
     FloatBuffer _feedBackStatesPrev;

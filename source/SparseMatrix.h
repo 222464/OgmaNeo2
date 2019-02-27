@@ -141,6 +141,18 @@ struct SparseMatrix {
 
 	// --- Delta Rules ---
 
+	void deltas(
+		const std::vector<float> &in,
+		float delta,
+		int row
+	);
+
+	void deltasT(
+		const std::vector<float> &in,
+		float delta,
+		int column
+	);
+
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
 		float delta,

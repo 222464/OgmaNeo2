@@ -283,6 +283,28 @@ float SparseMatrix::distanceOHVsT(
 	return dist;
 }
 
+void SparseMatrix::deltas(
+	const std::vector<float> &in,
+	float delta,
+	int row
+) {
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] += delta * in[_columnIndices[j]];
+}
+
+void SparseMatrix::deltasT(
+	const std::vector<float> &in,
+	float delta,
+	int column
+) {
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		_nonZeroValues[_nonZeroValueIndices[j]] += delta * in[_rowIndices[j]];
+}
+
 void SparseMatrix::deltaOHVs(
 	const std::vector<int> &nonZeroIndices,
 	float delta,
