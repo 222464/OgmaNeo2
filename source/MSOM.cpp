@@ -88,7 +88,7 @@ void MSOM::backward(
 
     int visibleIndex = address2C(pos, vld._size);
 
-    vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(0.0001f, vl._weights.countsT(*hiddenStates, visibleIndex));
+    vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(1.0f, vl._weights.countsT(*hiddenStates, visibleIndex));
 }
 
 void MSOM::learn(
