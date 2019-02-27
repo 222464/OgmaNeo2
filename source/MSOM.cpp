@@ -294,7 +294,7 @@ void MSOM::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_blurs), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_inhibitRadius), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_blurRadius), sizeof(int));
 
@@ -323,7 +323,7 @@ void MSOM::readFromStream(
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_blurs), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_inhibitRadius), sizeof(int));
     is.read(reinterpret_cast<char*>(&_blurRadius), sizeof(int));
 
