@@ -23,7 +23,7 @@ void MSOM::forward(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        sum -= vl._weights.distance(*inputs[vli], hiddenIndex);
+        sum -= vl._weights.distance(*inputs[vli], hiddenIndex) / std::max(1, vl._weights.counts(hiddenIndex));
     }
 
     _hiddenActivations[hiddenIndex] = sum;
@@ -123,12 +123,12 @@ void MSOM::predict(
 ) {
     int hiddenIndex = address2C(pos, _hiddenSize);
 
-    _hiddenActivations[hiddenIndex] = -_crossWeights.distance(_hiddenStates, hiddenIndex);
+    _hiddenActivations[hiddenIndex] = -_crossWeights.distance(_hiddenStates, hiddenIndex) / std::max(1, _crossWeights.counts(hiddenIndex));
 
     if (feedBackStates != nullptr) {
         assert(!_feedBackWeights._nonZeroValues.empty());
 
-        _hiddenActivations[hiddenIndex] += -_feedBackWeights.distance(*feedBackStates, hiddenIndex);
+        _hiddenActivations[hiddenIndex] += -_feedBackWeights.distance(*feedBackStates, hiddenIndex) / std::max(1, _feedBackWeights.counts(hiddenIndex));
     }
 }
 
