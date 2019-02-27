@@ -19,7 +19,6 @@ void MSOM::forward(
 
     float sum = 0.0f;
 
-    // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
@@ -36,24 +35,75 @@ void MSOM::inhibit(
 ) {
     int hiddenIndex = address2C(pos, _hiddenSize);
 
-    float 
+    bool highest = true;
 
     for (int dx = -_inhibitRadius; dx <= _inhibitRadius; dx++)
         for (int dy = -_inhibitRadius; dy <= _inhibitRadius; dy++) {
+            if (dx == 0 && dy == 0)
+                continue;
 
+            Int2 dPos(pos.x + dx, pos.y + dy);
+
+            if (inBounds0(dPos, _hiddenSize) && _hiddenActivations[address2C(dPos, _hiddenSize)] > _hiddenActivations[hiddenIndex]) {
+                highest = false;
+
+                break;
+            }
         }
-    
-    float sum = 0.0f;
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    _hiddenStates[hiddenIndex] = highest ? 1.0f : 0.0f;
+}
 
-        sum -= vl._weights.distance(*inputs[vli], hiddenIndex);
+void MSOM::blur(
+    const Int2 &pos,
+    std::mt19937 &rng
+) {
+    int hiddenIndex = address2C(pos, _hiddenSize);
+
+    float m = 0.0f;
+
+    for (int dx = -_blurRadius; dx <= _blurRadius; dx++)
+        for (int dy = -_blurRadius; dy <= _blurRadius; dy++) {
+            Int2 dPos(pos.x + dx, pos.y + dy);
+
+            if (inBounds0(dPos, _hiddenSize) && _hiddenStates[address2C(dPos, _hiddenSize)] != 0.0f) {
+                float falloff = 1.0f - (std::abs(dx) + std::abs(dy)) / (2.0f * _blurRadius);
+
+                m = std::max(m, falloff);
+            }
+        }
+
+    _hiddenBlurs[hiddenIndex] = m;
+}
+
+void MSOM::backward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    int vli
+) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    int visibleIndex = address2C(pos, vld._size);
+
+    vl._recons[visibleIndex] = vl._weights.multiplyT(_hiddenStates, visibleIndex);
+}
+
+void MSOM::learn(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const FloatBuffer*> &inputs
+) {
+    int hiddenIndex = address2C(pos, _hiddenSize);
+
+    if (_hiddenBlurs[hiddenIndex] != 0.0f) {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            vl._weights.hebb(*inputs[vli], hiddenIndex, _alpha * _hiddenBlurs[hiddenIndex]);
+        }
     }
-
-    _hiddenActivations[hiddenIndex] = sum;
 }
 
 void MSOM::initRandom(
@@ -70,31 +120,33 @@ void MSOM::initRandom(
     // Pre-compute dimensions
     int numHidden = _hiddenSize.x * _hiddenSize.y;
 
-    std::uniform_real_distribution<float> weightDist(1.0f, 1.0001f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 0.0001f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        //int numVisible = vld._size.x * vld._size.y;
+        int numVisible = vld._size.x * vld._size.y;
 
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
+
+        vl._recons = FloatBuffer(numVisible, 0.0f);
     }
 
     // Hidden
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
+    _hiddenBlurs = FloatBuffer(numHidden, 0.0f);
 }
 
-void MSOM::step(
+void MSOM::activate(
     ComputeSystem &cs,
-    const std::vector<const FloatBuffer*> &inputs,
-    bool learnEnabled
+    const std::vector<const FloatBuffer*> &inputs
 ) {
     int numHidden = _hiddenSize.x * _hiddenSize.y;
 
@@ -118,16 +170,15 @@ void MSOM::step(
 void MSOM::writeToStream(
     std::ostream &os
 ) const {
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_cutoff), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_inhibitRadius), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&_blurRadius), sizeof(int));
 
-    writeBufferToStream(os, &_hiddens);
+    writeBufferToStream(os, &_hiddenActivations);
+    writeBufferToStream(os, &_hiddenStates);
+    writeBufferToStream(os, &_hiddenBlurs);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -138,6 +189,8 @@ void MSOM::writeToStream(
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
         writeSMToStream(os, vl._weights);
+
+        writeBufferToStream(os, &vl._recons);
     }
 }
 
@@ -146,14 +199,13 @@ void MSOM::readFromStream(
 ) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_cutoff), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_inhibitRadius), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_blurRadius), sizeof(int));
 
-    readBufferFromStream(is, &_hiddens);
+    readBufferFromStream(is, &_hiddenActivations);
+    readBufferFromStream(is, &_hiddenStates);
+    readBufferFromStream(is, &_hiddenBlurs);
 
     int numVisibleLayers;
     
@@ -168,9 +220,8 @@ void MSOM::readFromStream(
 
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
         readSMFromStream(is, vl._weights);
+
+        readBufferFromStream(is, &vl._recons);
     }
 }

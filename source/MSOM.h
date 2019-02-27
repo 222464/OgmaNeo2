@@ -31,6 +31,8 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
+
+        FloatBuffer _recons; // Reconstructions
     };
 
 private:
@@ -38,6 +40,7 @@ private:
 
     FloatBuffer _hiddenActivations;
     FloatBuffer _hiddenStates;
+    FloatBuffer _hiddenBlurs;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -52,6 +55,11 @@ private:
     );
 
     void inhibit(
+        const Int2 &pos,
+        std::mt19937 &rng
+    );
+
+    void blur(
         const Int2 &pos,
         std::mt19937 &rng
     );
@@ -85,6 +93,14 @@ private:
         p->inhibit(pos, rng);
     }
 
+    static void blurKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        MSOM* p
+    ) {
+        p->blur(pos, rng);
+    }
+
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -106,14 +122,14 @@ private:
 public:
     float _alpha; // Weight learning rate
     int _inhibitRadius; // Max activation radius
-    int _learnRadius; // Radius of learning
+    int _blurRadius; // Radius of learning
 
     // Defaults
     MSOM()
     :
     _alpha(0.01f),
     _inhibitRadius(3),
-    _learnRadius(2)
+    _blurRadius(3)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -124,10 +140,19 @@ public:
     );
 
     // Activate the sparse coder (perform sparse coding)
-    void step(
+    void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &inputs, // Input states
-        bool learnEnabled // Whether to learn
+        const std::vector<const FloatBuffer*> &inputs // Input states
+    );
+
+    void learn(
+        ComputeSystem &cs,
+        const std::vector<const FloatBuffer*> &inputs // Input states
+    );
+
+    void reconstruct(
+        ComputeSystem &cs,
+        const FloatBuffer* hiddenStates
     );
 
     // Write to stream
