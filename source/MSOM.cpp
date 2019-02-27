@@ -68,7 +68,7 @@ void MSOM::blur(
             Int2 dPos(pos.x + dx, pos.y + dy);
 
             if (inBounds0(dPos, _hiddenSize) && _hiddenStates[address2C(dPos, _hiddenSize)] != 0.0f) {
-                float falloff = 1.0f - (std::abs(dx) + std::abs(dy)) / (2.0f * _blurRadius);
+                float falloff = 1.0f - (std::abs(dx) + std::abs(dy)) / (2.0f * (_blurRadius + 1));
 
                 m = std::max(m, falloff);
             }
@@ -150,7 +150,7 @@ void MSOM::initRandom(
     // Pre-compute dimensions
     int numHidden = _hiddenSize.x * _hiddenSize.y;
 
-    std::uniform_real_distribution<float> weightDist(0.0f, 0.0001f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
