@@ -23,7 +23,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4 }),
+        _size(16, 16),
         _radius(2)
         {}
     };
@@ -159,7 +159,7 @@ public:
     MSOM()
     :
     _alpha(0.1f),
-    _beta(0.01f),
+    _beta(0.05f),
     _inhibitRadius(2),
     _blurRadius(1)
     {}

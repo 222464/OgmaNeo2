@@ -29,9 +29,9 @@ public:
 
         LayerDesc()
         :
-        _hiddenSize(4, 4),
-        _scRadius(4),
-        _pRadius(4),
+        _hiddenSize(16, 16),
+        _scRadius(6),
+        _pRadius(6),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}

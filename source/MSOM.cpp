@@ -68,7 +68,8 @@ void MSOM::blur(
             Int2 dPos(pos.x + dx, pos.y + dy);
 
             if (inBounds0(dPos, _hiddenSize) && _hiddenStates[address2C(dPos, _hiddenSize)] != 0.0f) {
-                float falloff = 1.0f - (std::abs(dx) + std::abs(dy)) / (2.0f * (_blurRadius + 1));
+                float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+                float falloff = 1.0f - dist / (_blurRadius + 1);
 
                 m = std::max(m, falloff);
             }
