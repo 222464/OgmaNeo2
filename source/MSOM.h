@@ -63,7 +63,8 @@ private:
 
     void inhibit(
         const Int2 &pos,
-        std::mt19937 &rng
+        std::mt19937 &rng,
+        FloatBuffer* hiddenStates
     );
 
     void blur(
@@ -102,9 +103,10 @@ private:
     static void inhibitKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        MSOM* p
+        MSOM* p,
+        FloatBuffer* hiddenStates
     ) {
-        p->inhibit(pos, rng);
+        p->inhibit(pos, rng, hiddenStates);
     }
 
     static void blurKernel(

@@ -31,7 +31,8 @@ void MSOM::forward(
 
 void MSOM::inhibit(
     const Int2 &pos,
-    std::mt19937 &rng
+    std::mt19937 &rng,
+    FloatBuffer* hiddenStates
 ) {
     int hiddenIndex = address2C(pos, _hiddenSize);
 
@@ -51,7 +52,7 @@ void MSOM::inhibit(
             }
         }
 
-    _hiddenStates[hiddenIndex] = highest ? 1.0f : 0.0f;
+    (*hiddenStates)[hiddenIndex] = highest ? 1.0f : 0.0f;
 }
 
 void MSOM::blur(
@@ -114,13 +115,12 @@ void MSOM::predict(
 ) {
     int hiddenIndex = address2C(pos, _hiddenSize);
 
-    if (_hiddenBlurs[hiddenIndex] != 0.0f) {
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    _hiddenActivations[hiddenIndex] = _crossWeights.multiply(_hiddenStates, hiddenIndex);
 
-            vl._weights.hebb(*inputs[vli], hiddenIndex, _alpha * _hiddenBlurs[hiddenIndex]);
-        }
+    if (feedBackStates != nullptr) {
+        assert(!_feedBackWeights._nonZeroValues.empty());
+
+        _hiddenActivations[hiddenIndex] += _feedBackWeights.multiply(*feedBackStates, hiddenIndex);
     }
 }
 
@@ -166,6 +166,7 @@ void MSOM::initRandom(
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
     _hiddenBlurs = FloatBuffer(numHidden, 0.0f);
+    _hiddenPredictions = FloatBuffer(numHidden, 0.0f);
 
     initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _crossWeights);
 
@@ -188,9 +189,9 @@ void MSOM::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            inhibit(Int2(x, y), cs._rng);
+            inhibit(Int2(x, y), cs._rng, &_hiddenStates);
 #else
-    runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
 #ifdef KERNEL_NOTHREAD
@@ -244,6 +245,14 @@ void predict(
 #else
     runKernel2(cs, std::bind(MSOM::predictKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            inhibit(Int2(x, y), cs._rng, &_hiddenPredictions);
+#else
+    runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenPredictions), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
 }
 
 void MSOM::writeToStream(
@@ -258,6 +267,7 @@ void MSOM::writeToStream(
     writeBufferToStream(os, &_hiddenActivations);
     writeBufferToStream(os, &_hiddenStates);
     writeBufferToStream(os, &_hiddenBlurs);
+    writeBufferToStream(os, &_hiddenPredictions);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -285,6 +295,7 @@ void MSOM::readFromStream(
     readBufferFromStream(is, &_hiddenActivations);
     readBufferFromStream(is, &_hiddenStates);
     readBufferFromStream(is, &_hiddenBlurs);
+    readBufferFromStream(is, &_hiddenPredictions);
 
     int numVisibleLayers;
     
