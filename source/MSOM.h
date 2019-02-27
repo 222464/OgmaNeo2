@@ -160,7 +160,7 @@ public:
     :
     _alpha(0.1f),
     _beta(0.1f),
-    _inhibitRadius(2),
+    _inhibitRadius(3),
     _blurRadius(1)
     {}
 
