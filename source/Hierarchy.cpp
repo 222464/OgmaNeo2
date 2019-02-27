@@ -219,7 +219,8 @@ void Hierarchy::step(
             else
                 feedBackStates = nullptr;
 
-            _scLayers[l].learn(cs, constGet(_histories[l]));
+            if (learnEnabled)
+                _scLayers[l].learn(cs, constGet(_histories[l]));
 
             _scLayers[l].predict(cs, feedBackStates);
 
