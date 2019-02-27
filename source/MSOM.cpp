@@ -88,7 +88,7 @@ void MSOM::backward(
 
     int visibleIndex = address2C(pos, vld._size);
 
-    vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(0.0001f, vl._weights.countT(*hiddenStates, visibleIndex));
+    vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(0.0001f, vl._weights.countsT(*hiddenStates, visibleIndex));
 }
 
 void MSOM::learn(
@@ -106,7 +106,7 @@ void MSOM::learn(
             vl._weights.hebb(*inputs[vli], hiddenIndex, _alpha * _hiddenBlurs[hiddenIndex]);
         }
 
-        _crossWeights.hebb(_hiddenStatePrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
+        _crossWeights.hebb(_hiddenStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
     
         if (_feedBackStatesPrev != nullptr) {
             assert(!_feedBackWeights._nonZeroValues.empty());
@@ -181,7 +181,7 @@ void MSOM::initRandom(
     initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _crossWeights);
 
     if (hasFeedBack) {
-        _feedBackStatesPrev = std::make_unique(numHidden, 0.0f);
+        _feedBackStatesPrev = std::make_unique<FloatBuffer>(numHidden, 0.0f);
 
         initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _feedBackWeights);
     }
@@ -229,7 +229,7 @@ void MSOM::learn(
 #endif
 }
 
-void reconstruct(
+void MSOM::reconstruct(
     ComputeSystem &cs,
     const FloatBuffer* hiddenStates
 ) {
@@ -247,7 +247,7 @@ void reconstruct(
     }
 }
 
-void predict(
+void MSOM::predict(
     ComputeSystem &cs,
     const FloatBuffer* feedBackStates
 ) {
