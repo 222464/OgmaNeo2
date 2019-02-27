@@ -161,7 +161,7 @@ public:
     _alpha(0.01f),
     _beta(0.1f),
     _inhibitRadius(2),
-    _blurRadius(2)
+    _blurRadius(1)
     {}
 
     // Create a sparse coding layer with random initialization
