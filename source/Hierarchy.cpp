@@ -241,6 +241,7 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(&numInputs), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(_inputSizes.data()), numInputs * sizeof(Int3));
+    os.write(reinterpret_cast<const char*>(&_inputTemporalHorizon), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(_updates.data()), _updates.size() * sizeof(char));
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
@@ -257,15 +258,6 @@ void Hierarchy::writeToStream(
             writeBufferToStream(os, _histories[l][i].get());
 
         _scLayers[l].writeToStream(os);
-
-        for (int v = 0; v < _pLayers[l].size(); v++) {
-            char exists = _pLayers[l][v] != nullptr;
-
-            os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
-
-            if (exists)
-                _pLayers[l][v]->writeToStream(os);
-        }
     }
 }
 
@@ -282,9 +274,9 @@ void Hierarchy::readFromStream(
     _inputSizes.resize(numInputs);
 
     is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(Int3));
+    is.read(reinterpret_cast<char*>(&_inputTemporalHorizon), sizeof(int));
 
     _scLayers.resize(numLayers);
-    _pLayers.resize(numLayers);
 
     _ticks.resize(numLayers);
 
@@ -309,26 +301,11 @@ void Hierarchy::readFromStream(
         _histories[l].resize(numHistorySizes);
 
         for (int i = 0; i < _historySizes[l].size(); i++) {
-            _histories[l][i] = std::make_shared<IntBuffer>();
+            _histories[l][i] = std::make_shared<FloatBuffer>();
 
             readBufferFromStream(is, _histories[l][i].get());
         }
 
         _scLayers[l].readFromStream(is);
-
-        _pLayers[l].resize(l == 0 ? _inputSizes.size() : _ticksPerUpdate[l]);
-
-        for (int v = 0; v < _pLayers[l].size(); v++) {
-            char exists;
-
-            is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-            if (exists) {
-                _pLayers[l][v] = std::make_unique<Predictor>();
-                _pLayers[l][v]->readFromStream(is);
-            }
-            else
-                _pLayers[l][v] = nullptr;
-        }
     }
 }

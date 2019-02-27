@@ -181,8 +181,7 @@ public:
 
     void learn(
         ComputeSystem &cs,
-        const std::vector<const FloatBuffer*> &inputs, // Input states
-        const FloatBuffer* feedBackStates
+        const std::vector<const FloatBuffer*> &inputs // Input states
     );
 
     void reconstruct(
