@@ -228,6 +228,11 @@ public:
         return _hiddenStates;
     }
 
+    // Get the hidden blurs
+    const FloatBuffer &getHiddenBlurs() const {
+        return _hiddenBlurs;
+    }
+
     // Get the hidden predictions
     const FloatBuffer &getHiddenPredictions() const {
         return _hiddenPredictions;

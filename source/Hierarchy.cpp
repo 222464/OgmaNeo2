@@ -194,10 +194,10 @@ void Hierarchy::step(
 
                 // Copy
 #ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < _scLayers[l].getHiddenStates().size(); x++)
-                    copyFloat(x, cs._rng, &_scLayers[l].getHiddenStates(), last.get());
+                for (int x = 0; x < _scLayers[l].getHiddenBlurs().size(); x++)
+                    copyFloat(x, cs._rng, &_scLayers[l].getHiddenBlurs(), last.get());
 #else
-                runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenStates(), last.get()), _scLayers[l].getHiddenStates().size(), cs._rng, cs._batchSize1);
+                runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenBlurs(), last.get()), _scLayers[l].getHiddenBlurs().size(), cs._rng, cs._batchSize1);
 #endif
 
                 _histories[lNext].front() = last;
