@@ -158,10 +158,10 @@ public:
     // Defaults
     MSOM()
     :
-    _alpha(0.02f),
-    _beta(0.5f),
-    _inhibitRadius(2),
-    _blurRadius(1)
+    _alpha(0.1f),
+    _beta(0.1f),
+    _inhibitRadius(3),
+    _blurRadius(2)
     {}
 
     // Create a sparse coding layer with random initialization
