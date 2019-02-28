@@ -76,8 +76,18 @@ struct SparseMatrix {
 		int row
 	);
 
+	float distance(
+		const std::vector<float> &in,
+		int row
+	);
+
 	// Count number of elements in each row
 	int counts(
+		int row
+	);
+
+	float counts(
+		const std::vector<float> &in,
 		int row
 	);
 
@@ -88,8 +98,18 @@ struct SparseMatrix {
 		int column
 	);
 
+	float distanceT(
+		const std::vector<float> &in,
+		int column
+	);
+
 	// Count number of elements in each column
 	int countsT(
+		int column
+	);
+
+	float countsT(
+		const std::vector<float> &in,
 		int column
 	);
 
@@ -120,6 +140,18 @@ struct SparseMatrix {
 	);
 
 	// --- Delta Rules ---
+
+	void deltas(
+		const std::vector<float> &in,
+		float delta,
+		int row
+	);
+
+	void deltasT(
+		const std::vector<float> &in,
+		float delta,
+		int column
+	);
 
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
