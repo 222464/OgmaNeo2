@@ -367,6 +367,32 @@ void SparseMatrix::normalizeT(
 		_nonZeroValues[_nonZeroValueIndices[j]] *= scale;
 }
 
+float SparseMatrix::magnitude(
+	int row
+) {
+	int nextIndex = row + 1;
+
+	float sum = 0.0f;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += _nonZeroValues[j] * _nonZeroValues[j];
+
+	return std::sqrt(sum);
+}
+
+float SparseMatrix::magnitudeT(
+	int column
+) {
+	int nextIndex = column + 1;
+
+	float sum = 0.0f;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		sum += _nonZeroValues[_nonZeroValueIndices[j]] * _nonZeroValues[_nonZeroValueIndices[j]];
+
+	return std::sqrt(sum);
+}
+
 void SparseMatrix::hebb(
 	const std::vector<float> &in,
 	int row,

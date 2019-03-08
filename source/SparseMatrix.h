@@ -177,6 +177,14 @@ struct SparseMatrix {
 		int column
 	);
 
+	float magnitude(
+		int row
+	);
+
+	float magnitudeT(
+		int column
+	);
+
 	// --- Hebb Rules ---
 
 	void hebb(
