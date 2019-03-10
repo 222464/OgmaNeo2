@@ -59,7 +59,7 @@ void Actor::learn(
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
 
-    float newValue = q + g * _hiddenActivations[hiddenColumnIndex];
+    float newValue = q;// + g * _hiddenActivations[hiddenColumnIndex];
 
     float sum = 0.0f;
 
