@@ -129,7 +129,7 @@ public:
     // Step (get actions and update)
     void step(
         ComputeSystem &cs,
-        const std::vector<const IntBuffer*> &visibleCs,
+        const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCs, // Actions taken
         float reward,
         bool learnEnabled
