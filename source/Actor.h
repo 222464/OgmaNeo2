@@ -31,6 +31,8 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Q weights
+
+        FloatBuffer _visibleRates; // Learning rates
     };
 
     // History sample for delayed updates
@@ -76,6 +78,13 @@ private:
         float g
     );
 
+    void rateUpdate(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    );
+
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -97,14 +106,26 @@ private:
         a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
     }
 
+    static void rateUpdateKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Actor* a,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    ) {
+        a->rateUpdate(pos, rng, inputCs, vli);
+    }
+
 public:
     float _alpha; // Value learning rate
+    float _beta; // Learning rate decay
     float _gamma; // Discount factor
 
     // Defaults
     Actor()
     :
-    _alpha(0.01f),
+    _alpha(0.1f),
+    _beta(1.0f),
     _gamma(0.95f)
     {}
 
@@ -129,7 +150,7 @@ public:
     // Step (get actions and update)
     void step(
         ComputeSystem &cs,
-        const std::vector<const IntBuffer*> &visibleCs,
+        const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCs, // Actions taken
         float reward,
         bool learnEnabled

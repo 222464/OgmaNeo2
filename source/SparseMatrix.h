@@ -127,6 +127,20 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float countsOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &in,
+		int row,
+		int oneHotSize
+	);
+
+	float countsOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &in,
+		int column,
+		int oneHotSize
+	);
+
 	float distanceOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
