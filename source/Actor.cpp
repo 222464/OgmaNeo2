@@ -61,8 +61,6 @@ void Actor::learn(
 
     float newValue = q + g * _hiddenActivations[hiddenColumnIndex];
 
-    float rate = 0.0f;
-
     float sum = 0.0f;
 
     // For each visible layer
@@ -70,12 +68,8 @@ void Actor::learn(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        rate += vl._weights.countsOHVs(*inputCsPrev[vli], vl._visibleRates, hiddenIndex, vld._size.z);
-
         sum += vl._weights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
     }
-
-    rate /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
     sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
@@ -88,22 +82,6 @@ void Actor::learn(
 
         vl._weights.deltaModOHVs(*inputCsPrev[vli], vl._rates, delta, hiddenIndex, vld._size.z, _beta);
     }
-}
-
-void Actor::rateUpdate(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs,
-    int vli
-) {
-    VisibleLayer &vl = _visibleLayers[vli];
-    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-    int visibleColumnIndex = address2C(pos, Int2(vld._size.x, vld._size.y));
-
-    int visibleIndex = address3C(Int3(pos.x, pos.y, (*inputCs[vli])[visibleColumnIndex]), vld._size);
-
-    vl._visibleRates[visibleIndex] *= _beta;
 }
 
 void Actor::initRandom(
@@ -146,8 +124,6 @@ void Actor::initRandom(
 
         for (int i = 0; i < numHiddenColumns; i++)
             _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
-
-        vl._visibleRates = FloatBuffer(numVisible, 1.0f);
     }
 
     // Hidden Cs
@@ -277,19 +253,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs
 #else
         runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &s._hiddenCs, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-#ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < vld._size.x; x++)
-                for (int y = 0; y < vld._size.y; y++)
-                    rateUpdate(Int2(x, y), cs._rng, inputCs, vli);
-#else
-            runKernel2(cs, std::bind(Actor::rateUpdateKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
-#endif
-        }
     }
 
     // Forward kernel
@@ -333,8 +296,7 @@ void Actor::writeToStream(std::ostream &os) const {
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
-
-        writeBufferToStream(os, &vl._visibleRates);
+        writeSMToStream(os, vl._rates);
     }
 
     int numHistorySamples = _historySamples.size();
@@ -387,8 +349,7 @@ void Actor::readFromStream(std::istream &is) {
         int numVisible = numVisibleColumns * vld._size.z;
 
         readSMFromStream(is, vl._weights);
-
-        readBufferFromStream(is, &vl._visibleRates);
+        readSMFromStream(is, vl._rates);
     }
 
     int numHistorySamples;

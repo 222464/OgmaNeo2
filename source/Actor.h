@@ -32,8 +32,6 @@ public:
     struct VisibleLayer {
         SparseMatrix _weights; // Q weights
         SparseMatrix _rates; // Rates
-
-        FloatBuffer _visibleRates; // Learning rates
     };
 
     // History sample for delayed updates
@@ -79,13 +77,6 @@ private:
         float g
     );
 
-    void rateUpdate(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
-    );
-
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -105,16 +96,6 @@ private:
         float g
     ) {
         a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
-    }
-
-    static void rateUpdateKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        Actor* a,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
-    ) {
-        a->rateUpdate(pos, rng, inputCs, vli);
     }
 
 public:
