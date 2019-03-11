@@ -31,6 +31,7 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Q weights
+        SparseMatrix _rates; // Rates
 
         FloatBuffer _visibleRates; // Learning rates
     };
@@ -124,7 +125,7 @@ public:
     // Defaults
     Actor()
     :
-    _alpha(0.2f),
+    _alpha(0.1f),
     _beta(0.999f),
     _gamma(0.98f)
     {}

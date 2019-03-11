@@ -79,14 +79,14 @@ void Actor::learn(
 
     sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-    float delta = _alpha * rate * (newValue - sum);
+    float delta = _alpha * (newValue - sum);
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.deltaOHVs(*inputCsPrev[vli], delta, hiddenIndex, vld._size.z);
+        vl._weights.deltaModOHVs(*inputCsPrev[vli], vl._rates, delta, hiddenIndex, vld._size.z, _beta);
     }
 }
 
@@ -137,8 +137,12 @@ void Actor::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
-        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
+        vl._rates = vl._weights;
+
+        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++) {
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
+            vl._rates._nonZeroValues[i] = 1.0f;
+        }
 
         for (int i = 0; i < numHiddenColumns; i++)
             _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
