@@ -149,7 +149,7 @@ private:
     }
 
 public:
-    float _beta; // Routing learning rate
+    float _alpha; // Routing learning rate
     float _gamma; // Discount factor
     float _clip; // Error clip
 
@@ -159,7 +159,7 @@ public:
     // Default
     Hierarchy()
     :
-    _beta(0.01f),
+    _alpha(0.01f),
     _gamma(0.95f),
     _clip(0.1f),
     _maxHistorySamples(32),
