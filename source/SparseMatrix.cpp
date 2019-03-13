@@ -271,7 +271,7 @@ float SparseMatrix::multiplyOHVsT(
 	
 	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
 		int i = _rowIndices[jj] / oneHotSize;
-		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+		int j = jj + nonZeroIndices[i];
 
 		sum += _nonZeroValues[_nonZeroValueIndices[j]] * nonZeroScalars[i];
 	}
