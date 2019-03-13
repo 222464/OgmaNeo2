@@ -523,7 +523,7 @@ void Hierarchy::step(
 
             // Errors
             for (int i = 0; i < _rLayers.back()._errors.size(); i++)
-                _rLayers.back()._errors[i] = _q[i] - _rLayers.back()._activations[i];
+                _rLayers.back()._errors[i] = sNext._reward + _gamma * _q[i] - _rLayers.back()._activations[i];
 
             // Backward
             for (int l = _scLayers.size() - 1; l >= 1; l--) {
