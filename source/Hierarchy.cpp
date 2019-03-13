@@ -88,7 +88,7 @@ void Hierarchy::learn(
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
-    float delta = _alpha * _rLayers[l]._errors[hiddenColumnIndex];
+    float delta = _alpha * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[hiddenColumnIndex]));
 
     if (l == 0) {
         // For each visible layer
