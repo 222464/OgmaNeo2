@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <iostream>
 
 using namespace ogmaneo;
 
@@ -57,7 +58,7 @@ void Hierarchy::backward(
                 int visibleIndex = address3C(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
 
                 float sum = _rLayers[l]._weights[vli].multiplyOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-            
+                std::cout << sum << std::endl;
                 if (sum > maxValue) {
                     maxValue = sum;
 
@@ -173,7 +174,7 @@ void Hierarchy::initRandom(
                     for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
                         _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[i].counts(j * layerDescs[l]._hiddenSize.z) / inputSizes[i].z;
 
-                    _rLayers[l]._visibleCounts[i] = IntBuffer(_actions.size());
+                    _rLayers[l]._visibleCounts[i] = IntBuffer(_actions[i].size());
 
                     for (int j = 0; j < _rLayers[l]._visibleCounts[i].size(); j++)
                         _rLayers[l]._visibleCounts[i][j] = _rLayers[l]._weights[i].countsT(j * inputSizes[i].z) / layerDescs[l]._hiddenSize.z;
