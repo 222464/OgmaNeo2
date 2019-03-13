@@ -159,9 +159,9 @@ public:
     // Default
     Hierarchy()
     :
-    _alpha(0.01f),
+    _alpha(0.05f),
     _gamma(0.95f),
-    _clip(0.2f),
+    _clip(0.5f),
     _maxHistorySamples(32),
     _historyIters(4)
     {}
