@@ -173,7 +173,7 @@ void Hierarchy::initRandom(
                     for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
                         _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[i].counts(j * layerDescs[l]._hiddenSize.z) / inputSizes[i].z;
 
-                    _rLayers[l]._visibleCounts[i] = IntBuffer(_actions.size());
+                    _rLayers[l]._visibleCounts[i] = IntBuffer(_actions[i].size());
 
                     for (int j = 0; j < _rLayers[l]._visibleCounts[i].size(); j++)
                         _rLayers[l]._visibleCounts[i][j] = _rLayers[l]._weights[i].countsT(j * inputSizes[i].z) / layerDescs[l]._hiddenSize.z;
