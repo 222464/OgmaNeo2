@@ -10,7 +10,6 @@
 
 #include <algorithm>
 #include <assert.h>
-#include <iostream>
 
 using namespace ogmaneo;
 
@@ -58,7 +57,7 @@ void Hierarchy::backward(
                 int visibleIndex = address3C(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
 
                 float sum = _rLayers[l]._weights[vli].multiplyOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-                std::cout << sum << std::endl;
+                
                 if (sum > maxValue) {
                     maxValue = sum;
 
@@ -74,7 +73,7 @@ void Hierarchy::backward(
 
         int visibleIndex = address3C(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        _rLayers[l - 1]._errors[visibleColumnIndex] = std::min(_clip, std::max(-_clip, _rLayers[l]._weights[vli].multiplyOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex])));
+        _rLayers[l - 1]._errors[visibleColumnIndex] = _rLayers[l]._weights[vli].multiplyOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
     }
 }
 
@@ -231,7 +230,7 @@ void Hierarchy::initRandom(
         }
 
         _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
-        _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 0.0f);
+        _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 1.0f);
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
