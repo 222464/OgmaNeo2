@@ -660,10 +660,14 @@ void Hierarchy::readFromStream(
         readBufferFromStream(is, &_rLayers[l]._errors);
         readBufferFromStream(is, &_rLayers[l]._hiddenCounts);
 
-        if (l == 0)
+        if (l == 0) {
             _rLayers[l]._weights.resize(_inputSizes.size());
-        else
+            _rLayers[l]._visibleCounts.resize(_inputSizes.size());
+        }
+        else {
             _rLayers[l]._weights.resize(1);
+            _rLayers[l]._visibleCounts.resize(1);
+        }
 
         for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
             char exists;
