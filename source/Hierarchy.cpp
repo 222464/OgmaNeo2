@@ -683,7 +683,7 @@ void Hierarchy::readFromStream(
 
             if (exists) {
                 readSMFromStream(is, _rLayers[l]._weights[v]);
-                readBufferFromStream(is, &_rLayers[l]._visibleCounts);
+                readBufferFromStream(is, &_rLayers[l]._visibleCounts[v]);
             }
         }
     }
