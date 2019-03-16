@@ -602,6 +602,10 @@ void Hierarchy::writeToStream(
 
         for (int l = 0; l < _scLayers.size(); l++)
             writeBufferToStream(os, &s._states[l]);
+
+        for (int vli = 0; vli < _actions.size(); vli++)
+            if (!_actions[vli].empty())
+                writeBufferToStream(os, &s._actionsPrev[vli]);
         
         os.write(reinterpret_cast<const char*>(&s._reward), sizeof(float));
     }
@@ -701,6 +705,12 @@ void Hierarchy::readFromStream(
 
         for (int l = 0; l < _scLayers.size(); l++)
             readBufferFromStream(is, &s._states[l]);
+
+        s._actionsPrev.resize(_actions.size());
+
+        for (int vli = 0; vli < _actions.size(); vli++)
+            if (!_actions[vli].empty())
+                readBufferFromStream(is, &s._actionsPrev[vli]);
         
         is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
     }
