@@ -556,7 +556,8 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
     os.write(reinterpret_cast<const char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
 
-    writeBufferToStream(os, &_actions);
+    for (int vli = 0; vli < _actions.size(); vli++)
+        writeBufferToStream(os, &_actions[vli]);
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes = _historySizes[l].size();
@@ -618,7 +619,6 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
 
     int numInputs;
-
     is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
 
     _inputSizes.resize(numInputs);
@@ -641,7 +641,10 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
     is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
 
-    readBufferFromStream(is, &_actions);
+    _actions.resize(_inputSizes.size());
+
+    for (int vli = 0; vli < _actions.size(); vli++)
+        readBufferFromStream(is, &_actions[vli]);
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes;
