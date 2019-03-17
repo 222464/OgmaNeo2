@@ -61,8 +61,6 @@ public:
         std::vector<IntBuffer> _actionsPrev;
 
         float _reward;
-
-        int _w;
     };
 
 private:
