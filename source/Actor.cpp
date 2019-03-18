@@ -96,8 +96,9 @@ void Actor::learn(
         sum += vl._weights[w].multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
     }
 
+    nextQ /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
     sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
+    
     float delta = _alpha * (reward + _gamma * nextQ - sum);
 
     // For each visible layer
@@ -218,7 +219,7 @@ void Actor::step(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputCs);
+            forward(Int2(x, y), cs._rng, inputCs, 0);
 #else
     runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, 0), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
@@ -271,10 +272,10 @@ void Actor::step(
 
         std::uniform_int_distribution<int> doubleDist(0, 1);
 
-        int w = doubleDist(cs._rng);
-
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
+
+            int w = doubleDist(cs._rng);
 
             const HistorySample &s = *_historySamples[t + 1];
             const HistorySample &sPrev = *_historySamples[t];
