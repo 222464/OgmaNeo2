@@ -215,13 +215,17 @@ void Actor::step(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
+    std::uniform_int_distribution<int> doubleDist(0, 1);
+
+    int w = doubleDist(cs._rng);
+
     // Forward kernel
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputCs, 0);
+            forward(Int2(x, y), cs._rng, inputCs, w);
 #else
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, 0), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, w), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     // Add sample
@@ -270,12 +274,10 @@ void Actor::step(
     if (learnEnabled && _historySize > 2) {
         std::uniform_int_distribution<int> sampleDist(0, _historySize - 2);
 
-        std::uniform_int_distribution<int> doubleDist(0, 1);
-
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
 
-            int w = doubleDist(cs._rng);
+            w = doubleDist(cs._rng);
 
             const HistorySample &s = *_historySamples[t + 1];
             const HistorySample &sPrev = *_historySamples[t];
