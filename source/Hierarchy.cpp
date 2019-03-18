@@ -31,13 +31,13 @@ void Hierarchy::forward(
         // For each visible layer
         for (int vli = 0; vli < _rLayers[l]._weights[w].size(); vli++) {
             if (!_rLayers[l]._weights[w][vli]._nonZeroValues.empty())
-                sum += _rLayers[l]._weights[w][vli].multiplyOHVs(*inputCs[vli], hiddenIndex, _inputSizes[vli].z);
+                sum += _rLayers[l]._weights[w][vli].multiplyOHVsT(*inputCs[vli], hiddenIndex, _inputSizes[vli].z);
         }
 
         _rLayers[l]._activations[hiddenColumnIndex] = sum / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
     }
     else
-        _rLayers[l]._activations[hiddenColumnIndex] = _rLayers[l]._weights[w][0].multiplyOHVs(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+        _rLayers[l]._activations[hiddenColumnIndex] = _rLayers[l]._weights[w][0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 }
 
 void Hierarchy::backward(
@@ -58,7 +58,7 @@ void Hierarchy::backward(
             for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
                 int visibleIndex = address3C(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
 
-                float sum = _rLayers[l]._weights[w][vli].multiplyOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+                float sum = _rLayers[l]._weights[w][vli].multiplyOHVs(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
                 
                 if (sum > maxValue) {
                     maxValue = sum;
@@ -75,7 +75,7 @@ void Hierarchy::backward(
 
         int visibleIndex = address3C(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        _rLayers[l - 1]._errors[visibleColumnIndex] = _rLayers[l]._weights[w][vli].multiplyOHVsT(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+        _rLayers[l - 1]._errors[visibleColumnIndex] = _rLayers[l]._weights[w][vli].multiplyOHVs(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
     }
 }
 
@@ -97,11 +97,11 @@ void Hierarchy::learn(
         // For each visible layer
         for (int vli = 0; vli < _rLayers[l]._weights[w].size(); vli++) {
             if (!_rLayers[l]._weights[w][vli]._nonZeroValues.empty())
-                _rLayers[l]._weights[w][vli].deltaOHVs(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
+                _rLayers[l]._weights[w][vli].deltaOHVsT(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
         }
     }
     else
-        _rLayers[l]._weights[w][0].deltaOHVs(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z, _clip);
+        _rLayers[l]._weights[w][0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z, _clip);
 }
 
 void Hierarchy::initRandom(
@@ -166,7 +166,7 @@ void Hierarchy::initRandom(
                 if (inputTypes[i] == InputType::_act) {
                     _actions[i] = IntBuffer(inputSizes[i].x * inputSizes[i].y, 0);
 
-                    initSMLocalRF(inputSizes[i], layerDescs[l]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[0][i]);
+                    initSMLocalRF(layerDescs[l]._hiddenSize, inputSizes[i], layerDescs[l]._rRadius, _rLayers[l]._weights[0][i]);
 
                     _rLayers[l]._weights[0][i].initT();
 
@@ -179,12 +179,12 @@ void Hierarchy::initRandom(
                     }
 
                     for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
-                        _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[0][i].counts(j * layerDescs[l]._hiddenSize.z) / inputSizes[i].z;
+                        _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[0][i].countsT(j * layerDescs[l]._hiddenSize.z) / inputSizes[i].z;
 
                     _rLayers[l]._visibleCounts[i] = IntBuffer(_actions[i].size());
 
                     for (int j = 0; j < _rLayers[l]._visibleCounts[i].size(); j++)
-                        _rLayers[l]._visibleCounts[i][j] = _rLayers[l]._weights[0][i].countsT(j * inputSizes[i].z) / layerDescs[l]._hiddenSize.z;
+                        _rLayers[l]._visibleCounts[i][j] = _rLayers[l]._weights[0][i].counts(j * inputSizes[i].z) / layerDescs[l]._hiddenSize.z;
                 }
             }
             
@@ -213,7 +213,7 @@ void Hierarchy::initRandom(
                 scVisibleLayerDescs[t]._radius = layerDescs[l]._scRadius;
             }
 
-            initSMLocalRF(layerDescs[l - 1]._hiddenSize, layerDescs[l]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[0][0]);
+            initSMLocalRF(layerDescs[l]._hiddenSize, layerDescs[l - 1]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[0][0]);
 
             _rLayers[l]._weights[0][0].initT();
 
@@ -226,12 +226,12 @@ void Hierarchy::initRandom(
             }
 
             for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
-                _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[0][0].counts(j * layerDescs[l]._hiddenSize.z) / layerDescs[l - 1]._hiddenSize.z;
+                _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[0][0].countsT(j * layerDescs[l]._hiddenSize.z) / layerDescs[l - 1]._hiddenSize.z;
 
             _rLayers[l]._visibleCounts[0] = IntBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y);
 
             for (int j = 0; j < _rLayers[l]._visibleCounts[0].size(); j++)
-                _rLayers[l]._visibleCounts[0][j] = _rLayers[l]._weights[0][0].countsT(j * layerDescs[l - 1]._hiddenSize.z) / layerDescs[l]._hiddenSize.z;
+                _rLayers[l]._visibleCounts[0][j] = _rLayers[l]._weights[0][0].counts(j * layerDescs[l - 1]._hiddenSize.z) / layerDescs[l]._hiddenSize.z;
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
