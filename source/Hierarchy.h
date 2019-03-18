@@ -158,6 +158,7 @@ private:
 public:
     float _alpha; // Routing learning rate
     float _gamma; // Discount factor
+    float _clip; // Clipping updates
 
     int _maxHistorySamples; // Maximum number of history samples
     int _historyIters; // Number of times to iterate over history
@@ -165,8 +166,9 @@ public:
     // Default
     Hierarchy()
     :
-    _alpha(0.1f),
+    _alpha(0.05f),
     _gamma(0.95f),
+    _clip(0.05f),
     _maxHistorySamples(32),
     _historyIters(8)
     {}
