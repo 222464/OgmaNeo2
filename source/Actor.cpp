@@ -34,7 +34,7 @@ void Actor::forward(
     // --- Action ---
 
     std::vector<float> activations(_hiddenSize.z);
-    float maxActivation = -999999.0f;
+    float total = 0.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -51,16 +51,8 @@ void Actor::forward(
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        activations[hc] = sum;
+        activations[hc] = sigmoid(sum);
 
-        maxActivation = std::max(maxActivation, sum);
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-        
         total += activations[hc];
     }
 
@@ -126,8 +118,7 @@ void Actor::learn(
 
     // --- Action ---
 
-    std::vector<float> activations(_hiddenSize.z);
-    float maxActivation = -999999.0f;
+    int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -142,25 +133,7 @@ void Actor::learn(
             sum += vl._actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
         }
 
-        activations[hc] = sum / std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
-        maxActivation = std::max(maxActivation, activations[hc]);
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-
-        total += activations[hc];
-    }
-
-    int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        float deltaAction = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = _beta * std::tanh(tdErrorAction) * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum / std::max(1, _hiddenCounts[hiddenColumnIndex])));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
