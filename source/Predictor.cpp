@@ -70,8 +70,6 @@ void Predictor::learn(
             sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
-        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
         if (sum > maxActivation) {
             maxActivation = sum;
 
