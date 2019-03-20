@@ -325,8 +325,6 @@ void Hierarchy::step(
     ns._states.resize(_scLayers.size());
     ns._reward = reward;
 
-    std::uniform_int_distribution<int> doubleDist(0, 1);
-
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
         // If is time for layer to tick
