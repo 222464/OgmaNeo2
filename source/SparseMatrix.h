@@ -9,7 +9,7 @@
 #pragma once
 
 #include <vector>
-
+#include <math.h>
 #include <assert.h>
 
 namespace ogmaneo {
@@ -76,8 +76,18 @@ struct SparseMatrix {
 		int row
 	);
 
+	float distance(
+		const std::vector<float> &in,
+		int row
+	);
+
 	// Count number of elements in each row
 	int counts(
+		int row
+	);
+
+	float counts(
+		const std::vector<float> &in,
 		int row
 	);
 
@@ -88,8 +98,18 @@ struct SparseMatrix {
 		int column
 	);
 
+	float distanceT(
+		const std::vector<float> &in,
+		int column
+	);
+
 	// Count number of elements in each column
 	int countsT(
+		int column
+	);
+
+	float countsT(
+		const std::vector<float> &in,
 		int column
 	);
 
@@ -107,15 +127,27 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// --- Min Max ---
+	float countsOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &in,
+		int row,
+		int oneHotSize
+	);
 
-	float maxOHVs(
+	float countsOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &in,
+		int column,
+		int oneHotSize
+	);
+
+	float distanceOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize
 	);
 
-	float maxOHVsT(
+	float distanceOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize
@@ -123,7 +155,18 @@ struct SparseMatrix {
 
 	// --- Delta Rules ---
 
-	// For dense deltas
+	void deltas(
+		const std::vector<float> &in,
+		float delta,
+		int row
+	);
+
+	void deltasT(
+		const std::vector<float> &in,
+		float delta,
+		int column
+	);
+
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
@@ -131,12 +174,29 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// For dense deltas
 	void deltaOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	// --- Normalization ---
+
+	void normalize(
+		int row
+	);
+
+	void normalizeT(
+		int column
+	);
+
+	float magnitude(
+		int row
+	);
+
+	float magnitudeT(
+		int column
 	);
 
 	// --- Hebb Rules ---
@@ -165,6 +225,17 @@ struct SparseMatrix {
 		int row,
 		int oneHotSize,
 		float alpha
+	);
+
+	// --- Special ---
+
+	void deltaModOHVs(
+		const std::vector<int> &nonZeroIndices,
+		SparseMatrix &rates,
+		float delta,
+		int row,
+		int oneHotSize,
+		float beta // Rate decay
 	);
 };
 } // namespace ogmaneo
