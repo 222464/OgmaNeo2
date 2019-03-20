@@ -49,23 +49,26 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCsPlus,
+        const std::vector<const IntBuffer*> &inputCsMinus
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCsPlus,
+        const std::vector<const IntBuffer*> &inputCsMinus
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCsPlus,
+        const std::vector<const IntBuffer*> &inputCsMinus
     ) {
-        p->forward(pos, rng, inputCs);
+        p->forward(pos, rng, inputCsPlus, inputCsMinus);
     }
 
     static void learnKernel(
@@ -73,9 +76,10 @@ private:
         std::mt19937 &rng,
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCsPlus,
+        const std::vector<const IntBuffer*> &inputCsMinus
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCs);
+        p->learn(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
     }
 
 public:
@@ -97,14 +101,16 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCsPlus,
+        const std::vector<const IntBuffer*> &inputCsMinus
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCsPlus,
+        const std::vector<const IntBuffer*> &inputCsMinus
     );
 
     // Write to stream

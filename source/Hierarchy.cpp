@@ -90,8 +90,6 @@ void Hierarchy::initRandom(
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
-
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_predict) {
@@ -131,8 +129,6 @@ void Hierarchy::initRandom(
 
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-
-            pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
@@ -276,28 +272,30 @@ void Hierarchy::step(
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCsInfer(2);
-            std::vector<const IntBuffer*> feedBackCsLearn(2);
+            std::vector<const IntBuffer*> feedBackCsInferPlus(1);
+            std::vector<const IntBuffer*> feedBackCsInferMinus(1);
+            std::vector<const IntBuffer*> feedBackCsLearnPlus(1);
+            std::vector<const IntBuffer*> feedBackCsLearnMinus(1);
 
-            feedBackCsInfer[0] = &_scLayers[l].getHiddenCs();
-            feedBackCsLearn[0] = &_scLayers[l].getHiddenCsPrev();
-            feedBackCsLearn[1] = &_scLayers[l].getHiddenCs();
+            feedBackCsInferMinus[0] = &_scLayers[l].getHiddenCs();
+            feedBackCsLearnMinus[0] = &_scLayers[l].getHiddenCsPrev();
+            feedBackCsLearnPlus[0] = &_scLayers[l].getHiddenCs();
 
             if (l < _scLayers.size() - 1) {
                 assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBackCsInfer[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBackCsInferPlus[0] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
             else
-                feedBackCsInfer[1] = topFeedBackCs;
+                feedBackCsInferPlus[0] = topFeedBackCs;
 
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
                     if (learnEnabled) 
-                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsLearn);
+                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsLearnPlus, feedBackCsLearnMinus);
 
-                    _pLayers[l][p]->activate(cs, feedBackCsInfer);
+                    _pLayers[l][p]->activate(cs, feedBackCsInferPlus, feedBackCsInferMinus);
                 }
             }
         }

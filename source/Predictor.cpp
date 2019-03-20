@@ -14,7 +14,8 @@ using namespace ogmaneo;
 void Predictor::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs
+    const std::vector<const IntBuffer*> &inputCsPlus,
+    const std::vector<const IntBuffer*> &inputCsMinus
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -31,10 +32,9 @@ void Predictor::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._weights.multiplyOHVs(*inputCsPlus[vli], hiddenIndex, vld._size.z);
+            sum -= vl._weights.multiplyOHVs(*inputCsMinus[vli], hiddenIndex, vld._size.z);
         }
-
-        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -50,7 +50,8 @@ void Predictor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCs
+    const std::vector<const IntBuffer*> &inputCsPlus,
+    const std::vector<const IntBuffer*> &inputCsMinus
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -67,7 +68,8 @@ void Predictor::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._weights.multiplyOHVs(*inputCsPlus[vli], hiddenIndex, vld._size.z);
+            sum -= vl._weights.multiplyOHVs(*inputCsMinus[vli], hiddenIndex, vld._size.z);
         }
 
         if (sum > maxActivation) {
@@ -87,8 +89,10 @@ void Predictor::learn(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.deltaOHVs(*inputCs[vli], _alpha, hiddenIndexTarget, vld._size.z);
-        vl._weights.deltaOHVs(*inputCs[vli], -_alpha, hiddenIndexMax, vld._size.z);
+        vl._weights.deltaOHVs(*inputCsPlus[vli], _alpha, hiddenIndexTarget, vld._size.z);
+        vl._weights.deltaOHVs(*inputCsMinus[vli], -_alpha, hiddenIndexTarget, vld._size.z);
+        vl._weights.deltaOHVs(*inputCsPlus[vli], -_alpha, hiddenIndexMax, vld._size.z);
+        vl._weights.deltaOHVs(*inputCsMinus[vli], _alpha, hiddenIndexMax, vld._size.z);
     }
 }
 
@@ -134,7 +138,8 @@ void Predictor::initRandom(
 
 void Predictor::activate(
     ComputeSystem &cs,
-    const std::vector<const IntBuffer*> &inputCs
+    const std::vector<const IntBuffer*> &inputCsPlus,
+    const std::vector<const IntBuffer*> &inputCsMinus
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -143,16 +148,17 @@ void Predictor::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputCs);
+            forward(Int2(x, y), cs._rng, inputCsPlus, inputCsMinus);
 #else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
 void Predictor::learn(
     ComputeSystem &cs,
     const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCs
+    const std::vector<const IntBuffer*> &inputCsPlus,
+    const std::vector<const IntBuffer*> &inputCsMinus
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -161,9 +167,9 @@ void Predictor::learn(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            learn(Int2(x, y), cs._rng, hiddenTargetCs, inputCs);
+            learn(Int2(x, y), cs._rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
 #else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
