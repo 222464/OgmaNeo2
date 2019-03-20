@@ -44,7 +44,7 @@ public:
     };
 
     struct RouteLayer {
-        std::array<std::vector<SparseMatrix>, 2> _weights;
+        std::vector<SparseMatrix> _weights;
         
         std::vector<IntBuffer> _visibleCounts;
 
@@ -95,7 +95,6 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
-        int w,
         const std::vector<const IntBuffer*> &inputCs
     );
 
@@ -105,7 +104,6 @@ private:
         const IntBuffer* hiddenCs,
         int l,
         int vli,
-        int w,
         const IntBuffer* inputCs
     );
 
@@ -114,7 +112,6 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
-        int w,
         const std::vector<const IntBuffer*> &inputCs
     );
 
@@ -124,10 +121,9 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
-        int w,
         const std::vector<const IntBuffer*> &inputCs
     ) {
-        h->forward(pos, rng, hiddenCs, l, w, inputCs);
+        h->forward(pos, rng, hiddenCs, l, inputCs);
     }
 
     static void backwardKernel(
@@ -137,10 +133,9 @@ private:
         const IntBuffer* hiddenCs,
         int l,
         int vli,
-        int w,
         const IntBuffer* inputCs
     ) {
-        h->backward(pos, rng, hiddenCs, l, vli, w, inputCs);
+        h->backward(pos, rng, hiddenCs, l, vli, inputCs);
     }
 
     static void learnKernel(
@@ -149,10 +144,9 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
-        int w,
         const std::vector<const IntBuffer*> &inputCs
     ) {
-        h->learn(pos, rng, hiddenCs, l, w, inputCs);
+        h->learn(pos, rng, hiddenCs, l, inputCs);
     }
 
 public:
