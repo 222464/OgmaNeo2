@@ -39,6 +39,7 @@ private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsPrev; // Hidden states previous tick
 
     FloatBuffer _hiddenRates; // Hidden rates
 
@@ -139,6 +140,11 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
+    }
+
+    // Get the hidden states previous tick
+    const IntBuffer &getHiddenCsPrev() const {
+        return _hiddenCsPrev;
     }
 
     // Get the hidden size
