@@ -152,7 +152,6 @@ private:
 public:
     float _alpha; // Routing learning rate
     float _gamma; // Discount factor
-    float _clip; // Clipping updates
 
     int _maxHistorySamples; // Maximum number of history samples
     int _historyIters; // Number of times to iterate over history
