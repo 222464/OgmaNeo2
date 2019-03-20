@@ -58,6 +58,8 @@ void Predictor::learn(
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
+    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
+
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
@@ -72,27 +74,19 @@ void Predictor::learn(
             sum -= vl._weights.multiplyOHVs(*inputCsMinus[vli], hiddenIndex, vld._size.z);
         }
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
+        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-            maxIndex = hc;
+        float target = (hc == targetC ? 1.0f : 0.0f);
+
+        float delta = _alpha * (target - sigmoid(sum));
+
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            vl._weights.deltaOHVs(*inputCsPlus[vli], delta, hiddenIndex, vld._size.z);
+            vl._weights.deltaOHVs(*inputCsMinus[vli], -delta, hiddenIndex, vld._size.z);
         }
-    }
-    
-    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
-
-    int hiddenIndexTarget = address3C(Int3(pos.x, pos.y, targetC), _hiddenSize);
-    int hiddenIndexMax = address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
-
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        vl._weights.deltaOHVs(*inputCsPlus[vli], _alpha, hiddenIndexTarget, vld._size.z);
-        vl._weights.deltaOHVs(*inputCsMinus[vli], -_alpha, hiddenIndexTarget, vld._size.z);
-        vl._weights.deltaOHVs(*inputCsPlus[vli], -_alpha, hiddenIndexMax, vld._size.z);
-        vl._weights.deltaOHVs(*inputCsMinus[vli], _alpha, hiddenIndexMax, vld._size.z);
     }
 }
 
