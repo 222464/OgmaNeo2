@@ -276,28 +276,25 @@ void Hierarchy::step(
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCsInfer(2);
-            std::vector<const IntBuffer*> feedBackCsLearn(2);
+            std::vector<const IntBuffer*> feedBackCs(2);
 
-            feedBackCsInfer[0] = &_scLayers[l].getHiddenCs();
-            feedBackCsLearn[0] = &_scLayers[l].getHiddenCsPrev();
-            feedBackCsLearn[1] = &_scLayers[l].getHiddenCs();
+            feedBackCs[0] = &_scLayers[l].getHiddenCs();
 
             if (l < _scLayers.size() - 1) {
                 assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBackCsInfer[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBackCs[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
             else
-                feedBackCsInfer[1] = topFeedBackCs;
+                feedBackCs[1] = topFeedBackCs;
 
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
                     if (learnEnabled) 
-                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsLearn);
+                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCs);
 
-                    _pLayers[l][p]->activate(cs, feedBackCsInfer);
+                    _pLayers[l][p]->activate(cs, feedBackCs);
                 }
             }
         }
