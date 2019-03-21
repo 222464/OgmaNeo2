@@ -50,6 +50,7 @@ private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsPrev; // Hidden states from previous tick
 
     IntBuffer _predictedCs; // Predicted (pathed) states
 

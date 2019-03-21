@@ -103,6 +103,7 @@ void Pather::forward(
         }
     }
 
+    _hiddenCsPrev[hiddenColumnIndex] = _hiddenCs[hiddenColumnIndex];
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
@@ -140,6 +141,21 @@ void Pather::transition(
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
+    if (learnEnabled) {
+        int startIndex = _hiddenCsPrev[hiddenColumnIndex];
+        int endIndex = _hiddenCs[hiddenColumnIndex];
+
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + hc * _hiddenSize.z + startIndex;
+
+            float target = (hc == endIndex ? 1.0f : 0.0f);
+
+            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        }
+    }
+
+    // Pathfind
+    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights);
 }
 
 void Pather::reconstruct(
@@ -216,6 +232,7 @@ void Pather::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
+    _hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 
     _predictedCs = IntBuffer(numHiddenColumns, 0);
 
@@ -290,6 +307,7 @@ void Pather::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
+    writeBufferToStream(os, &_hiddenCsPrev);
 
     writeBufferToStream(os, &_predictedCs);
 
@@ -322,6 +340,7 @@ void Pather::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
+    readBufferFromStream(is, &_hiddenCsPrev);
 
     readBufferFromStream(is, &_predictedCs);
 
