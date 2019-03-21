@@ -136,7 +136,7 @@ public:
     Pather()
     :
     _alpha(0.1f),
-    _beta(0.01f)
+    _beta(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization

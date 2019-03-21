@@ -146,9 +146,9 @@ void Pather::transition(
         int endIndex = _hiddenCs[hiddenColumnIndex];
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + hc * _hiddenSize.z + startIndex;
+            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + hc * _hiddenSize.z + endIndex;
 
-            float target = (hc == endIndex ? 1.0f : 0.0f);
+            float target = (hc == startIndex ? 1.0f : 0.0f);
 
             _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
         }
