@@ -33,6 +33,8 @@ public:
         SparseMatrix _weights; // Weight matrix
 
         IntBuffer _visibleCounts; // Number touching
+
+        IntBuffer _recons; // Reconstruction
     };
 
 private:
@@ -62,6 +64,13 @@ private:
         int vli
     );
 
+    void reconstruct(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int vli
+    );
+
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -80,6 +89,16 @@ private:
         int vli
     ) {
         sc->learnWeights(pos, rng, inputCs, vli);
+    }
+
+    static void reconstructKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const IntBuffer* hiddenCs,
+        int vli
+    ) {
+        sc->reconstruct(pos, rng, hiddenCs, vli);
     }
 
 public:
@@ -105,6 +124,11 @@ public:
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input states
         bool learnEnabled // Whether to learn
+    );
+
+    void reconstruct(
+        ComputeSystem &cs, // Compute system
+        const IntBuffer* hiddenCs // States to reconstruct
     );
 
     // Write to stream

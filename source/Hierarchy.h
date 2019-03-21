@@ -9,7 +9,6 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
 
 #include <memory>
 
@@ -46,7 +45,6 @@ public:
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -60,6 +58,8 @@ private:
 
     // Input dimensions
     std::vector<Int3> _inputSizes;
+
+    int _inputTemporalHorizon;
 
 public:
     // Default
@@ -112,7 +112,7 @@ public:
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front()[i]->getHiddenCs();
+        return _scLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._recons;
     }
 
     // Whether this layer received on update this timestep
@@ -153,20 +153,6 @@ public:
         int l // Layer index
     ) const {
         return _scLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
-    ) {
-        return _pLayers[l];
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
-    ) const {
-        return _pLayers[l];
     }
 };
 } // namespace ogmaneo

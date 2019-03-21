@@ -79,6 +79,35 @@ void SparseCoder::learnWeights(
     }
 }
 
+void SparseCoder::reconstruct(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    int vli
+) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    int visibleColumnIndex = address2C(pos, Int2(vld._size.x, vld._size.y));
+    
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
+
+        float sum = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z);
+
+        if (sum > maxActivation) {
+            maxActivation = sum;
+
+            maxIndex = vc;
+        }
+    }
+
+    vl._recons[visibleColumnIndex] = maxIndex;
+}
+
 void SparseCoder::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
@@ -118,6 +147,8 @@ void SparseCoder::initRandom(
 
         for (int i = 0; i < numVisibleColumns; i++)
             vl._visibleCounts[i] = vl._weights.countsT(i * vld._size.z) / _hiddenSize.z;
+
+        vl._recons = IntBuffer(numVisibleColumns, 0);
     }
 
     // Hidden Cs
@@ -159,6 +190,24 @@ void SparseCoder::step(
     }
 }
 
+void SparseCoder::reconstruct(
+    ComputeSystem &cs,
+    const IntBuffer* hiddenCs
+) {
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < vld._size.x; x++)
+            for (int y = 0; y < vld._size.y; y++)
+                reconstruct(Int2(x, y), cs._rng, hiddenCs, vli);
+#else
+        runKernel2(cs, std::bind(SparseCoder::reconstructKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+#endif
+    }
+}
+
 void SparseCoder::writeToStream(
     std::ostream &os
 ) const {
@@ -186,6 +235,8 @@ void SparseCoder::writeToStream(
         writeSMToStream(os, vl._weights);
 
         writeBufferToStream(os, &vl._visibleCounts);
+
+        writeBufferToStream(os, &vl._recons);
     }
 }
 
@@ -222,5 +273,7 @@ void SparseCoder::readFromStream(
         readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._visibleCounts);
+
+        readBufferFromStream(is, &vl._recons);
     }
 }
