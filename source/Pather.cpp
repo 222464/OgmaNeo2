@@ -59,7 +59,7 @@ int ogmaneo::findNextIndex(
         q.erase(u);
 
         for (int n = 0; n < size; n++) {
-            float w = weights[weightsStart + n + u * size];
+            float w = weights[weightsStart + u * size + n];
 
             float alt = dist[u] + 1.0f / (0.00001f + w);
             
@@ -144,13 +144,18 @@ void Pather::transition(
     if (learnEnabled) {
         int startIndex = _hiddenCsPrev[hiddenColumnIndex];
         int endIndex = _hiddenCs[hiddenColumnIndex];
+        int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + hc * _hiddenSize.z + endIndex;
+        if (predIndexPrev != endIndex) {
+            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + startIndex * _hiddenSize.z + predIndexPrev;
 
-            float target = (hc == startIndex ? 1.0f : 0.0f);
+            _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
+        }
 
-            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        {
+            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + startIndex * _hiddenSize.z + endIndex;
+
+            _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
         }
     }
 
@@ -311,6 +316,8 @@ void Pather::writeToStream(
 
     writeBufferToStream(os, &_predictedCs);
 
+    writeBufferToStream(os, &_transitionWeights);
+
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -343,6 +350,8 @@ void Pather::readFromStream(
     readBufferFromStream(is, &_hiddenCsPrev);
 
     readBufferFromStream(is, &_predictedCs);
+
+    readBufferFromStream(is, &_transitionWeights);
 
     int numVisibleLayers;
     
