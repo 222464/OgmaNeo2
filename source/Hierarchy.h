@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "SparseCoder.h"
+#include "Pather.h"
 
 #include <memory>
 
@@ -42,7 +42,7 @@ public:
     };
 private:
     // Layers
-    std::vector<SparseCoder> _scLayers;
+    std::vector<Pather> _pLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -102,14 +102,14 @@ public:
 
     // Get the number of layers (scLayers)
     int getNumLayers() const {
-        return _scLayers.size();
+        return _pLayers.size();
     }
 
     // Retrieve predictions
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _scLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._recons;
+        return _pLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._recons;
     }
 
     // Whether this layer received on update this timestep
@@ -139,17 +139,17 @@ public:
     }
 
     // Retrieve a sparse coding layer
-    SparseCoder &getSCLayer(
+    Pather &getPLayer(
         int l // Layer index
     ) {
-        return _scLayers[l];
+        return _pLayers[l];
     }
 
     // Retrieve a sparse coding layer, const version
-    const SparseCoder &getSCLayer(
+    const Pather &getPLayer(
         int l // Layer index
     ) const {
-        return _scLayers[l];
+        return _pLayers[l];
     }
 };
 } // namespace ogmaneo

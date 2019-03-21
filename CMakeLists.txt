@@ -32,7 +32,7 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
     "${SOURCE_PATH}/Helpers.cpp"
-    "${SOURCE_PATH}/SparseCoder.cpp"
+    "${SOURCE_PATH}/Pather.cpp"
     "${SOURCE_PATH}/Hierarchy.cpp"
     "${SOURCE_PATH}/ImageEncoder.cpp"
 	"${SOURCE_PATH}/SparseMatrix.cpp"
@@ -40,7 +40,7 @@ set(SOURCES
 
 set(HEADERS
 	"${SOURCE_PATH}/Helpers.h"
-    "${SOURCE_PATH}/SparseCoder.h"
+    "${SOURCE_PATH}/Pather.h"
     "${SOURCE_PATH}/Hierarchy.h"
     "${SOURCE_PATH}/ImageEncoder.h"
 	"${SOURCE_PATH}/SparseMatrix.h"

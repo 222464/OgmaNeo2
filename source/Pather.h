@@ -11,8 +11,17 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
+// Pathfinding
+int findNextIndex(
+    int startIndex,
+    int endIndex,
+    int size,
+    int weightsStart,
+    const FloatBuffer &weights
+);
+
 // Sparse coder
-class SparseCoder {
+class Pather {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
@@ -42,7 +51,9 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenRates; // Hidden rates
+    IntBuffer _predictedCs; // Predicted (pathed) states
+
+    FloatBuffer _transitionWeights; // Transitioning (state to next state) probability weights
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -53,8 +64,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     void learnWeights(
@@ -62,6 +72,13 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
+    );
+
+    void transition(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* feedBackCs,
+        bool learnEnabled
     );
 
     void reconstruct(
@@ -74,27 +91,36 @@ private:
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        Pather* sc,
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        sc->forward(pos, rng, inputCs);
     }
 
     static void learnWeightsKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
+        Pather* sc,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
     ) {
         sc->learnWeights(pos, rng, inputCs, vli);
     }
 
+    static void transitionKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Pather* sc,
+        const IntBuffer* feedBackCs,
+        bool learnEnabled
+    ) {
+        sc->transition(pos, rng, feedBackCs, learnEnabled);
+    }
+
     static void reconstructKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
+        Pather* sc,
         const IntBuffer* hiddenCs,
         int vli
     ) {
@@ -103,13 +129,13 @@ private:
 
 public:
     float _alpha; // Weight learning rate
-    float _beta; // Learning rate decay
+    float _beta; // Transition learning rate
 
     // Defaults
-    SparseCoder()
+    Pather()
     :
     _alpha(0.1f),
-    _beta(0.998f)
+    _beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -120,15 +146,16 @@ public:
     );
 
     // Activate the sparse coder (perform sparse coding)
-    void step(
+    void stepUp(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input states
         bool learnEnabled // Whether to learn
     );
 
-    void reconstruct(
+    void stepDown(
         ComputeSystem &cs, // Compute system
-        const IntBuffer* hiddenCs // States to reconstruct
+        const IntBuffer* feedBackCs, // States to reconstruct
+        bool learnEnabled // Whether to learn
     );
 
     // Write to stream
