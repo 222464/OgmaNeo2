@@ -27,7 +27,6 @@ public:
         Int3 _hiddenSize; // Size of hidden layer
 
         int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction Radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -37,7 +36,6 @@ public:
         :
         _hiddenSize(4, 4, 16),
         _scRadius(2),
-        _pRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}
@@ -81,7 +79,6 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const std::vector<Int3> &inputSizes, // Sizes of input layers
-        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
         const std::vector<LayerDesc> &layerDescs // Descriptors for layers
     );
 
