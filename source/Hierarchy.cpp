@@ -13,6 +13,18 @@
 
 using namespace ogmaneo;
 
+float ogmaneo::scaledBiasedSigmoid(float x) {
+    return sigmoid(x - 1.0f) * 2.0f;
+}
+
+float ogmaneo::scaledBiasedSigmoidDeriv(float x) {
+    float v = std::exp(1.0f - x);
+    float s = v + 1.0f;
+    s *= s;
+
+    return 2.0f * v / s;
+}
+
 void Hierarchy::forward(
     const Int2 &pos,
     std::mt19937 &rng,
@@ -34,10 +46,17 @@ void Hierarchy::forward(
                 sum += _rLayers[l]._weights[w][vli].multiplyOHVsT(*inputCs[vli], hiddenIndex, _inputSizes[vli].z);
         }
 
-        _rLayers[l]._activations[hiddenColumnIndex] = sum / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+        sum /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+
+        _rLayers[l]._activations[hiddenColumnIndex] = scaledBiasedSigmoid(sum);
+        _rLayers[l]._derivatives[hiddenColumnIndex] = scaledBiasedSigmoidDeriv(sum);
     }
-    else
-        _rLayers[l]._activations[hiddenColumnIndex] = _rLayers[l]._weights[w][0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+    else {
+        float sum = _rLayers[l]._weights[w][0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+
+        _rLayers[l]._activations[hiddenColumnIndex] = scaledBiasedSigmoid(sum);
+        _rLayers[l]._derivatives[hiddenColumnIndex] = scaledBiasedSigmoidDeriv(sum);
+    }
 }
 
 void Hierarchy::backward(
@@ -76,6 +95,8 @@ void Hierarchy::backward(
         int visibleIndex = address3C(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
         _rLayers[l - 1]._errors[visibleColumnIndex] = _rLayers[l]._weights[w][vli].multiplyOHVs(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+    
+        _rLayers[l - 1]._errors[visibleColumnIndex] *= _rLayers[l - 1]._derivatives[visibleColumnIndex];
     }
 }
 
@@ -91,17 +112,17 @@ void Hierarchy::learn(
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
-    float delta = _rLayers[l]._errors[hiddenColumnIndex];
+    float delta = _alpha * _rLayers[l]._errors[hiddenColumnIndex];
 
     if (l == 0) {
         // For each visible layer
         for (int vli = 0; vli < _rLayers[l]._weights[w].size(); vli++) {
             if (!_rLayers[l]._weights[w][vli]._nonZeroValues.empty())
-                _rLayers[l]._weights[w][vli].deltaRateOHVsT(*inputCs[vli], _rLayers[l]._rates[w][vli], delta, hiddenIndex, _inputSizes[vli].z, _alpha, _beta);
+                _rLayers[l]._weights[w][vli].deltaOHVsT(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
         }
     }
     else
-        _rLayers[l]._weights[w][0].deltaRateOHVsT(*inputCs[0], _rLayers[l]._rates[w][0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z, _alpha, _beta);
+        _rLayers[l]._weights[w][0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 }
 
 void Hierarchy::initRandom(
@@ -151,8 +172,6 @@ void Hierarchy::initRandom(
 
             _rLayers[l]._weights[0].resize(_inputSizes.size());
             _rLayers[l]._weights[1].resize(_inputSizes.size());
-            _rLayers[l]._rates[0].resize(_inputSizes.size());
-            _rLayers[l]._rates[1].resize(_inputSizes.size());
             _rLayers[l]._visibleCounts.resize(_inputSizes.size());
 
             _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
@@ -172,14 +191,12 @@ void Hierarchy::initRandom(
 
                     _rLayers[l]._weights[0][i].initT();
 
-                    _rLayers[l]._rates[1][i] = _rLayers[l]._rates[0][i] = _rLayers[l]._weights[1][i] = _rLayers[l]._weights[0][i];
+                    _rLayers[l]._weights[1][i] = _rLayers[l]._weights[0][i];
 
                     // Init weights
                     for (int j = 0; j < _rLayers[l]._weights[0][i]._nonZeroValues.size(); j++) {
                         _rLayers[l]._weights[0][i]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
                         _rLayers[l]._weights[1][i]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
-                        _rLayers[l]._rates[0][i]._nonZeroValues[j] = 1.0f;
-                        _rLayers[l]._rates[1][i]._nonZeroValues[j] = 1.0f;
                     }
 
                     for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
@@ -208,8 +225,6 @@ void Hierarchy::initRandom(
 
             _rLayers[l]._weights[0].resize(1);
             _rLayers[l]._weights[1].resize(1);
-            _rLayers[l]._rates[0].resize(1);
-            _rLayers[l]._rates[1].resize(1);
             _rLayers[l]._visibleCounts.resize(1);
 
             _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
@@ -223,14 +238,12 @@ void Hierarchy::initRandom(
 
             _rLayers[l]._weights[0][0].initT();
 
-            _rLayers[l]._rates[1][0] = _rLayers[l]._rates[0][0] = _rLayers[l]._weights[1][0] = _rLayers[l]._weights[0][0];
+            _rLayers[l]._weights[1][0] = _rLayers[l]._weights[0][0];
 
             // Init weights
             for (int j = 0; j < _rLayers[l]._weights[0][0]._nonZeroValues.size(); j++) {
                 _rLayers[l]._weights[0][0]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
                 _rLayers[l]._weights[1][0]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
-                _rLayers[l]._rates[0][0]._nonZeroValues[j] = 1.0f;
-                _rLayers[l]._rates[1][0]._nonZeroValues[j] = 1.0f;
             }
 
             for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
@@ -251,6 +264,7 @@ void Hierarchy::initRandom(
         }
 
         _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
+        _rLayers[l]._derivatives = FloatBuffer(_rLayers[l]._activations.size(), 0.0f);
         _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 1.0f);
 		
         // Create the sparse coding layer
@@ -598,6 +612,7 @@ void Hierarchy::writeToStream(
         _scLayers[l].writeToStream(os);
 
         writeBufferToStream(os, &_rLayers[l]._activations);
+        writeBufferToStream(os, &_rLayers[l]._derivatives);
         writeBufferToStream(os, &_rLayers[l]._errors);
         writeBufferToStream(os, &_rLayers[l]._hiddenCounts);
 
@@ -609,8 +624,6 @@ void Hierarchy::writeToStream(
             if (exists) {
                 writeSMToStream(os, _rLayers[l]._weights[0][v]);
                 writeSMToStream(os, _rLayers[l]._weights[1][v]);
-                writeSMToStream(os, _rLayers[l]._rates[0][v]);
-                writeSMToStream(os, _rLayers[l]._rates[1][v]);
                 writeBufferToStream(os, &_rLayers[l]._visibleCounts[v]);
             }
         }
@@ -692,21 +705,18 @@ void Hierarchy::readFromStream(
         _scLayers[l].readFromStream(is);
 
         readBufferFromStream(is, &_rLayers[l]._activations);
+        readBufferFromStream(is, &_rLayers[l]._derivatives);
         readBufferFromStream(is, &_rLayers[l]._errors);
         readBufferFromStream(is, &_rLayers[l]._hiddenCounts);
 
         if (l == 0) {
             _rLayers[l]._weights[0].resize(_inputSizes.size());
             _rLayers[l]._weights[1].resize(_inputSizes.size());
-            _rLayers[l]._rates[0].resize(_inputSizes.size());
-            _rLayers[l]._rates[1].resize(_inputSizes.size());
             _rLayers[l]._visibleCounts.resize(_inputSizes.size());
         }
         else {
             _rLayers[l]._weights[0].resize(1);
             _rLayers[l]._weights[1].resize(1);
-            _rLayers[l]._rates[0].resize(1);
-            _rLayers[l]._rates[1].resize(1);
             _rLayers[l]._visibleCounts.resize(1);
         }
 
@@ -718,8 +728,6 @@ void Hierarchy::readFromStream(
             if (exists) {
                 readSMFromStream(is, _rLayers[l]._weights[0][v]);
                 readSMFromStream(is, _rLayers[l]._weights[1][v]);
-                readSMFromStream(is, _rLayers[l]._rates[0][v]);
-                readSMFromStream(is, _rLayers[l]._rates[1][v]);
                 readBufferFromStream(is, &_rLayers[l]._visibleCounts[v]);
             }
         }

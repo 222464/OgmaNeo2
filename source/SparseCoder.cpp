@@ -62,9 +62,9 @@ void SparseCoder::learnWeights(
 
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        float delta = target - sum;
+        float delta = _alpha * (target - sum);
 
-        vl._weights.deltaRateOHVsT(_hiddenCs, vl._rates, delta, visibleIndex, _hiddenSize.z, _alpha, _beta);
+        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 
@@ -99,12 +99,8 @@ void SparseCoder::initRandom(
         // Generate transpose (needed for reconstruction)
         vl._weights.initT();
 
-        vl._rates = vl._weights;
-
-        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++) {
+        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
-            vl._rates._nonZeroValues[i] = 1.0f;
-        }
 
         // Counts
         vl._visibleCounts = IntBuffer(numVisibleColumns);

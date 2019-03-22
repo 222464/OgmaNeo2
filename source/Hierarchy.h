@@ -19,6 +19,9 @@ enum InputType {
     _act = 1
 };
 
+float scaledBiasedSigmoid(float x);
+float scaledBiasedSigmoidDeriv(float x);
+
 // A SPH
 class Hierarchy {
 public:
@@ -45,11 +48,11 @@ public:
 
     struct RouteLayer {
         std::array<std::vector<SparseMatrix>, 2> _weights;
-        std::array<std::vector<SparseMatrix>, 2> _rates;
         
         std::vector<IntBuffer> _visibleCounts;
 
         FloatBuffer _activations;
+        FloatBuffer _derivatives;
 
         FloatBuffer _errors;
 
@@ -167,8 +170,8 @@ public:
     // Default
     Hierarchy()
     :
-    _alpha(0.01f),
-    _beta(0.1f),
+    _alpha(0.001f),
+    _beta(0.01f),
     _gamma(0.98f),
     _maxHistorySamples(32),
     _historyIters(8)
