@@ -627,7 +627,7 @@ void SparseMatrix::deltaRateOHVs(
 
 		float d = delta * nonZeroValues[i];
 
-		_nonZeroValues[j] += alpha * d / std::sqrt(0.0001f + rates._nonZeroValues[j]);
+		_nonZeroValues[j] += alpha * d * rates._nonZeroValues[j];
 
 		rates._nonZeroValues[j] = (1.0f - beta) * rates._nonZeroValues[j] + beta * d * d;
 	}
@@ -651,7 +651,7 @@ void SparseMatrix::deltaRateOHVsT(
 
 		float d = delta * nonZeroValues[i];
 
-		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * d / std::sqrt(0.0001f + rates._nonZeroValues[rates._nonZeroValueIndices[j]]);
+		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * d * rates._nonZeroValues[rates._nonZeroValueIndices[j]];
 
 		rates._nonZeroValues[rates._nonZeroValueIndices[j]] = (1.0f - beta) * rates._nonZeroValues[rates._nonZeroValueIndices[j]] + beta * d * d;
 	}
