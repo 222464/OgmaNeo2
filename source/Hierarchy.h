@@ -45,6 +45,7 @@ public:
 
     struct RouteLayer {
         std::array<std::vector<SparseMatrix>, 2> _weights;
+        std::array<std::vector<SparseMatrix>, 2> _rates;
         
         std::vector<IntBuffer> _visibleCounts;
 
@@ -157,8 +158,8 @@ private:
 
 public:
     float _alpha; // Routing learning rate
+    float _beta; // Rate decay
     float _gamma; // Discount factor
-    float _clip; // Clipping updates
 
     int _maxHistorySamples; // Maximum number of history samples
     int _historyIters; // Number of times to iterate over history
@@ -166,9 +167,9 @@ public:
     // Default
     Hierarchy()
     :
-    _alpha(0.01f),
+    _alpha(0.001f),
+    _beta(0.1f),
     _gamma(0.98f),
-    _clip(0.1f),
     _maxHistorySamples(32),
     _historyIters(8)
     {}

@@ -200,8 +200,7 @@ struct SparseMatrix {
 		const std::vector<float> &nonZeroScalars,
 		float delta,
 		int row,
-		int oneHotSize,
-		float clip = 0.0f
+		int oneHotSize
 	);
 
 	void deltaOHVsT(
@@ -209,8 +208,7 @@ struct SparseMatrix {
 		const std::vector<float> &nonZeroScalars,
 		float delta,
 		int column,
-		int oneHotSize,
-		float clip = 0.0f
+		int oneHotSize
 	);
 
 	// --- Normalization ---
@@ -274,6 +272,28 @@ struct SparseMatrix {
 	void deltaRateOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		SparseMatrix &rates,
+		float delta,
+		int column,
+		int oneHotSize,
+		float alpha,
+		float beta
+	);
+
+	void deltaRateOHVs(
+		const std::vector<int> &nonZeroIndices,
+		SparseMatrix &rates,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize,
+		float alpha,
+		float beta
+	);
+
+	void deltaRateOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		SparseMatrix &rates,
+		const std::vector<float> &nonZeroScalars,
 		float delta,
 		int column,
 		int oneHotSize,

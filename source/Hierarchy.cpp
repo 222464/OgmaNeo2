@@ -91,17 +91,17 @@ void Hierarchy::learn(
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
-    float delta = _alpha * _rLayers[l]._errors[hiddenColumnIndex];
+    float delta = _rLayers[l]._errors[hiddenColumnIndex];
 
     if (l == 0) {
         // For each visible layer
         for (int vli = 0; vli < _rLayers[l]._weights[w].size(); vli++) {
             if (!_rLayers[l]._weights[w][vli]._nonZeroValues.empty())
-                _rLayers[l]._weights[w][vli].deltaOHVsT(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
+                _rLayers[l]._weights[w][vli].deltaRateOHVsT(*inputCs[vli], _rLayers[l]._rates[w][vli], delta, hiddenIndex, _inputSizes[vli].z, _alpha, _beta);
         }
     }
     else
-        _rLayers[l]._weights[w][0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z, _clip);
+        _rLayers[l]._weights[w][0].deltaRateOHVsT(*inputCs[0], _rLayers[l]._rates[w][0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z, _alpha, _beta);
 }
 
 void Hierarchy::initRandom(
@@ -151,6 +151,8 @@ void Hierarchy::initRandom(
 
             _rLayers[l]._weights[0].resize(_inputSizes.size());
             _rLayers[l]._weights[1].resize(_inputSizes.size());
+            _rLayers[l]._rates[0].resize(_inputSizes.size());
+            _rLayers[l]._rates[1].resize(_inputSizes.size());
             _rLayers[l]._visibleCounts.resize(_inputSizes.size());
 
             _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
@@ -170,12 +172,14 @@ void Hierarchy::initRandom(
 
                     _rLayers[l]._weights[0][i].initT();
 
-                    _rLayers[l]._weights[1][i] = _rLayers[l]._weights[0][i];
+                    _rLayers[l]._rates[1][i] = _rLayers[l]._rates[0][i] = _rLayers[l]._weights[1][i] = _rLayers[l]._weights[0][i];
 
                     // Init weights
                     for (int j = 0; j < _rLayers[l]._weights[0][i]._nonZeroValues.size(); j++) {
                         _rLayers[l]._weights[0][i]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
                         _rLayers[l]._weights[1][i]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
+                        _rLayers[l]._rates[0][i]._nonZeroValues[j] = 1.0f;
+                        _rLayers[l]._rates[1][i]._nonZeroValues[j] = 1.0f;
                     }
 
                     for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
@@ -204,6 +208,8 @@ void Hierarchy::initRandom(
 
             _rLayers[l]._weights[0].resize(1);
             _rLayers[l]._weights[1].resize(1);
+            _rLayers[l]._rates[0].resize(1);
+            _rLayers[l]._rates[1].resize(1);
             _rLayers[l]._visibleCounts.resize(1);
 
             _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
@@ -217,12 +223,14 @@ void Hierarchy::initRandom(
 
             _rLayers[l]._weights[0][0].initT();
 
-            _rLayers[l]._weights[1][0] = _rLayers[l]._weights[0][0];
+            _rLayers[l]._rates[1][0] = _rLayers[l]._rates[0][0] = _rLayers[l]._weights[1][0] = _rLayers[l]._weights[0][0];
 
             // Init weights
             for (int j = 0; j < _rLayers[l]._weights[0][0]._nonZeroValues.size(); j++) {
                 _rLayers[l]._weights[0][0]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
                 _rLayers[l]._weights[1][0]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
+                _rLayers[l]._rates[0][0]._nonZeroValues[j] = 1.0f;
+                _rLayers[l]._rates[1][0]._nonZeroValues[j] = 1.0f;
             }
 
             for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
@@ -601,6 +609,8 @@ void Hierarchy::writeToStream(
             if (exists) {
                 writeSMToStream(os, _rLayers[l]._weights[0][v]);
                 writeSMToStream(os, _rLayers[l]._weights[1][v]);
+                writeSMToStream(os, _rLayers[l]._rates[0][v]);
+                writeSMToStream(os, _rLayers[l]._rates[1][v]);
                 writeBufferToStream(os, &_rLayers[l]._visibleCounts[v]);
             }
         }
@@ -608,7 +618,6 @@ void Hierarchy::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_clip), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySamples), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
@@ -689,11 +698,15 @@ void Hierarchy::readFromStream(
         if (l == 0) {
             _rLayers[l]._weights[0].resize(_inputSizes.size());
             _rLayers[l]._weights[1].resize(_inputSizes.size());
+            _rLayers[l]._rates[0].resize(_inputSizes.size());
+            _rLayers[l]._rates[1].resize(_inputSizes.size());
             _rLayers[l]._visibleCounts.resize(_inputSizes.size());
         }
         else {
             _rLayers[l]._weights[0].resize(1);
             _rLayers[l]._weights[1].resize(1);
+            _rLayers[l]._rates[0].resize(1);
+            _rLayers[l]._rates[1].resize(1);
             _rLayers[l]._visibleCounts.resize(1);
         }
 
@@ -705,6 +718,8 @@ void Hierarchy::readFromStream(
             if (exists) {
                 readSMFromStream(is, _rLayers[l]._weights[0][v]);
                 readSMFromStream(is, _rLayers[l]._weights[1][v]);
+                readSMFromStream(is, _rLayers[l]._rates[0][v]);
+                readSMFromStream(is, _rLayers[l]._rates[1][v]);
                 readBufferFromStream(is, &_rLayers[l]._visibleCounts[v]);
             }
         }
@@ -712,7 +727,6 @@ void Hierarchy::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_clip), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySamples), sizeof(int));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 

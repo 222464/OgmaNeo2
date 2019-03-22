@@ -81,11 +81,13 @@ private:
 
 public:
     float _alpha; // Weight learning rate
+    float _beta; // Rate decay
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.001f)
+    _alpha(0.001f),
+    _beta(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization

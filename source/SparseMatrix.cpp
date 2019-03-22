@@ -418,26 +418,15 @@ void SparseMatrix::deltaOHVs(
 	const std::vector<float> &nonZeroValues,
 	float delta,
 	int row,
-	int oneHotSize,
-	float clip
+	int oneHotSize
 ) {
 	int nextIndex = row + 1;
 
-	if (clip == 0.0f) {
-		for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
-			int i = _columnIndices[jj] / oneHotSize;
-			int j = jj + nonZeroIndices[i];
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = _columnIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
 
-			_nonZeroValues[j] += delta * nonZeroValues[i];
-		}
-	}
-	else {
-		for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
-			int i = _columnIndices[jj] / oneHotSize;
-			int j = jj + nonZeroIndices[i];
-
-			_nonZeroValues[j] += std::min(clip, std::max(-clip, delta * nonZeroValues[i]));
-		}
+		_nonZeroValues[j] += delta * nonZeroValues[i];
 	}
 }
 
@@ -446,26 +435,15 @@ void SparseMatrix::deltaOHVsT(
 	const std::vector<float> &nonZeroValues,
 	float delta,
 	int column,
-	int oneHotSize,
-	float clip
+	int oneHotSize
 ) {
 	int nextIndex = column + 1;
 
-	if (clip == 0.0f) {
-		for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
-			int i = _rowIndices[jj] / oneHotSize;
-			int j = jj + nonZeroIndices[i];
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int i = _rowIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
 
-			_nonZeroValues[_nonZeroValueIndices[j]] += delta * nonZeroValues[i];
-		}
-	}
-	else {
-		for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
-			int i = _rowIndices[jj] / oneHotSize;
-			int j = jj + nonZeroIndices[i];
-
-			_nonZeroValues[_nonZeroValueIndices[j]] += std::min(clip, std::max(-clip, delta * nonZeroValues[i]));
-		}
+		_nonZeroValues[_nonZeroValueIndices[j]] += delta * nonZeroValues[i];
 	}
 }
 
@@ -611,7 +589,7 @@ void SparseMatrix::deltaRateOHVs(
 	}
 }
 
-void SparseMatrix::deltaRateOHVs(
+void SparseMatrix::deltaRateOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	SparseMatrix &rates,
 	float delta,
@@ -628,5 +606,53 @@ void SparseMatrix::deltaRateOHVs(
 		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * delta / (0.0001f + std::sqrt(rates._nonZeroValues[j]));
 
 		rates._nonZeroValues[rates._nonZeroValueIndices[j]] = (1.0f - beta) * rates._nonZeroValues[rates._nonZeroValueIndices[j]] + beta * delta * delta;
+	}
+}
+
+void SparseMatrix::deltaRateOHVs(
+	const std::vector<int> &nonZeroIndices,
+	SparseMatrix &rates,
+	const std::vector<float> &nonZeroValues,
+	float delta,
+	int row,
+	int oneHotSize,
+	float alpha,
+	float beta
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = _columnIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		float d = delta * nonZeroValues[i];
+
+		_nonZeroValues[j] += alpha * d / (0.0001f + std::sqrt(rates._nonZeroValues[j]));
+
+		rates._nonZeroValues[j] = (1.0f - beta) * rates._nonZeroValues[j] + beta * d * d;
+	}
+}
+
+void SparseMatrix::deltaRateOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	SparseMatrix &rates,
+	const std::vector<float> &nonZeroValues,
+	float delta,
+	int column,
+	int oneHotSize,
+	float alpha,
+	float beta
+) {
+	int nextIndex = column + 1;
+
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int i = _rowIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		float d = delta * nonZeroValues[i];
+
+		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * d / (0.0001f + std::sqrt(rates._nonZeroValues[j]));
+
+		rates._nonZeroValues[rates._nonZeroValueIndices[j]] = (1.0f - beta) * rates._nonZeroValues[rates._nonZeroValueIndices[j]] + beta * d * d;
 	}
 }
