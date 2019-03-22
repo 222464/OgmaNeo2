@@ -161,7 +161,6 @@ private:
 
 public:
     float _alpha; // Routing learning rate
-    float _beta; // Rate decay
     float _gamma; // Discount factor
 
     int _maxHistorySamples; // Maximum number of history samples
@@ -171,7 +170,6 @@ public:
     Hierarchy()
     :
     _alpha(0.001f),
-    _beta(0.01f),
     _gamma(0.98f),
     _maxHistorySamples(32),
     _historyIters(8)
