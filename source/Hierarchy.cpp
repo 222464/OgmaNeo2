@@ -128,7 +128,7 @@ void Hierarchy::initRandom(
     for (int l = 0; l < layerDescs.size(); l++)
         _ticksPerUpdate[l] = l == 0 ? 1 : layerDescs[l]._ticksPerUpdate; // First layer always 1
 
-    std::uniform_real_distribution<float> noiseDist(-0.0001f, 0.0001f);
+    std::uniform_real_distribution<float> weightDist(0.9999f, 1.0001f);
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
@@ -168,7 +168,7 @@ void Hierarchy::initRandom(
 
                     // Init weights
                     for (int j = 0; j < _rLayers[l]._weights[i]._nonZeroValues.size(); j++)
-                        _rLayers[l]._weights[i]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
+                        _rLayers[l]._weights[i]._nonZeroValues[j] = weightDist(cs._rng);
 
                     for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
                         _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[i].countsT(j * layerDescs[l]._hiddenSize.z) / inputSizes[i].z;
@@ -210,7 +210,7 @@ void Hierarchy::initRandom(
 
             // Init weights
             for (int j = 0; j < _rLayers[l]._weights[0]._nonZeroValues.size(); j++)
-                _rLayers[l]._weights[0]._nonZeroValues[j] = 1.0f + noiseDist(cs._rng);
+                _rLayers[l]._weights[0]._nonZeroValues[j] = weightDist(cs._rng);
 
             for (int j = 0; j < _rLayers[l]._hiddenCounts.size(); j++)
                 _rLayers[l]._hiddenCounts[j] += _rLayers[l]._weights[0].countsT(j * layerDescs[l]._hiddenSize.z) / layerDescs[l - 1]._hiddenSize.z;
