@@ -18,7 +18,8 @@ int ogmaneo::findNextIndex(
     int endIndex,
     int size,
     int weightsStart,
-    const FloatBuffer &weights
+    const FloatBuffer &weights,
+    float gamma
 ) {
     std::vector<float> dist(size, 999999.0f);
     std::vector<int> prev(size, -1);
@@ -61,7 +62,7 @@ int ogmaneo::findNextIndex(
         for (int n = 0; n < size; n++) {
             float w = weights[weightsStart + u * size + n];
 
-            float alt = dist[u] + 1.0f / (0.00001f + w);
+            float alt = dist[u] + 1.0f / (0.00001f + std::pow(w, gamma));
             
             if (alt < dist[n]) {
                 dist[n] = alt;
@@ -160,7 +161,7 @@ void Pather::transition(
     }
 
     // Pathfind
-    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights);
+    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights, _gamma);
 }
 
 void Pather::reconstruct(
