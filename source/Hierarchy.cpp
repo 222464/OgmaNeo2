@@ -48,14 +48,26 @@ void Hierarchy::forward(
 
         sum /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        _rLayers[l]._activations[hiddenColumnIndex] = scaledBiasedSigmoid(sum);
-        _rLayers[l]._derivatives[hiddenColumnIndex] = scaledBiasedSigmoidDeriv(sum);
+        if (l == _scLayers.size() - 1) {
+            _rLayers[l]._activations[hiddenColumnIndex] = sum;
+            _rLayers[l]._derivatives[hiddenColumnIndex] = 1.0f;
+        }
+        else {
+            _rLayers[l]._activations[hiddenColumnIndex] = scaledBiasedSigmoid(sum);
+            _rLayers[l]._derivatives[hiddenColumnIndex] = scaledBiasedSigmoidDeriv(sum);
+        }
     }
     else {
         float sum = _rLayers[l]._weights[w][0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        _rLayers[l]._activations[hiddenColumnIndex] = scaledBiasedSigmoid(sum);
-        _rLayers[l]._derivatives[hiddenColumnIndex] = scaledBiasedSigmoidDeriv(sum);
+        if (l == _scLayers.size() - 1) {
+            _rLayers[l]._activations[hiddenColumnIndex] = sum;
+            _rLayers[l]._derivatives[hiddenColumnIndex] = 1.0f;
+        }
+        else {
+            _rLayers[l]._activations[hiddenColumnIndex] = scaledBiasedSigmoid(sum);
+            _rLayers[l]._derivatives[hiddenColumnIndex] = scaledBiasedSigmoidDeriv(sum);
+        }
     }
 }
 
