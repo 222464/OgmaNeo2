@@ -261,13 +261,24 @@ struct SparseMatrix {
 
 	// --- Special ---
 
-	void deltaModOHVs(
+	void deltaRateOHVs(
 		const std::vector<int> &nonZeroIndices,
 		SparseMatrix &rates,
 		float delta,
 		int row,
 		int oneHotSize,
-		float beta // Rate decay
+		float alpha,
+		float beta
+	);
+
+	void deltaRateOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		SparseMatrix &rates,
+		float delta,
+		int column,
+		int oneHotSize,
+		float alpha,
+		float beta
 	);
 };
 } // namespace ogmaneo

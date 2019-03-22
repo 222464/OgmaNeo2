@@ -31,6 +31,7 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
+        SparseMatrix _rates; // Rate matrix (1 rate per weight)
 
         IntBuffer _visibleCounts; // Number touching
     };
@@ -84,7 +85,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f)
+    _alpha(0.001f)
     {}
 
     // Create a sparse coding layer with random initialization

@@ -96,11 +96,15 @@ void SparseCoder::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
-        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
-            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
-
         // Generate transpose (needed for reconstruction)
         vl._weights.initT();
+
+        vl._rates = vl._weights;
+
+        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++) {
+            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
+            vl._rates._nonZeroValues[i] = 1.0f;
+        }
 
         // Counts
         vl._visibleCounts = IntBuffer(numVisibleColumns);
