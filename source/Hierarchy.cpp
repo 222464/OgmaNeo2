@@ -37,6 +37,8 @@ void Hierarchy::forward(
     }
     else
         _rLayers[l]._activations[hiddenColumnIndex] = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+
+    _rLayers[l]._activationsClipped[hiddenColumnIndex] = std::min(1.0f + _clip, std::max(1.0f - _clip, _rLayers[l]._activations[hiddenColumnIndex]));
 }
 
 void Hierarchy::backward(
@@ -88,7 +90,7 @@ void Hierarchy::learn(
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
-    float delta = _alpha * _rLayers[l]._errors[hiddenColumnIndex];
+    float delta = _alpha * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[hiddenColumnIndex]));
 
     if (l == 0) {
         // For each visible layer
@@ -98,7 +100,7 @@ void Hierarchy::learn(
         }
     }
     else
-        _rLayers[l]._weights[0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
+        _rLayers[l]._weights[0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activationsClipped, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 }
 
 void Hierarchy::initRandom(
@@ -230,6 +232,7 @@ void Hierarchy::initRandom(
         }
 
         _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
+        _rLayers[l]._activationsClipped = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
         _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 1.0f);
 		
         // Create the sparse coding layer
@@ -553,6 +556,7 @@ void Hierarchy::writeToStream(
         _scLayers[l].writeToStream(os);
 
         writeBufferToStream(os, &_rLayers[l]._activations);
+        writeBufferToStream(os, &_rLayers[l]._activationsClipped);
         writeBufferToStream(os, &_rLayers[l]._errors);
         writeBufferToStream(os, &_rLayers[l]._hiddenCounts);
 
@@ -644,6 +648,7 @@ void Hierarchy::readFromStream(
         _scLayers[l].readFromStream(is);
 
         readBufferFromStream(is, &_rLayers[l]._activations);
+        readBufferFromStream(is, &_rLayers[l]._activationsClipped);
         readBufferFromStream(is, &_rLayers[l]._errors);
         readBufferFromStream(is, &_rLayers[l]._hiddenCounts);
 

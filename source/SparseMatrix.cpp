@@ -568,22 +568,3 @@ void SparseMatrix::hebbDecreasingOHVs(
 		}
 	}
 }
-
-void SparseMatrix::deltaModOHVs(
-	const std::vector<int> &nonZeroIndices,
-	SparseMatrix &rates,
-	float delta,
-	int row,
-	int oneHotSize,
-	float beta
-) {
-	int nextIndex = row + 1;
-
-	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
-		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
-
-		_nonZeroValues[j] += delta * rates._nonZeroValues[j];
-
-		rates._nonZeroValues[j] *= beta;
-	}
-}
