@@ -38,7 +38,7 @@ void Hierarchy::forward(
     else
         _rLayers[l]._activations[hiddenColumnIndex] = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-    _rLayers[l]._activationsClipped[hiddenColumnIndex] = std::min(1.0f + _clip, std::max(1.0f - _clip, _rLayers[l]._activations[hiddenColumnIndex]));
+    _rLayers[l]._activationsClipped[hiddenColumnIndex] = std::min(1.0f + _clipActivation, std::max(1.0f - _clipActivation, _rLayers[l]._activations[hiddenColumnIndex]));
 }
 
 void Hierarchy::backward(
@@ -90,7 +90,7 @@ void Hierarchy::learn(
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
-    float delta = _alpha * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[hiddenColumnIndex]));
+    float delta = _alpha * std::min(_clipError, std::max(-_clipError, _rLayers[l]._errors[hiddenColumnIndex]));
 
     if (l == 0) {
         // For each visible layer
@@ -574,6 +574,8 @@ void Hierarchy::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_clipActivation), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_clipError), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySamples), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
@@ -675,6 +677,8 @@ void Hierarchy::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_clipActivation), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_clipError), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySamples), sizeof(int));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
