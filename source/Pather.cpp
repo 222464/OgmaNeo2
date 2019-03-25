@@ -119,18 +119,35 @@ void Pather::learnWeights(
 
     int visibleColumnIndex = address2C(pos, Int2(vld._size.x, vld._size.y));
 
-    int targetC = (*inputCs[vli])[visibleColumnIndex];
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
 
-        float target = (vc == targetC ? 1.0f : 0.0f);
-
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        float delta = _alpha * (target - sum);
+        if (sum > maxActivation) {
+            maxActivation = sum;
 
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+            maxIndex = vc;
+        }
+    }
+
+    int targetC = (*inputCs[vli])[visibleColumnIndex];
+
+    if (maxIndex != targetC) {
+        for (int vc = 0; vc < vld._size.z; vc++) {
+            int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
+
+            float target = (vc == targetC ? 1.0f : 0.0f);
+
+            float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+
+            float delta = _alpha * (target - sum);
+
+            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+        }
     }
 }
 
@@ -158,6 +175,14 @@ void Pather::transition(
 
             _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
         }
+
+        // for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        //     float target = (hc == startIndex ? 1.0f : 0.0f);
+
+        //     int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + hc * _hiddenSize.z + endIndex;
+
+        //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // }
     }
 
     // Pathfind
