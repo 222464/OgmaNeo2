@@ -136,6 +136,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &visibleCs,
+        const IntBuffer* hiddenCs,
         float reward,
         bool learnEnabled
     );
