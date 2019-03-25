@@ -129,9 +129,8 @@ void Actor::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
-        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++) {
+        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
-        }
 
         for (int i = 0; i < numHiddenColumns; i++)
             _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
