@@ -56,15 +56,6 @@ set(HEADERS
 
 add_library(OgmaNeo ${SOURCES} ${HEADERS})
 
-add_executable(neo "${SOURCE_PATH}/Main.cpp")
-target_link_libraries(neo OgmaNeo)
-
-find_package(SFML 2.5 COMPONENTS system window graphics network audio REQUIRED)
-
-include_directories(${SFML_INCLUDE_DIR})
-
-target_link_libraries(neo sfml-system sfml-graphics)
-
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
