@@ -60,7 +60,8 @@ void ImageEncoder::forward(
                 vl._weights.hebb(*inputActivations[vli], hiddenIndex, rate);
             }
 
-            _hiddenRates[hiddenIndex] -= (1.0f - (hc == maxIndex ? _beta : 1.0f)) * _hiddenRates[hiddenIndex];
+            if (hc == maxIndex)
+                _hiddenRates[hiddenIndex] -= (1.0f - _beta) * _hiddenRates[hiddenIndex];
         }
     }
 }
