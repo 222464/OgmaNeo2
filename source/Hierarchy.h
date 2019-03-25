@@ -164,7 +164,7 @@ public:
     :
     _alpha(0.01f),
     _gamma(0.98f),
-    _clipActivation(2.0f),
+    _clipActivation(16.0f),
     _clipError(1.0f),
     _maxHistorySamples(32),
     _historyIters(8)
