@@ -39,6 +39,7 @@ void SparseCoder::forward(
         }
     }
 
+    _hiddenCsPrev[hiddenColumnIndex] = _hiddenCs[hiddenColumnIndex];
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
@@ -111,6 +112,7 @@ void SparseCoder::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
+    _hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 }
 
 void SparseCoder::step(
@@ -156,6 +158,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
+    writeBufferToStream(os, &_hiddenCsPrev);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -184,6 +187,7 @@ void SparseCoder::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
+    readBufferFromStream(is, &_hiddenCsPrev);
 
     int numVisibleLayers;
     
