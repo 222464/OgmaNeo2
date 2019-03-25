@@ -30,7 +30,7 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        std::array<SparseMatrix, 2> _weights;
+        SparseMatrix _weights;
     };
 
     // History sample for delayed updates
@@ -62,8 +62,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int w
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     void learn(
@@ -72,7 +71,6 @@ private:
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        int w,
         float reward
     );
 
@@ -80,10 +78,9 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
-        const std::vector<const IntBuffer*> &inputCs,
-        int w
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        a->forward(pos, rng, inputCs, w);
+        a->forward(pos, rng, inputCs);
     }
 
     static void learnKernel(
@@ -93,10 +90,9 @@ private:
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        int w,
         float reward
     ) {
-        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, w, reward);
+        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, reward);
     }
 
 public:
@@ -179,7 +175,7 @@ public:
     }
 
     // Get the weights for a visible layer
-    const std::array<SparseMatrix, 2> &getWeights(
+    const SparseMatrix &getWeights(
         int i // Index of layer
     ) {
         return _visibleLayers[i]._weights;
