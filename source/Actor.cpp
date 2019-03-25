@@ -33,8 +33,8 @@ void Actor::forward(
 
     // --- Action ---
 
-    std::vector<float> activations(_hiddenSize.z);
-    float total = 0.0f;
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -51,29 +51,14 @@ void Actor::forward(
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        activations[hc] = sigmoid(sum);
+        if (sum > maxActivation) {
+            maxActivation = sum;
 
-        total += activations[hc];
-    }
-
-    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
-
-    float cusp = dist01(rng) * total;
-
-    int selectIndex = 0;
-    float sumSoFar = 0.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        sumSoFar += activations[hc];
-
-        if (sumSoFar >= cusp) {
-            selectIndex = hc;
-
-            break;
+            maxIndex = hc;
         }
     }
 
-    _hiddenCs[hiddenColumnIndex] = selectIndex;
+    _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void Actor::learn(
