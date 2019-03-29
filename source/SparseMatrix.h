@@ -139,6 +139,30 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float minOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float minOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	float maxOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float maxOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
 	// --- Delta Rules ---
 
 	void deltas(
@@ -165,6 +189,22 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void targetOHVs(
+		const std::vector<int> &nonZeroIndices,
+		float value,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
+	void targetOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		float value,
+		int column,
+		int oneHotSize,
+		float alpha
 	);
 
 	// --- Normalization ---
