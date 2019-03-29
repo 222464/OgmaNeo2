@@ -207,10 +207,6 @@ void Actor::step(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_int_distribution<int> doubleDist(0, 1);
-
-    int w = doubleDist(cs._rng);
-
     // Forward kernel
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
@@ -268,8 +264,6 @@ void Actor::step(
 
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
-
-            w = doubleDist(cs._rng);
 
             const HistorySample &s = *_historySamples[t + 1];
             const HistorySample &sPrev = *_historySamples[t];
