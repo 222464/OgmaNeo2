@@ -88,18 +88,7 @@ void Hierarchy::learn(
 
     int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
-    float delta = _rLayers[l]._errors[hiddenColumnIndex];
-
-    if (l != _scLayers.size() - 1) {
-        float squash = sigmoid(_rLayers[l]._activations[hiddenColumnIndex] - 1.0f);
-
-        if (delta > 0.0f)
-            delta *= 1.0f - squash;
-        else
-            delta *= squash;
-    }
-
-    delta *= _alpha;
+    float delta = _alpha * _rLayers[l]._errors[hiddenColumnIndex];
 
     if (l == 0) {
         // For each visible layer
