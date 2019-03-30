@@ -162,7 +162,7 @@ public:
     // Default
     Hierarchy()
     :
-    _alpha(0.001f),
+    _alpha(0.01f),
     _gamma(0.98f),
     _clipActivation(4.0f),
     _clipError(1.0f),
