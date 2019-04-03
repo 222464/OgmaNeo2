@@ -175,6 +175,7 @@ const Actor &Actor::operator=(
 
     _alpha = other._alpha;
     _gamma = other._gamma;
+    _epsilon = other._epsilon;
 
     _historySamples.resize(other._historySamples.size());
 
@@ -284,6 +285,7 @@ void Actor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(float));
 
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
@@ -335,6 +337,7 @@ void Actor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(float));
 
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
