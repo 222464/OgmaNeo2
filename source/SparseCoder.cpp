@@ -15,6 +15,8 @@ void SparseCoder::forward(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs
 ) {
+    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
@@ -37,7 +39,7 @@ void SparseCoder::forward(
         }
     }
 
-    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
+    _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void SparseCoder::learnWeights(
