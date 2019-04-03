@@ -43,7 +43,16 @@ void Actor::forward(
         }
     }
 
-    _hiddenCs[hiddenColumnIndex] = maxIndex;
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    if (dist01(rng) < _epsilon) {
+        std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
+
+        _hiddenCs[hiddenColumnIndex] = columnDist(rng);
+    }
+    else
+        _hiddenCs[hiddenColumnIndex] = maxIndex;
+
     _hiddenActivations[hiddenColumnIndex] = maxActivation;
 }
 
@@ -178,7 +187,12 @@ const Actor &Actor::operator=(
     return *this;
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* hiddenCs, float reward, bool learnEnabled) {
+void Actor::step(
+    ComputeSystem &cs,
+    const std::vector<const IntBuffer*> &inputCs,
+    float reward,
+    bool learnEnabled
+) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -218,9 +232,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs
         // Copy hidden Cs
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, hiddenCs, &s._hiddenCs);
+            copyInt(x, cs._rng, &_hiddenCs, &s._hiddenCs);
 #else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
         s._reward = reward;
@@ -228,7 +242,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs
 
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize > 2) {
-        const HistorySample &s = *_historySamples[1];
         const HistorySample &sPrev = *_historySamples[0];
 
         // Compute (partial) Q value, rest is completed in the kernel
@@ -245,9 +258,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < _hiddenSize.x; x++)
             for (int y = 0; y < _hiddenSize.y; y++)
-                learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &s._hiddenCs, q, g);
+                learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &sPrev._hiddenCs, q, g);
 #else
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &s._hiddenCs, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &sPrev._hiddenCs, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
     }
 
@@ -262,7 +275,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs
 
 }
 
-void Actor::writeToStream(std::ostream &os) const {
+void Actor::writeToStream(
+    std::ostream &os
+) const {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -311,7 +326,9 @@ void Actor::writeToStream(std::ostream &os) const {
     }
 }
 
-void Actor::readFromStream(std::istream &is) {
+void Actor::readFromStream(
+    std::istream &is
+) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
