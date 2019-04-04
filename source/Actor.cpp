@@ -19,7 +19,7 @@ void Actor::forward(
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    std::vector<float> activations(_hiddenSize.z);
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -36,11 +36,10 @@ void Actor::forward(
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
-
+        activations[hc] = sum;
+        
+        if (sum > activations[maxIndex])
             maxIndex = hc;
-        }
     }
 
     std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
@@ -53,7 +52,7 @@ void Actor::forward(
     else
         _hiddenCs[hiddenColumnIndex] = maxIndex;
 
-    _hiddenActivations[hiddenColumnIndex] = maxActivation;
+    _hiddenActivations[hiddenColumnIndex] = activations[_hiddenCs[hiddenColumnIndex]];
 }
 
 void Actor::learn(
