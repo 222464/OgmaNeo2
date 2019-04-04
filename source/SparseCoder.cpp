@@ -38,12 +38,17 @@ void SparseCoder::forward(
             maxActivation = sum;
             maxIndex = hc;
         }
-
-        if (learnEnabled)
-            _hiddenBiases[hiddenIndex] += _beta * -sum;
     }
 
     _hiddenCs[hiddenColumnIndex] = maxIndex;
+
+    if (learnEnabled) {
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+            _hiddenBiases[hiddenIndex] += _beta * (1.0f / _hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
+        }
+    }
 }
 
 void SparseCoder::learnWeights(
