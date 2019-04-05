@@ -64,7 +64,7 @@ void SparseCoder::recon(
 
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        vl._reconErrors[visibleIndex] = _alpha * (target - sigmoid(sum));
+        vl._reconErrors[visibleIndex] = _alpha * (target - sum);
     }
 }
 
@@ -99,7 +99,7 @@ void SparseCoder::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        _hiddenBiases[hiddenIndex] += _beta * (1.0f / _hiddenSize.z - (hc == _hiddenCs[hiddenColumnIndex] ? 1.0f : 0.0f));
+        //_hiddenBiases[hiddenIndex] += _beta * (1.0f / _hiddenSize.z - (hc == _hiddenCs[hiddenColumnIndex] ? 1.0f : 0.0f));
 
         if (_refractoryTimers[hiddenIndex] > 0)
             _refractoryTimers[hiddenIndex]--;
@@ -123,7 +123,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.1f, 0.1f);
+    std::uniform_real_distribution<float> weightDist(0.999f, 1.0f);
 
     _hiddenCounts = IntBuffer(numHiddenColumns, 0);
 
