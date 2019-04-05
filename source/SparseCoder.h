@@ -32,6 +32,8 @@ public:
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
 
+        FloatBuffer _reconErrors; // Reconstruction errors
+
         IntBuffer _visibleCounts; // Number touching
     };
 
@@ -40,7 +42,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenBiases;
+    IntBuffer _refractoryTimers; // Timers to track refractory period
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -51,46 +53,57 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
     );
 
-    void learnWeights(
+    void recon(
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        sc->forward(pos, rng, inputCs);
     }
 
-    static void learnWeightsKernel(
+    static void reconKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
     ) {
-        sc->learnWeights(pos, rng, inputCs, vli);
+        sc->recon(pos, rng, inputCs, vli);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc
+    ) {
+        sc->learn(pos, rng);
     }
 
 public:
     float _alpha; // Weight learning rate
-    float _beta; // Bias learning rate
+    int _refractoryTicks; // Time for refractory period
 
     // Defaults
     SparseCoder()
     :
     _alpha(0.001f),
-    _beta(0.001f)
+    _refractoryTicks(4)
     {}
 
     // Create a sparse coding layer with random initialization
