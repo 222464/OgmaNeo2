@@ -42,6 +42,10 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
+    FloatBuffer _hiddenBiases; // Biases
+
+    IntBuffer _hiddenCounts; // Number touching
+
     IntBuffer _refractoryTimers; // Timers to track refractory period
 
     // Visible layers and associated descriptors
@@ -65,7 +69,8 @@ private:
 
     void learn(
         const Int2 &pos,
-        std::mt19937 &rng
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void forwardKernel(
@@ -90,20 +95,23 @@ private:
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->learn(pos, rng);
+        sc->learn(pos, rng, inputCs);
     }
 
 public:
     float _alpha; // Weight learning rate
+    float _beta; // Bias learning rate
     int _refractoryTicks; // Time for refractory period
 
     // Defaults
     SparseCoder()
     :
     _alpha(0.01f),
-    _refractoryTicks(8)
+    _beta(0.001f),
+    _refractoryTicks(4)
     {}
 
     // Create a sparse coding layer with random initialization
