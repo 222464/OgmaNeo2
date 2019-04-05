@@ -78,22 +78,22 @@ void SparseCoder::learn(
     int hiddenIndexMax = address3C(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
     if (_refractoryTimers[hiddenIndexMax] == 0) {
-        float error = 0.0f;
+        // float error = 0.0f;
+
+        // for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        //     VisibleLayer &vl = _visibleLayers[vli];
+        //     const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        //     error += vl._weights.multiply(vl._reconErrors, hiddenIndexMax);
+        // }
+
+        // error /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            error += vl._weights.multiply(vl._reconErrors, hiddenIndexMax);
-        }
-
-        error /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            vl._weights.deltaOHVs(*inputCs[vli], error, hiddenIndexMax, vld._size.z);
+            vl._weights.hebbErrors(vl._reconErrors, hiddenIndexMax);
         }
     }
 
