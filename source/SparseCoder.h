@@ -105,7 +105,7 @@ public:
     SparseCoder()
     :
     _alpha(0.01f),
-    _refractoryTicks(5)
+    _refractoryTicks(3)
     {}
 
     // Create a sparse coding layer with random initialization
