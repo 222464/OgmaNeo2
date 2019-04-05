@@ -127,6 +127,20 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float multiplyOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int row,
+		int oneHotSize
+	);
+
+	float multiplyOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int column,
+		int oneHotSize
+	);
+
 	float countsOHVs(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &in,
@@ -181,6 +195,22 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize
+	);
+
 	// --- Normalization ---
 
 	void normalize(
@@ -217,17 +247,6 @@ struct SparseMatrix {
 	void hebbErrors(
 		const std::vector<float> &errors,
 		int row
-	);
-
-	// --- Special ---
-
-	void deltaModOHVs(
-		const std::vector<int> &nonZeroIndices,
-		SparseMatrix &rates,
-		float delta,
-		int row,
-		int oneHotSize,
-		float beta // Rate decay
 	);
 };
 } // namespace ogmaneo
