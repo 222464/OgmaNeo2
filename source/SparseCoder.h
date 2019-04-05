@@ -42,8 +42,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenBiases; // Biases
-
     IntBuffer _hiddenCounts; // Number touching
 
     IntBuffer _refractoryTimers; // Timers to track refractory period
@@ -101,14 +99,12 @@ private:
 
 public:
     float _alpha; // Weight learning rate
-    float _beta; // Bias learning rate
     int _refractoryTicks; // Time for refractory period
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.1f),
-    _beta(0.01f),
+    _alpha(0.01f),
     _refractoryTicks(3)
     {}
 

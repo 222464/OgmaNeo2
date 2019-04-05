@@ -23,7 +23,7 @@ void SparseCoder::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _hiddenBiases[hiddenIndex];
+        float sum = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -77,17 +77,6 @@ void SparseCoder::learn(
     int hiddenIndexMax = address3C(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
     if (_refractoryTimers[hiddenIndexMax] == 0) {
-        // float error = 0.0f;
-
-        // for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        //     VisibleLayer &vl = _visibleLayers[vli];
-        //     const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        //     error += vl._weights.multiply(vl._reconErrors, hiddenIndexMax);
-        // }
-
-        // error /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
@@ -98,8 +87,6 @@ void SparseCoder::learn(
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        //_hiddenBiases[hiddenIndex] += _beta * (1.0f / _hiddenSize.z - (hc == _hiddenCs[hiddenColumnIndex] ? 1.0f : 0.0f));
 
         if (_refractoryTimers[hiddenIndex] > 0)
             _refractoryTimers[hiddenIndex]--;
@@ -159,8 +146,6 @@ void SparseCoder::initRandom(
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
 
-    _hiddenBiases = FloatBuffer(numHidden, 0.0f);
-
     _refractoryTimers = IntBuffer(numHidden, 0);
 }
 
@@ -213,11 +198,9 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_refractoryTicks), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
-    writeBufferToStream(os, &_hiddenBiases);
     writeBufferToStream(os, &_hiddenCounts);
     writeBufferToStream(os, &_refractoryTimers);
 
@@ -248,11 +231,9 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_refractoryTicks), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
-    readBufferFromStream(is, &_hiddenBiases);
     readBufferFromStream(is, &_hiddenCounts);
     readBufferFromStream(is, &_refractoryTimers);
 
