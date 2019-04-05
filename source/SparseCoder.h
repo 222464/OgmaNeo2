@@ -111,7 +111,7 @@ public:
     :
     _alpha(0.01f),
     _beta(0.001f),
-    _refractoryTicks(4)
+    _refractoryTicks(1)
     {}
 
     // Create a sparse coding layer with random initialization
