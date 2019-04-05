@@ -123,7 +123,7 @@ void SparseCoder::initRandom(
         // Generate transpose (needed for reconstruction)
         vl._weights.initT();
 
-        vl._reconErrors = FloatBuffer(numVisible, 0.0);
+        vl._reconErrors = FloatBuffer(numVisible, 0.0f);
 
         // Counts
         vl._visibleCounts = IntBuffer(numVisibleColumns);
