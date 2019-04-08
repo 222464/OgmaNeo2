@@ -167,5 +167,9 @@ public:
     ) const {
         return _visibleLayers[i]._weights;
     }
+
+    const IntBuffer &getRefractoryTimers() const {
+        return _refractoryTimers;
+    }
 };
 } // namespace ogmaneo
