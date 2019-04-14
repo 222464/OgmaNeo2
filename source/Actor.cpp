@@ -155,7 +155,7 @@ void Actor::learn(
         total += activations[hc];
     }
 
-    int targetC = (*hiddenCsPrev)[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
+    int targetC = (*hiddenCsPrev)[hiddenColumnIndex];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
