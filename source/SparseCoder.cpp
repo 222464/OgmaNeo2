@@ -23,23 +23,34 @@ void SparseCoder::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = 0.0f;
+        if (_refractoryTimers[hiddenIndex] == 0) {
+            float sum = 0.0f;
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-        }
+                sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            }
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
-            maxIndex = hc;
+            if (sum > maxActivation) {
+                maxActivation = sum;
+                maxIndex = hc;
+            }
         }
     }
 
     _hiddenCs[hiddenColumnIndex] = maxIndex;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+        if (_refractoryTimers[hiddenIndex] > 0)
+            _refractoryTimers[hiddenIndex]--;
+    }
+
+    _refractoryTimers[address3C(Int3(pos.x, pos.y, maxIndex), _hiddenSize)] = _refractoryTicks;
 }
 
 void SparseCoder::recon(
@@ -74,23 +85,12 @@ void SparseCoder::learn(
 
     int hiddenIndexMax = address3C(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
-    if (_refractoryTimers[hiddenIndexMax] == 0) {
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebbErrors(vl._reconErrors, hiddenIndexMax);
-        }
+        vl._weights.hebbErrors(vl._reconErrors, hiddenIndexMax);
     }
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        if (_refractoryTimers[hiddenIndex] > 0)
-            _refractoryTimers[hiddenIndex]--;
-    }
-
-    _refractoryTimers[hiddenIndexMax] = _refractoryTicks;
 }
 
 void SparseCoder::initRandom(
