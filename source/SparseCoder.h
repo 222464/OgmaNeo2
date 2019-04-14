@@ -42,6 +42,8 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
+    IntBuffer _hiddenCounts; // Number touching
+
     IntBuffer _refractoryTimers; // Timers to track refractory period
 
     // Visible layers and associated descriptors
@@ -103,7 +105,7 @@ public:
     SparseCoder()
     :
     _alpha(0.01f),
-    _refractoryTicks(4)
+    _refractoryTicks(5)
     {}
 
     // Create a sparse coding layer with random initialization
