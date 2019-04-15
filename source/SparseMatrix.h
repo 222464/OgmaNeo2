@@ -127,6 +127,30 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float minOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float minOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	float maxOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float maxOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
 	float countsOHVs(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &in,
@@ -207,6 +231,12 @@ struct SparseMatrix {
 		float alpha
 	);
 
+	void hebbT(
+		const std::vector<float> &in,
+		int column,
+		float alpha
+	);
+
 	void hebbOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
@@ -214,9 +244,11 @@ struct SparseMatrix {
 		float alpha
 	);
 
-	void hebbErrors(
-		const std::vector<float> &errors,
-		int row
+	void hebbOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+		float alpha
 	);
 };
 } // namespace ogmaneo

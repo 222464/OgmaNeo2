@@ -53,33 +53,18 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
-    ) {
-        sc->forward(pos, rng, inputCs);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        bool learnEnabled
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->forward(pos, rng, inputCs, learnEnabled);
     }
 
 public:
@@ -90,7 +75,7 @@ public:
     SparseCoder()
     :
     _alpha(0.01f),
-    _refractoryTicks(3)
+    _refractoryTicks(7)
     {}
 
     // Create a sparse coding layer with random initialization
