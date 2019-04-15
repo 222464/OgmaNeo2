@@ -214,6 +214,13 @@ struct SparseMatrix {
 		float alpha
 	);
 
+	void hebbDecreasingOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
 	void hebbErrors(
 		const std::vector<float> &errors,
 		int row
