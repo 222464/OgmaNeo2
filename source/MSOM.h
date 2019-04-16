@@ -42,6 +42,7 @@ private:
 
     FloatBuffer _hiddenActivations;
     FloatBuffer _hiddenStates;
+    IntBuffer _hiddenRefractoryTimers;
     FloatBuffer _hiddenBlurs;
     FloatBuffer _hiddenPredictions;
 
@@ -153,6 +154,7 @@ public:
     float _beta; // Prediction learning rate
     int _inhibitRadius; // Max activation radius
     int _blurRadius; // Radius of learning
+    int _refractoryTime; // Ticks before a unit can fire again
 
     // Defaults
     MSOM()
@@ -160,7 +162,8 @@ public:
     _alpha(0.05f),
     _beta(0.1f),
     _inhibitRadius(2),
-    _blurRadius(1)
+    _blurRadius(1),
+    _refractoryTime(7)
     {}
 
     // Create a sparse coding layer with random initialization

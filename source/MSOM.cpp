@@ -17,16 +17,26 @@ void MSOM::forward(
 ) {
     int hiddenIndex = address2C(pos, _hiddenSize);
 
-    float sum = 0.0f;
+    if (_hiddenStates[hiddenIndex] != 0)
+        _hiddenRefractoryTimers[hiddenIndex] = _refractoryTime;
 
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    if (_hiddenRefractoryTimers[hiddenIndex] > 0) {
+        _hiddenActivations[hiddenIndex] = -99999.0f;
 
-        sum -= vl._weights.distance(*inputs[vli], hiddenIndex) / std::max(1, vl._weights.counts(hiddenIndex));
+        _hiddenRefractoryTimers[hiddenIndex]--;
     }
+    else {
+        float sum = 0.0f;
 
-    _hiddenActivations[hiddenIndex] = sum;
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            sum -= vl._weights.distance(*inputs[vli], hiddenIndex) / std::max(1, vl._weights.counts(hiddenIndex));
+        }
+
+        _hiddenActivations[hiddenIndex] = sum;
+    }
 }
 
 void MSOM::inhibit(
@@ -174,6 +184,7 @@ void MSOM::initRandom(
     // Hidden
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
+    _hiddenRefractoryTimers = IntBuffer(numHidden, 0);
     _hiddenBlurs = FloatBuffer(numHidden, 0.0f);
     _hiddenPredictions = FloatBuffer(numHidden, 0.0f);
 
@@ -307,6 +318,7 @@ void MSOM::writeToStream(
 
     writeBufferToStream(os, &_hiddenActivations);
     writeBufferToStream(os, &_hiddenStates);
+    writeBufferToStream(os, &_hiddenRefractoryTimers);
     writeBufferToStream(os, &_hiddenBlurs);
     writeBufferToStream(os, &_hiddenPredictions);
 
@@ -320,6 +332,8 @@ void MSOM::writeToStream(
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         const VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
 
@@ -339,6 +353,7 @@ void MSOM::readFromStream(
 
     readBufferFromStream(is, &_hiddenActivations);
     readBufferFromStream(is, &_hiddenStates);
+    readBufferFromStream(is, &_hiddenRefractoryTimers);
     readBufferFromStream(is, &_hiddenBlurs);
     readBufferFromStream(is, &_hiddenPredictions);
 
