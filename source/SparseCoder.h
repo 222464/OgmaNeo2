@@ -99,7 +99,7 @@ public:
     :
     _alpha(0.01f),
     _maxHistorySamples(32),
-    _historyIters(8)
+    _historyIters(4)
     {}
 
     // Create a sparse coding layer with random initialization
