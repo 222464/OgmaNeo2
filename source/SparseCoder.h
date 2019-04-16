@@ -32,9 +32,14 @@ public:
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
 
-        FloatBuffer _reconErrors; // Reconstruction errors
+        IntBuffer _visibleCounts;
+    };
 
-        IntBuffer _visibleCounts; // Number touching
+    // History sample for delayed updates
+    struct HistorySample {
+        std::vector<IntBuffer> _inputCs;
+
+        IntBuffer _hiddenCs;
     };
 
 private:
@@ -42,9 +47,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    IntBuffer _hiddenCounts; // Number touching
-
-    IntBuffer _refractoryTimers; // Timers to track refractory period
+    std::vector<HistorySample> _historySamples;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -58,16 +61,12 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void recon(
+    void learn(
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenCs,
         int vli
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng
     );
 
     static void forwardKernel(
@@ -79,33 +78,28 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
-    static void reconKernel(
+    static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenCs,
         int vli
     ) {
-        sc->recon(pos, rng, inputCs, vli);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc
-    ) {
-        sc->learn(pos, rng);
+        sc->learn(pos, rng, inputCs, hiddenCs, vli);
     }
 
 public:
     float _alpha; // Weight learning rate
-    int _refractoryTicks; // Time for refractory period
+    int _maxHistorySamples; // Maximum number of samples
+    int _historyIters; // Number of update iterations on history
 
     // Defaults
     SparseCoder()
     :
     _alpha(0.01f),
-    _refractoryTicks(3)
+    _maxHistorySamples(32),
+    _historyIters(8)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -166,10 +160,6 @@ public:
         int i // Index of visible layer
     ) const {
         return _visibleLayers[i]._weights;
-    }
-
-    const IntBuffer &getRefractoryTimers() const {
-        return _refractoryTimers;
     }
 };
 } // namespace ogmaneo

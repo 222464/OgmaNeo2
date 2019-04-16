@@ -141,6 +141,30 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float minOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float minOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	float maxOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float maxOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
 	float countsOHVs(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &in,
@@ -221,11 +245,11 @@ struct SparseMatrix {
 		int column
 	);
 
-	float magnitude(
+	float magnitude2(
 		int row
 	);
 
-	float magnitudeT(
+	float magnitude2T(
 		int column
 	);
 
@@ -237,6 +261,12 @@ struct SparseMatrix {
 		float alpha
 	);
 
+	void hebbT(
+		const std::vector<float> &in,
+		int column,
+		float alpha
+	);
+
 	void hebbOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
@@ -244,9 +274,23 @@ struct SparseMatrix {
 		float alpha
 	);
 
-	void hebbErrors(
-		const std::vector<float> &errors,
+	void hebbOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+		float alpha
+	);
+
+	// --- Copy ---
+
+	void copyRow(
+		const SparseMatrix &source,
 		int row
+	);
+
+	void copyColumn(
+		const SparseMatrix &source,
+		int column
 	);
 };
 } // namespace ogmaneo
