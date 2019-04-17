@@ -127,6 +127,20 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float multiplyOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int row,
+		int oneHotSize
+	);
+
+	float multiplyOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int column,
+		int oneHotSize
+	);
+
 	float minOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
@@ -205,6 +219,22 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize
+	);
+
 	// --- Normalization ---
 
 	void normalize(
@@ -215,11 +245,23 @@ struct SparseMatrix {
 		int column
 	);
 
-	float magnitude(
+	float magnitude2(
 		int row
 	);
 
-	float magnitudeT(
+	float magnitude2T(
+		int column
+	);
+
+	// --- Copy ---
+
+	void copyRow(
+		const SparseMatrix &source,
+		int row
+	);
+
+	void copyColumn(
+		const SparseMatrix &source,
 		int column
 	);
 

@@ -31,16 +31,12 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-        
-        IntBuffer _visibleCounts; // Number touching
     };
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
-
-    IntBuffer _hiddenCounts; // Number touching
 
     IntBuffer _refractoryTimers; // Timers to track refractory period
 
@@ -75,7 +71,7 @@ public:
     SparseCoder()
     :
     _alpha(0.01f),
-    _refractoryTicks(7)
+    _refractoryTicks(3)
     {}
 
     // Create a sparse coding layer with random initialization
