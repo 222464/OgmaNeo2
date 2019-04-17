@@ -38,8 +38,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    IntBuffer _refractoryTimers; // Timers to track refractory period
-
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -65,13 +63,11 @@ private:
 
 public:
     float _alpha; // Weight learning rate
-    int _refractoryTicks; // Time for refractory period
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f),
-    _refractoryTicks(3)
+    _alpha(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
