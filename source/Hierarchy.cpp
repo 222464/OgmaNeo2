@@ -57,7 +57,7 @@ void State::writeToStream(
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
 
     for (int l = 0; l < numLayers; l++) {
-        writeBufferToStream(os, &_hiddenCs);
+        writeBufferToStream(os, &_hiddenCs[l]);
 
         int numHistorySizes = _histories[l].size();
 
@@ -70,9 +70,8 @@ void State::writeToStream(
 
         os.write(reinterpret_cast<const char*>(&numPredictions), sizeof(int));
 
-        for (int i = 0; i < numPredictions; i++) {
+        for (int i = 0; i < numPredictions; i++)
             writeBufferToStream(os, &_predictions[l][i]);
-        }
     }
 }
 
@@ -93,7 +92,7 @@ void State::readFromStream(
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
 
     for (int l = 0; l < numLayers; l++) {
-        readBufferFromStream(is, &_hiddenCs);
+        readBufferFromStream(is, &_hiddenCs[l]);
 
         int numHistorySizes;
 
@@ -110,9 +109,8 @@ void State::readFromStream(
 
         _predictions[l].resize(numPredictions);
 
-        for (int i = 0; i < numPredictions; i++) {
+        for (int i = 0; i < numPredictions; i++)
             readBufferFromStream(is, &_predictions[l][i]);
-        }
     }
 }
 
