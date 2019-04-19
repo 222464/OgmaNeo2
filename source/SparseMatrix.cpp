@@ -577,6 +577,30 @@ float SparseMatrix::magnitude2T(
 	return sum;
 }
 
+void SparseMatrix::copyRow(
+	const SparseMatrix &source,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] = source._nonZeroValues[j];
+}
+
+void SparseMatrix::copyColumn(
+	const SparseMatrix &source,
+	int column
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		_nonZeroValues[j] = source._nonZeroValues[j];
+}
+
 void SparseMatrix::hebb(
 	const std::vector<float> &in,
 	int row,
@@ -615,7 +639,7 @@ void SparseMatrix::hebbOHVs(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[j] += alpha * (target - _nonZeroValues[j]);
+			_nonZeroValues[j] += alpha * std::min(0.0f, target - _nonZeroValues[j]);
 		}
 	}
 }
@@ -636,31 +660,7 @@ void SparseMatrix::hebbOHVsT(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * std::min(0.0f, target - _nonZeroValues[_nonZeroValueIndices[j]]);
 		}
 	}
-}
-
-void SparseMatrix::copyRow(
-	const SparseMatrix &source,
-	int row
-) {
-	float sum = 0.0f;
-
-	int nextIndex = row + 1;
-	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		_nonZeroValues[j] = source._nonZeroValues[j];
-}
-
-void SparseMatrix::copyColumn(
-	const SparseMatrix &source,
-	int column
-) {
-	float sum = 0.0f;
-
-	int nextIndex = column + 1;
-	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		_nonZeroValues[j] = source._nonZeroValues[j];
 }

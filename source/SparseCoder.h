@@ -31,23 +31,12 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-
-        IntBuffer _visibleCounts;
-    };
-
-    // History sample for delayed updates
-    struct HistorySample {
-        std::vector<IntBuffer> _inputCs;
-
-        IntBuffer _hiddenCs;
     };
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
-
-    std::vector<HistorySample> _historySamples;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -58,48 +47,27 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCs,
-        int vli
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
-    ) {
-        sc->forward(pos, rng, inputCs);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCs,
-        int vli
+        bool learnEnabled
     ) {
-        sc->learn(pos, rng, inputCs, hiddenCs, vli);
+        sc->forward(pos, rng, inputCs, learnEnabled);
     }
 
 public:
     float _alpha; // Weight learning rate
-    int _maxHistorySamples; // Maximum number of samples
-    int _historyIters; // Number of update iterations on history
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f),
-    _maxHistorySamples(32),
-    _historyIters(4)
+    _alpha(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization

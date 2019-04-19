@@ -253,6 +253,18 @@ struct SparseMatrix {
 		int column
 	);
 
+	// --- Copy ---
+
+	void copyRow(
+		const SparseMatrix &source,
+		int row
+	);
+
+	void copyColumn(
+		const SparseMatrix &source,
+		int column
+	);
+
 	// --- Hebb Rules ---
 
 	void hebb(
@@ -279,18 +291,6 @@ struct SparseMatrix {
 		int column,
 		int oneHotSize,
 		float alpha
-	);
-
-	// --- Copy ---
-
-	void copyRow(
-		const SparseMatrix &source,
-		int row
-	);
-
-	void copyColumn(
-		const SparseMatrix &source,
-		int column
 	);
 };
 } // namespace ogmaneo
