@@ -292,5 +292,15 @@ struct SparseMatrix {
 		int oneHotSize,
 		float alpha
 	);
+
+	void hebbErrors(
+		const std::vector<float> &errors,
+		int row
+	);
+
+	void hebbErrorsT(
+		const std::vector<float> &errors,
+		int column
+	);
 };
 } // namespace ogmaneo
