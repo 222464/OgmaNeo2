@@ -31,7 +31,7 @@ void ImageEncoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiply(*inputActivations[vli], hiddenIndex);
+            sum -= vl._weights.distance(*inputActivations[vli], hiddenIndex);
         }
 
         if (sum > maxActivation) {
