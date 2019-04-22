@@ -127,6 +127,44 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float multiplyOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int row,
+		int oneHotSize
+	);
+
+	float multiplyOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		int column,
+		int oneHotSize
+	);
+
+	float minOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float minOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	float maxOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float maxOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
 	float countsOHVs(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &in,
@@ -181,6 +219,22 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize
+	);
+
 	// --- Normalization ---
 
 	void normalize(
@@ -191,11 +245,23 @@ struct SparseMatrix {
 		int column
 	);
 
-	float magnitude(
+	float magnitude2(
 		int row
 	);
 
-	float magnitudeT(
+	float magnitude2T(
+		int column
+	);
+
+	// --- Copy ---
+
+	void copyRow(
+		const SparseMatrix &source,
+		int row
+	);
+
+	void copyColumn(
+		const SparseMatrix &source,
 		int column
 	);
 
@@ -207,9 +273,22 @@ struct SparseMatrix {
 		float alpha
 	);
 
+	void hebbT(
+		const std::vector<float> &in,
+		int column,
+		float alpha
+	);
+
 	void hebbOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
+		int oneHotSize,
+		float alpha
+	);
+
+	void hebbOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
 		int oneHotSize,
 		float alpha
 	);
@@ -219,15 +298,9 @@ struct SparseMatrix {
 		int row
 	);
 
-	// --- Special ---
-
-	void deltaModOHVs(
-		const std::vector<int> &nonZeroIndices,
-		SparseMatrix &rates,
-		float delta,
-		int row,
-		int oneHotSize,
-		float beta // Rate decay
+	void hebbErrorsT(
+		const std::vector<float> &errors,
+		int column
 	);
 };
 } // namespace ogmaneo
