@@ -18,11 +18,14 @@ void Actor::forward(
 ) {
     int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+    if (dist01(rng) < _epsilon) {
+        std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
+
+        _hiddenCs[hiddenColumnIndex] = columnDist(rng);
+
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
         float sum = 0.0f;
 
@@ -36,24 +39,38 @@ void Actor::forward(
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
+        _hiddenActivations[hiddenColumnIndex] = sum;
+    }
+    else {
+        int maxIndex = 0;
+        float maxActivation = -999999.0f;
 
-            maxIndex = hc;
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+
+            float sum = 0.0f;
+
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            }
+
+            sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+
+            if (sum > maxActivation) {
+                maxActivation = sum;
+
+                maxIndex = hc;
+            }
         }
-    }
 
-    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
-
-    if (dist01(rng) < _epsilon) {
-        std::uniform_int_distribution<int> columnDist(0, _hiddenSize.z - 1);
-
-        _hiddenCs[hiddenColumnIndex] = columnDist(rng);
-    }
-    else
         _hiddenCs[hiddenColumnIndex] = maxIndex;
 
-    _hiddenActivations[hiddenColumnIndex] = maxActivation;
+        _hiddenActivations[hiddenColumnIndex] = maxActivation;
+    }
 }
 
 void Actor::learn(
