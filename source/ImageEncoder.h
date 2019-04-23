@@ -93,7 +93,7 @@ public:
     :
     _alpha(1.0f),
     _beta(0.98f),
-    _gamma(0.2f)
+    _gamma(0.3f)
     {}
 
     // Create a randomly initialized image encoder
