@@ -23,7 +23,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4, 16 }),
+        _size({ 4, 4, 32 }),
         _radius(2)
         {}
     };

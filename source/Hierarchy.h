@@ -38,12 +38,12 @@ public:
 
         LayerDesc()
         :
-        _hiddenSize(4, 4, 16),
+        _hiddenSize(4, 4, 32),
         _scRadius(2),
         _aRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2),
-        _historyCapacity(8)
+        _historyCapacity(16)
         {}
     };
 private:
