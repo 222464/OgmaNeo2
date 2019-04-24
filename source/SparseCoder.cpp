@@ -108,7 +108,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.0f, 0.001f);
+    std::uniform_real_distribution<float> weightDist(-0.001f, 0.0f);
 
     _hiddenCounts = IntBuffer(numHiddenColumns, 0);
 

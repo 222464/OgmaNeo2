@@ -126,18 +126,6 @@ void Actor::learn(
 
     // --- Action ---
 
-    // int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
-
-    // float deltaAction = _beta * std::tanh(tdErrorAction);
-
-    // // For each visible layer
-    // for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-    //     VisibleLayer &vl = _visibleLayers[vli];
-    //     const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-    //     vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
-    // }
-
     if (tdErrorAction > 0.0f) {
         std::vector<float> activations(_hiddenSize.z);
         float maxActivation = -999999.0f;
