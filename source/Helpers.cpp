@@ -55,7 +55,7 @@ void ogmaneo::runKernel2(
 
     // Ceil divide
     Int2 batches((size.x + batchSize.x - 1) / batchSize.x, (size.y + batchSize.y - 1) / batchSize.y);
-
+    
     std::vector<std::future<void>> futures;
 
     // Create work items
