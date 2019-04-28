@@ -20,9 +20,9 @@ void Hierarchy::forward(
     int l,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+    int hiddenColumnIndex = address2(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
 
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
+    int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
     if (l == 0) {
         float sum = 0.0f;
@@ -48,13 +48,13 @@ void Hierarchy::backward(
     const IntBuffer* inputCs
 ) {
     if (l == 0) {
-        int visibleColumnIndex = address2C(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
+        int visibleColumnIndex = address2(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
 
         if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
             float maxValue = -999999.0f;
 
             for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
-                int visibleIndex = address3C(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
+                int visibleIndex = address3(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
 
                 float sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
                 
@@ -67,11 +67,11 @@ void Hierarchy::backward(
         }
     }
     else {
-        int visibleColumnIndex = address2C(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
+        int visibleColumnIndex = address2(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
 
         int inputC = (*inputCs)[visibleColumnIndex];
 
-        int visibleIndex = address3C(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
+        int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
         _rLayers[l - 1]._errors[visibleColumnIndex] = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
     }
@@ -84,9 +84,9 @@ void Hierarchy::learn(
     int l,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    int hiddenColumnIndex = address2C(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
+    int hiddenColumnIndex = address2(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
 
-    int hiddenIndex = address3C(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
+    int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
     float delta = _alpha * _rLayers[l]._errors[hiddenColumnIndex];
 
