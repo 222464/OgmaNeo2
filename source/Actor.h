@@ -65,7 +65,6 @@ public:
         ComputeSystem &cs,
         ComputeProgram &prog,
         Int3 hiddenSize,
-        int historyCapacity,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs,
         std::mt19937 &rng
     );
