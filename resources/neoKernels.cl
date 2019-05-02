@@ -305,6 +305,8 @@ void kernel aForward(
     int3 hiddenSize
 ) {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int hiddenIndex = address3(hiddenPosition, hiddenSize);
 	      
     hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 }
