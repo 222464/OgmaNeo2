@@ -15,7 +15,7 @@ void Actor::forward(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     // --- Value ---
 
@@ -37,7 +37,7 @@ void Actor::forward(
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
 
@@ -93,7 +93,7 @@ void Actor::learn(
     float q,
     float g
 ) {
-    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     // --- Value Prev ---
 
@@ -130,7 +130,7 @@ void Actor::learn(
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
 
@@ -158,7 +158,7 @@ void Actor::learn(
     int targetC = (*hiddenCsPrev)[hiddenColumnIndex];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float deltaAction = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
 
