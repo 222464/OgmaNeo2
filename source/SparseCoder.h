@@ -78,13 +78,11 @@ private:
 
 public:
     float _alpha; // Weight learning rate
-    int _refractoryTicks; // Time for refractory period
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.1f),
-    _refractoryTicks(3)
+    _alpha(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
