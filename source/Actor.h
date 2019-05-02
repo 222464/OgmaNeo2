@@ -27,12 +27,12 @@ public:
 
     struct VisibleLayer {
         SparseMatrix _weights;
+
+        cl::Buffer _visibleCsPrev;
     };
 
 private:
     Int3 _hiddenSize;
-
-    int _historySize;
 
     cl::Buffer _hiddenCounts;
 
