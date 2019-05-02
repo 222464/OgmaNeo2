@@ -29,14 +29,6 @@ public:
         SparseMatrix _weights;
     };
 
-    struct HistorySample {
-        std::vector<cl::Buffer> _visibleCs;
-        cl::Buffer _hiddenCs;
-        cl::Buffer _hiddenValues;
-    
-        float _reward;
-    };
-
 private:
     Int3 _hiddenSize;
 
@@ -44,13 +36,9 @@ private:
 
     cl::Buffer _hiddenCounts;
 
-    cl::Buffer _hiddenCs;
+    DoubleBuffer _hiddenCs;
 
-    cl::Buffer _hiddenActivations;
-
-    DoubleBuffer _hiddenValues;
-
-    std::vector<HistorySample> _historySamples;
+    DoubleBuffer _hiddenActivations;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -62,8 +50,6 @@ private:
 public:
     cl_float _alpha;
 
-    cl_float _beta;
-
     cl_float _gamma;
 
     cl_float _epsilon;
@@ -71,7 +57,6 @@ public:
     Actor()
     :
     _alpha(0.02f),
-    _beta(0.2f),
     _gamma(0.98f),
     _epsilon(0.05f)
     {}
@@ -121,7 +106,7 @@ public:
     }
 
     const cl::Buffer &getHiddenCs() const {
-        return _hiddenCs;
+        return _hiddenCs[_front];
     }
 
     Int3 getHiddenSize() const {
