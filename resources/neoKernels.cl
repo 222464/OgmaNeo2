@@ -317,36 +317,36 @@ void kernel aForward(
 }
 
 void kernel aInhibit(
+    global const float* hiddenPredActivations,
     global const float* hiddenQActivations,
     global int* hiddenCs,
-    int3 hiddenSize,
-    float epsilon,
-    uint2 seed
+    global const int* hiddenCounts,
+    int3 hiddenSize
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    float rescale = 1.0f / hiddenCounts[hiddenColumnIndex];
 
     int selectIndex = 0;
 
-    if (randFloat(&stateValue) < epsilon)
-        selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
-    else {
-        float maxValue = hiddenQActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
-    
-        // Find max
-        for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenQActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+    float maxValue = -999999.0f;
 
-            if (value > maxValue) {
-                maxValue = value;
-                selectIndex = c;
-            }
+    // Find max
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        float value = hiddenQActivations[hiddenIndex] * rescale * sigmoid(hiddenPredActivations[hiddenIndex] * rescale);
+
+        if (value > maxValue) {
+            maxValue = value;
+            selectIndex = c;
         }
     }
 
     // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = selectIndex;
+    hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
 void kernel aLearn(
@@ -377,15 +377,8 @@ void kernel aLearn(
 
     float rescale = 1.0f / hiddenCounts[hiddenColumnIndex];
 
-    int targetC = hiddenCs[hiddenColumnIndex];
-
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
-
-        float deltaPred = ((c == targetC ? 1.0f : 0.0f) - sigmoid(hiddenPredActivationsPrev[hiddenIndex] * rescale));
-
-        deltaOHVs(nonZeroValuesPred, rowRangesPred, columnIndicesPred, visibleCsPrev, alpha * deltaPred, hiddenIndex, visibleSize.z);
-    }
+    int actualC = hiddenCs[hiddenColumnIndex];
+    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
     // Max value
     float nextQ = -999999.0f;
@@ -397,13 +390,17 @@ void kernel aLearn(
         nextQ = fmax(nextQ, hiddenQActivations[hiddenIndex] * rescale * sigmoid(hiddenPredActivations[hiddenIndex] * rescale));
     }
 
-    float qUpdate = reward + gamma * nextQ;
+    int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
 
-    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
-
-    float deltaQ = qUpdate - hiddenQActivationsPrev[hiddenIndex] * rescale;
+    float target = (actualC == hiddenCPrev ? 1.0f : 0.0f);
     
-    deltaOHVs(nonZeroValuesQ, rowRangesQ, columnIndicesQ, visibleCsPrev, beta * deltaQ, hiddenIndex, visibleSize.z);
+    float deltaPred = (target - sigmoid(hiddenPredActivationsPrev[hiddenIndexPrev] * rescale));
+
+    deltaOHVs(nonZeroValuesPred, rowRangesPred, columnIndicesPred, visibleCsPrev, alpha * deltaPred, hiddenIndexPrev, visibleSize.z);
+
+    float deltaQ = reward + gamma * nextQ - hiddenQActivationsPrev[hiddenIndexPrev] * rescale;
+    
+    deltaOHVs(nonZeroValuesQ, rowRangesQ, columnIndicesQ, visibleCsPrev, beta * deltaQ, hiddenIndexPrev, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
