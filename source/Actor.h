@@ -26,8 +26,7 @@ public:
     };
 
     struct VisibleLayer {
-        SparseMatrix _predWeights;
-        SparseMatrix _qWeights;
+        SparseMatrix _weights;
 
         cl::Buffer _visibleCsPrev;
     };
@@ -39,8 +38,7 @@ private:
 
     DoubleBuffer _hiddenCs;
 
-    DoubleBuffer _hiddenPredActivations;
-    DoubleBuffer _hiddenQActivations;
+    DoubleBuffer _hiddenActivations;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -52,14 +50,11 @@ private:
 public:
     cl_float _alpha;
 
-    cl_float _beta;
-
     cl_float _gamma;
 
     Actor()
     :
-    _alpha(0.5f),
-    _beta(0.1f),
+    _alpha(0.1f),
     _gamma(0.95f)
     {}
 
