@@ -490,7 +490,7 @@ void SparseMatrix::hebbDecreasingOHVs(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[j] += std::min(0.0f, target - _nonZeroValues[j]);
+			_nonZeroValues[j] += alpha * std::min(0.0f, target - _nonZeroValues[j]);
 		}
 	}
 }
