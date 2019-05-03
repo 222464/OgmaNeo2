@@ -20,13 +20,15 @@ int ogmaneo::findNextIndex(
     int weightsStart,
     const FloatBuffer &weights
 ) {
-    std::vector<float> dist(size, 1.0f);
+    std::vector<float> dist(size, 0.0f);
     std::vector<int> prev(size, -1);
 
     std::unordered_set<int> q;
 
     for (int v = 0; v < size; v++)
         q.insert(v);
+
+    dist[startIndex] = 1.0f;
 
     while (!q.empty()) {
         std::unordered_set<int>::iterator cit = q.begin();
@@ -161,19 +163,19 @@ void Pather::transition(
         int endIndex = _hiddenCs[hiddenColumnIndex];
         int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
+        // float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
 
-        int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        // int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
 
-        // for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        //     float target = (hc == startIndex ? 1.0f : 0.0f);
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            float target = (hc == endIndex ? 1.0f : 0.0f);
 
-        //     int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + hc * _hiddenSize.z + endIndex;
+            int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
-        // }
+            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        }
     }
 
     // Pathfind
