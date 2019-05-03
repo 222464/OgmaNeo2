@@ -18,10 +18,9 @@ int ogmaneo::findNextIndex(
     int endIndex,
     int size,
     int weightsStart,
-    const FloatBuffer &weights,
-    float gamma
+    const FloatBuffer &weights
 ) {
-    std::vector<float> dist(size, 999999.0f);
+    std::vector<float> dist(size, 1.0f);
     std::vector<int> prev(size, -1);
 
     std::unordered_set<int> q;
@@ -35,13 +34,13 @@ int ogmaneo::findNextIndex(
         std::unordered_set<int>::iterator cit = q.begin();
 
         int u = *cit;
-        float minDist = dist[u];
+        float maxDist = dist[u];
         
         cit++;
 
         for (; cit != q.end(); cit++) {
-            if (dist[*cit] < minDist) {
-                minDist = dist[*cit];
+            if (dist[*cit] > maxDist) {
+                maxDist = dist[*cit];
                 u = *cit;
             }
         }
@@ -62,9 +61,9 @@ int ogmaneo::findNextIndex(
         for (int n = 0; n < size; n++) {
             float w = weights[weightsStart + u * size + n];
 
-            float alt = dist[u] + 1.0f / (0.00001f + std::pow(w, gamma));
+            float alt = dist[u] * w;
             
-            if (alt < dist[n]) {
+            if (alt > dist[n]) {
                 dist[n] = alt;
 
                 prev[n] = u;
@@ -80,13 +79,13 @@ void Pather::forward(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
 
@@ -117,13 +116,13 @@ void Pather::learnWeights(
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    int visibleColumnIndex = address2C(pos, Int2(vld._size.x, vld._size.y));
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
 
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
@@ -138,7 +137,7 @@ void Pather::learnWeights(
 
     if (maxIndex != targetC) {
         for (int vc = 0; vc < vld._size.z; vc++) {
-            int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
             float target = (vc == targetC ? 1.0f : 0.0f);
 
@@ -157,24 +156,18 @@ void Pather::transition(
     const IntBuffer* feedBackCs,
     bool learnEnabled
 ) {
-    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     if (learnEnabled) {
         int startIndex = _hiddenCsPrev[hiddenColumnIndex];
         int endIndex = _hiddenCs[hiddenColumnIndex];
         int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        if (predIndexPrev != endIndex) {
-            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + startIndex * _hiddenSize.z + predIndexPrev;
+        float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
 
-            _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
-        }
+        int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        {
-            int wi = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z + startIndex * _hiddenSize.z + endIndex;
-
-            _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
-        }
+        _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
 
         // for (int hc = 0; hc < _hiddenSize.z; hc++) {
         //     float target = (hc == startIndex ? 1.0f : 0.0f);
@@ -186,7 +179,7 @@ void Pather::transition(
     }
 
     // Pathfind
-    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights, _gamma);
+    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights);
 }
 
 void Pather::reconstruct(
@@ -198,13 +191,13 @@ void Pather::reconstruct(
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    int visibleColumnIndex = address2C(pos, Int2(vld._size.x, vld._size.y));
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
     
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3C(Int3(pos.x, pos.y, vc), vld._size);
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
         float sum = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z);
 
@@ -233,7 +226,7 @@ void Pather::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(1.0f, 1.0001f);
+    std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -336,6 +329,7 @@ void Pather::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
     writeBufferToStream(os, &_hiddenCsPrev);
@@ -371,6 +365,7 @@ void Pather::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
     readBufferFromStream(is, &_hiddenCsPrev);
