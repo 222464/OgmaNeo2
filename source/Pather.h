@@ -41,8 +41,6 @@ public:
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
 
-        IntBuffer _visibleCounts; // Number touching
-
         IntBuffer _recons; // Reconstruction
     };
 
@@ -65,14 +63,8 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void learnWeights(
-        const Int2 &pos,
-        std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        bool learnEnabled
     );
 
     void transition(
@@ -93,19 +85,10 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Pather* sc,
-        const std::vector<const IntBuffer*> &inputCs
-    ) {
-        sc->forward(pos, rng, inputCs);
-    }
-
-    static void learnWeightsKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        Pather* sc,
         const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        bool learnEnabled
     ) {
-        sc->learnWeights(pos, rng, inputCs, vli);
+        sc->forward(pos, rng, inputCs, learnEnabled);
     }
 
     static void transitionKernel(
@@ -135,8 +118,8 @@ public:
     // Defaults
     Pather()
     :
-    _alpha(0.1f),
-    _beta(0.1f)
+    _alpha(0.01f),
+    _beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization

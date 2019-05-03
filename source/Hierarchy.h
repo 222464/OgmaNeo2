@@ -13,12 +13,6 @@
 #include <memory>
 
 namespace ogmaneo {
-// Type of hierarchy input layer
-enum InputType {
-    _none = 0,
-    _predict = 1
-};
-
 // A SPH
 class Hierarchy {
 public:

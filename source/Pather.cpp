@@ -77,7 +77,8 @@ int ogmaneo::findNextIndex(
 void Pather::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs
+    const std::vector<const IntBuffer*> &inputCs,
+    bool learnEnabled
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -105,31 +106,17 @@ void Pather::forward(
 
     _hiddenCsPrev[hiddenColumnIndex] = _hiddenCs[hiddenColumnIndex];
     _hiddenCs[hiddenColumnIndex] = maxIndex;
-}
 
-void Pather::learnWeights(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs,
-    int vli
-) {
-    VisibleLayer &vl = _visibleLayers[vli];
-    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    if (learnEnabled) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
 
-    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    int targetC = (*inputCs[vli])[visibleColumnIndex];
-
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
-
-        float target = (vc == targetC ? 1.0f : 0.0f);
-
-        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
-
-        float delta = _alpha * (target - std::exp(sum));
-
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+            vl._weights.hebbDecreasingOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
+        }
     }
 }
 
@@ -209,7 +196,7 @@ void Pather::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.001f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -227,12 +214,6 @@ void Pather::initRandom(
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
-
-        // Counts
-        vl._visibleCounts = IntBuffer(numVisibleColumns);
-
-        for (int i = 0; i < numVisibleColumns; i++)
-            vl._visibleCounts[i] = vl._weights.countsT(i * vld._size.z) / _hiddenSize.z;
 
         vl._recons = IntBuffer(numVisibleColumns, 0);
     }
@@ -254,25 +235,10 @@ void Pather::stepUp(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputCs);
+            forward(Int2(x, y), cs._rng, inputCs, learnEnabled);
 #else
-    runKernel2(cs, std::bind(Pather::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Pather::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-    if (learnEnabled) {
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-#ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < vld._size.x; x++)
-                for (int y = 0; y < vld._size.y; y++)
-                    learnWeights(Int2(x, y), cs._rng, inputCs, vli);
-#else
-            runKernel2(cs, std::bind(Pather::learnWeightsKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
-#endif
-        }
-    }
 }
 
 void Pather::stepDown(
@@ -333,8 +299,6 @@ void Pather::writeToStream(
 
         writeSMToStream(os, vl._weights);
 
-        writeBufferToStream(os, &vl._visibleCounts);
-
         writeBufferToStream(os, &vl._recons);
     }
 }
@@ -374,8 +338,6 @@ void Pather::readFromStream(
         int numVisible = numVisibleColumns * vld._size.z;
 
         readSMFromStream(is, vl._weights);
-
-        readBufferFromStream(is, &vl._visibleCounts);
 
         readBufferFromStream(is, &vl._recons);
     }
