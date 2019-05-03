@@ -118,35 +118,18 @@ void Pather::learnWeights(
 
     int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    int targetC = (*inputCs[vli])[visibleColumnIndex];
 
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
+        float target = (vc == targetC ? 1.0f : 0.0f);
+
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
+        float delta = _alpha * (target - std::exp(sum));
 
-            maxIndex = vc;
-        }
-    }
-
-    int targetC = (*inputCs[vli])[visibleColumnIndex];
-
-    if (maxIndex != targetC) {
-        for (int vc = 0; vc < vld._size.z; vc++) {
-            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
-
-            float target = (vc == targetC ? 1.0f : 0.0f);
-
-            float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
-
-            float delta = _alpha * (target - std::exp(sum));
-
-            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
-        }
+        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 
@@ -163,19 +146,19 @@ void Pather::transition(
         int endIndex = _hiddenCs[hiddenColumnIndex];
         int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
+        // float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
 
-        int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        // int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
 
-        // for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        //     float target = (hc == endIndex ? 1.0f : 0.0f);
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            float target = (hc == endIndex ? 1.0f : 0.0f);
 
-        //     int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+            int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
-        // }
+            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        }
     }
 
     // Pathfind
@@ -260,7 +243,7 @@ void Pather::initRandom(
 
     _predictedCs = IntBuffer(numHiddenColumns, 0);
 
-    _transitionWeights = FloatBuffer(numHidden * _hiddenSize.z, 0.0f);
+    _transitionWeights = FloatBuffer(numHidden * _hiddenSize.z, 1.0f);
 }
 
 void Pather::stepUp(
