@@ -122,19 +122,17 @@ void Predictor::learn(
     
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
-    if (maxIndex != targetC) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(activations[hc]));
+        float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(activations[hc]));
 
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z);
-            }
+            vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z);
         }
     }
 }
