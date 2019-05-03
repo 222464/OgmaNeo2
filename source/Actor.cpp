@@ -163,6 +163,10 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
 
+    std::vector<cl_int> hiddenCounts(numHiddenColumns);
+    cs.getQueue().enqueueReadBuffer(_hiddenCounts, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCounts.data());
+    os.write(reinterpret_cast<const char*>(hiddenCounts.data()), numHiddenColumns * sizeof(cl_int));
+
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     cs.getQueue().enqueueReadBuffer(_hiddenCs[_front], CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
     os.write(reinterpret_cast<const char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
@@ -199,6 +203,11 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
+
+    std::vector<cl_int> hiddenCounts(numHiddenColumns);
+    is.read(reinterpret_cast<char*>(hiddenCounts.data()), numHiddenColumns * sizeof(cl_int));
+    _hiddenCounts = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+    cs.getQueue().enqueueWriteBuffer(_hiddenCounts, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCounts.data());
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
