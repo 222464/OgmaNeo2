@@ -90,9 +90,11 @@ void Actor::step(
 
     std::swap(_hiddenCs[_front], _hiddenCs[_back]);
     std::swap(_hiddenPredActivations[_front], _hiddenPredActivations[_back]);
+    std::swap(_hiddenQActivations[_front], _hiddenQActivations[_back]);
 
     // Initialize stimulus to 0
     cs.getQueue().enqueueFillBuffer(_hiddenPredActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenQActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
     // Compute feed stimulus
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
