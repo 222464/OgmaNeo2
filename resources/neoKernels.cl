@@ -297,10 +297,14 @@ void kernel aCount(
 
 void kernel aForward(
     global const int* visibleCs,
-    global float* hiddenActivations,
-    global const float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
+    global float* hiddenPredActivations,
+    global float* hiddenQActivations,
+    global const float* nonZeroValuesPred,
+    global const int* rowRangesPred,
+    global const int* columnIndicesPred,
+    global const float* nonZeroValuesQ,
+    global const int* rowRangesQ,
+    global const int* columnIndicesQ,
     int3 visibleSize,
     int3 hiddenSize
 ) {
@@ -308,11 +312,12 @@ void kernel aForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 	      
-    hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
+    hiddenPredActivations[hiddenIndex] += multiplyOHVs(nonZeroValuesPred, rowRangesPred, columnIndicesPred, visibleCs, hiddenIndex, visibleSize.z);
+    hiddenQActivations[hiddenIndex] += multiplyOHVs(nonZeroValuesQ, rowRangesQ, columnIndicesQ, visibleCs, hiddenIndex, visibleSize.z);
 }
 
 void kernel aInhibit(
-    global const float* hiddenActivations,
+    global const float* hiddenQActivations,
     global int* hiddenCs,
     int3 hiddenSize,
     float epsilon,
@@ -327,11 +332,11 @@ void kernel aInhibit(
     if (randFloat(&stateValue) < epsilon)
         selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
     else {
-        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+        float maxValue = hiddenQActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
         // Find max
         for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+            float value = hiddenQActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
             if (value > maxValue) {
                 maxValue = value;
@@ -346,16 +351,23 @@ void kernel aInhibit(
 
 void kernel aLearn(
     global const int* visibleCsPrev,
-    global const float* hiddenActivations,
-    global const float* hiddenActivationsPrev,
+    global const float* hiddenPredActivations,
+    global const float* hiddenPredActivationsPrev,
+    global const float* hiddenQActivations,
+    global const float* hiddenQActivationsPrev,
+    global const int* hiddenCs,
     global const int* hiddenCsPrev,
     global const int* hiddenCounts,
-    global float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
+    global float* nonZeroValuesPred,
+    global const int* rowRangesPred,
+    global const int* columnIndicesPred,
+    global float* nonZeroValuesQ,
+    global const int* rowRangesQ,
+    global const int* columnIndicesQ,
     int3 visibleSize,
     int3 hiddenSize,
     float alpha,
+    float beta,
     float gamma,
     float reward
 ) {
@@ -363,24 +375,35 @@ void kernel aLearn(
 	
     int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
-    // Max value
-    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
-    
-    // Find max
-    for (int c = 1; c < hiddenSize.z; c++)
-        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
-
-    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
-
     float rescale = 1.0f / hiddenCounts[hiddenColumnIndex];
 
-    float qUpdate = reward + gamma * maxValue * rescale;
+    int targetC = hiddenCs[hiddenColumnIndex];
 
-    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-    float deltaValue = qUpdate - hiddenActivationsPrev[hiddenIndex] * rescale;
+        float deltaPred = (c == targetC ? 1.0f : 0.0f) - sigmoid(hiddenPredActivationsPrev[hiddenIndex] * rescale);
+
+        deltaOHVs(nonZeroValuesPred, rowRangesPred, columnIndicesPred, visibleCsPrev, alpha * deltaPred, hiddenIndex, visibleSize.z);
+    }
+
+    // Max value
+    float nextQ = -999999.0f;
     
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * deltaValue, hiddenIndex, visibleSize.z);
+    // Find max
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        nextQ = fmax(nextQ, hiddenQActivations[hiddenIndex] * rescale * sigmoid(hiddenPredActivations[hiddenIndex] * rescale));
+    }
+
+    float qUpdate = reward + gamma * nextQ;
+
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+
+    float deltaQ = qUpdate - hiddenQActivationsPrev[hiddenIndex] * rescale;
+    
+    deltaOHVs(nonZeroValuesQ, rowRangesQ, columnIndicesQ, visibleCsPrev, alpha * deltaQ, hiddenIndex, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------

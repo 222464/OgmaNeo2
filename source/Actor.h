@@ -26,7 +26,8 @@ public:
     };
 
     struct VisibleLayer {
-        SparseMatrix _weights;
+        SparseMatrix _predWeights;
+        SparseMatrix _qWeights;
 
         cl::Buffer _visibleCsPrev;
     };
@@ -38,7 +39,8 @@ private:
 
     DoubleBuffer _hiddenCs;
 
-    DoubleBuffer _hiddenActivations;
+    DoubleBuffer _hiddenPredActivations;
+    DoubleBuffer _hiddenQActivations;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -50,6 +52,8 @@ private:
 public:
     cl_float _alpha;
 
+    cl_float _beta;
+
     cl_float _gamma;
 
     cl_float _epsilon;
@@ -57,7 +61,8 @@ public:
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.9f),
+    _beta(0.01f),
+    _gamma(0.95f),
     _epsilon(0.01f)
     {}
 
@@ -72,6 +77,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
+        const cl::Buffer &hiddenCs,
         std::mt19937 &rng,
         float reward,
         bool learnEnabled
