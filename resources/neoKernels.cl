@@ -367,9 +367,9 @@ void kernel aLearn(
 
     int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
-    float deltaQ = reward + gamma * nextQ * rescale - hiddenQActivationsPrev[hiddenIndexPrev] * rescale;
+    float deltaQ = reward + gamma * nextQ * rescale - hiddenActivationsPrev[hiddenIndexPrev] * rescale;
     
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * deltaQ, hiddenIndexPrev, visibleSize.z);
+    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * deltaQ, hiddenIndexPrev, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
