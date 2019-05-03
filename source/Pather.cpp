@@ -224,7 +224,7 @@ void Pather::initRandom(
 
     _predictedCs = IntBuffer(numHiddenColumns, 0);
 
-    _transitionWeights = FloatBuffer(numHidden * _hiddenSize.z, 0.0f);
+    _transitionWeights = FloatBuffer(numHidden * _hiddenSize.z, 1.0f);
 }
 
 void Pather::stepUp(
