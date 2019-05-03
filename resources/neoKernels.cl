@@ -382,7 +382,7 @@ void kernel aLearn(
     for (int c = 0; c < hiddenSize.z; c++) {
         int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-        float deltaPred = (c == targetC ? 1.0f : 0.0f) - sigmoid(hiddenPredActivationsPrev[hiddenIndex] * rescale);
+        float deltaPred = ((c == targetC ? 1.0f : 0.0f) - sigmoid(hiddenPredActivationsPrev[hiddenIndex] * rescale));
 
         deltaOHVs(nonZeroValuesPred, rowRangesPred, columnIndicesPred, visibleCsPrev, alpha * deltaPred, hiddenIndex, visibleSize.z);
     }
@@ -403,7 +403,7 @@ void kernel aLearn(
 
     float deltaQ = qUpdate - hiddenQActivationsPrev[hiddenIndex] * rescale;
     
-    deltaOHVs(nonZeroValuesQ, rowRangesQ, columnIndicesQ, visibleCsPrev, alpha * deltaQ, hiddenIndex, visibleSize.z);
+    deltaOHVs(nonZeroValuesQ, rowRangesQ, columnIndicesQ, visibleCsPrev, beta * deltaQ, hiddenIndex, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
