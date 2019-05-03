@@ -362,7 +362,7 @@ void kernel aLearn(
     float nextQ = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
     // Find max
-    for (int c = 0; c < hiddenSize.z; c++)
+    for (int c = 1; c < hiddenSize.z; c++)
         nextQ = fmax(nextQ, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
 
     int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
