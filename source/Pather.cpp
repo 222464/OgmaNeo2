@@ -28,8 +28,6 @@ int ogmaneo::findNextIndex(
     for (int v = 0; v < size; v++)
         q.insert(v);
 
-    dist[startIndex] = 0.0f;
-
     while (!q.empty()) {
         std::unordered_set<int>::iterator cit = q.begin();
 
