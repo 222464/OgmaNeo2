@@ -111,7 +111,7 @@ void Actor::step(
 
         int argIndex = 0;
 
-        _inhibitKernel.setArg(argIndex++, _hiddenActivations);
+        _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
         _inhibitKernel.setArg(argIndex++, _hiddenCs[_front]);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
         _inhibitKernel.setArg(argIndex++, _epsilon);
