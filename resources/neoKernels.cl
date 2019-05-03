@@ -314,22 +314,29 @@ void kernel aForward(
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    int3 hiddenSize
+    int3 hiddenSize,
+    float epsilon,
+    uint2 seed
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
+    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
+
     int selectIndex = 0;
-    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
 
-    // Find max
-    for (int c = 1; c < hiddenSize.z; c++) {
-        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+    if (randFloat(&stateValue) < epsilon)
+        selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
+    else {
+        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    
+        // Find max
+        for (int c = 1; c < hiddenSize.z; c++) {
+            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
-        float value = hiddenActivations[hiddenIndex];
-
-        if (value > maxValue) {
-            maxValue = value;
-            selectIndex = c;
+            if (value > maxValue) {
+                maxValue = value;
+                selectIndex = c;
+            }
         }
     }
 

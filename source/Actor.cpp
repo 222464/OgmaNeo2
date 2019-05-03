@@ -75,7 +75,6 @@ void Actor::init(
 void Actor::step(
     ComputeSystem &cs,
     const std::vector<cl::Buffer> &visibleCs,
-    const cl::Buffer &hiddenCs,
     std::mt19937 &rng,
     float reward,
     bool learnEnabled
@@ -108,11 +107,15 @@ void Actor::step(
 
     // Activate
     {
+        std::uniform_int_distribution<int> seedDist(0, 99999);
+
         int argIndex = 0;
 
-        _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
-        _inhibitKernel.setArg(argIndex++, _hiddenCs[_front]);
+        _inhibitKernel.setArg(argIndex++, _hiddenActivations);
+        _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
+        _inhibitKernel.setArg(argIndex++, _epsilon);
+        _inhibitKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -128,7 +131,7 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, vl._visibleCsPrev);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _learnKernel.setArg(argIndex++, hiddenCs);
+            _learnKernel.setArg(argIndex++, _hiddenCs[_back]);
             _learnKernel.setArg(argIndex++, _hiddenCounts);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
@@ -162,6 +165,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCounts(numHiddenColumns);
     cs.getQueue().enqueueReadBuffer(_hiddenCounts, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCounts.data());
@@ -203,6 +207,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCounts(numHiddenColumns);
     is.read(reinterpret_cast<char*>(hiddenCounts.data()), numHiddenColumns * sizeof(cl_int));

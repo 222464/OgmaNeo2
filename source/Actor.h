@@ -52,10 +52,13 @@ public:
 
     cl_float _gamma;
 
+    cl_float _epsilon;
+
     Actor()
     :
-    _alpha(0.1f),
-    _gamma(0.95f)
+    _alpha(0.2f),
+    _gamma(0.95f),
+    _epsilon(0.01f)
     {}
 
     void init(
@@ -69,7 +72,6 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
-        const cl::Buffer &hiddenCs,
         std::mt19937 &rng,
         float reward,
         bool learnEnabled
