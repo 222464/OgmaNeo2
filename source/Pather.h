@@ -137,8 +137,8 @@ public:
     // Defaults
     Pather()
     :
-    _alpha(0.1f),
-    _beta(0.1f),
+    _alpha(0.01f),
+    _beta(0.01f),
     _gamma(0.9f)
     {}
 
