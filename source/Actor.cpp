@@ -107,8 +107,6 @@ void Actor::step(
 
     // Activate
     {
-        std::uniform_int_distribution<int> seedDist(0, 99999);
-
         int argIndex = 0;
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
