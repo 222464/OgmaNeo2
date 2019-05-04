@@ -36,7 +36,7 @@ private:
 
     cl::Buffer _hiddenCounts;
 
-    DoubleBuffer _hiddenCs;
+    cl::Buffer _hiddenCs;
 
     DoubleBuffer _hiddenActivations;
 
@@ -52,13 +52,10 @@ public:
 
     cl_float _gamma;
 
-    cl_float _epsilon;
-
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.98f),
-    _epsilon(0.01f)
+    _gamma(0.98f)
     {}
 
     void init(
@@ -72,6 +69,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
+        const cl::Buffer &hiddenCs,
         std::mt19937 &rng,
         float reward,
         bool learnEnabled
@@ -105,7 +103,7 @@ public:
     }
 
     const cl::Buffer &getHiddenCs() const {
-        return _hiddenCs[_front];
+        return _hiddenCs;
     }
 
     Int3 getHiddenSize() const {
