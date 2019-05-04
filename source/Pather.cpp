@@ -9,7 +9,7 @@
 #include "Pather.h"
 
 #include <unordered_set>
-#include <iostream>
+
 using namespace ogmaneo;
 
 // Pathfinder
@@ -134,19 +134,19 @@ void Pather::transition(
         int endIndex = _hiddenCs[hiddenColumnIndex];
         int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        // float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
+        float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
 
-        // int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        // _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
 
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            float target = (hc == endIndex ? 1.0f : 0.0f);
+        // for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        //     float target = (hc == endIndex ? 1.0f : 0.0f);
 
-            int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        //     int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
-        }
+        //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // }
     }
 
     // Pathfind
