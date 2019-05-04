@@ -33,7 +33,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4, 16 }),
+        _size(4, 4, 16),
         _radius(2)
         {}
     };
@@ -138,7 +138,7 @@ public:
     Pather()
     :
     _alpha(0.01f),
-    _beta(0.2f),
+    _beta(0.1f),
     _gamma(0.9f)
     {}
 
