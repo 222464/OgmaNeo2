@@ -21,7 +21,7 @@ int ogmaneo::findNextIndex(
     const FloatBuffer &weights,
     float gamma
 ) {
-    std::vector<float> dist(size, -1.0f);
+    std::vector<float> prob(size, 0.0f);
     std::vector<int> prev(size, -1);
 
     std::unordered_set<int> q;
@@ -29,19 +29,19 @@ int ogmaneo::findNextIndex(
     for (int v = 0; v < size; v++)
         q.insert(v);
 
-    dist[startIndex] = 1.0f;
+    prob[startIndex] = 1.0f;
 
     while (!q.empty()) {
         std::unordered_set<int>::iterator cit = q.begin();
 
         int u = *cit;
-        float maxDist = dist[u];
+        float maxProb = prob[u];
         
         cit++;
 
         for (; cit != q.end(); cit++) {
-            if (dist[*cit] > maxDist) {
-                maxDist = dist[*cit];
+            if (prob[*cit] > maxProb) {
+                maxProb = prob[*cit];
                 u = *cit;
             }
         }
@@ -64,10 +64,10 @@ int ogmaneo::findNextIndex(
         for (; cit != q.end(); cit++) {
             float w = weights[weightsStart + u * size + *cit];
 
-            float alt = dist[u] * w * gamma;
+            float alt = prob[u] * w * gamma;
             
-            if (alt > dist[*cit]) {
-                dist[*cit] = alt;
+            if (alt > prob[*cit]) {
+                prob[*cit] = alt;
 
                 prev[*cit] = u;
             }
@@ -146,21 +146,27 @@ void Pather::transition(
 
         // _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
 
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            // {
-            //     float target = (hc == startIndex ? 1.0f : 0.0f);
+        float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
+        
+        int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-            //     int wi = endIndex + hc * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
 
-            //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
-            // }
+        // for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        //     // {
+        //     //     float target = (hc == startIndex ? 1.0f : 0.0f);
 
-            float target = (hc == endIndex ? 1.0f : 0.0f);
+        //     //     int wi = endIndex + hc * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-            int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        //     //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        //     // }
 
-            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
-        }
+        //     float target = (hc == endIndex ? 1.0f : 0.0f);
+
+        //     int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+
+        //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // }
     }
 
     // Pathfind
