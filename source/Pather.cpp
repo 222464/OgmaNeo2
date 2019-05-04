@@ -17,8 +17,8 @@ int ogmaneo::findNextIndex(
     int startIndex,
     int endIndex,
     int size,
-    int weightsStart,
-    const FloatBuffer &weights,
+    int transitionsStart,
+    const FloatBuffer &transitions,
     float gamma
 ) {
     std::vector<float> prob(size, 0.0f);
@@ -62,7 +62,7 @@ int ogmaneo::findNextIndex(
         cit = q.begin();
 
         for (; cit != q.end(); cit++) {
-            float w = weights[weightsStart + u * size + *cit];
+            float w = transitions[transitionsStart + u * size + *cit];
 
             float alt = prob[u] * w * gamma;
             

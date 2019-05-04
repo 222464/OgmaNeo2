@@ -16,8 +16,8 @@ int findNextIndex(
     int startIndex,
     int endIndex,
     int size,
-    int weightsStart,
-    const FloatBuffer &weights,
+    int transitionsStart,
+    const FloatBuffer &transitions,
     float gamma
 );
 
