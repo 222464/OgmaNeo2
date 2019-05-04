@@ -17,7 +17,8 @@ int findNextIndex(
     int endIndex,
     int size,
     int weightsStart,
-    const FloatBuffer &weights
+    const FloatBuffer &weights,
+    float gamma
 );
 
 // Sparse coder
@@ -114,12 +115,14 @@ private:
 public:
     float _alpha; // Weight learning rate
     float _beta; // Transition learning rate
+    float _gamma; // Distance penalty multiplier
 
     // Defaults
     Pather()
     :
     _alpha(0.1f),
-    _beta(0.1f)
+    _beta(0.1f),
+    _gamma(0.99f)
     {}
 
     // Create a sparse coding layer with random initialization
