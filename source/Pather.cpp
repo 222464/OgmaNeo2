@@ -21,7 +21,7 @@ int ogmaneo::findNextIndex(
     const FloatBuffer &transitions,
     float gamma
 ) {
-    std::vector<float> prob(size, 0.0f);
+    std::vector<float> dist(size, 999999.0f);
     std::vector<int> prev(size, -1);
 
     std::unordered_set<int> q;
@@ -29,19 +29,19 @@ int ogmaneo::findNextIndex(
     for (int v = 0; v < size; v++)
         q.insert(v);
 
-    prob[startIndex] = 1.0f;
+    dist[startIndex] = 0.0f;
 
     while (!q.empty()) {
         std::unordered_set<int>::iterator cit = q.begin();
 
         int u = *cit;
-        float maxProb = prob[u];
+        float minDist = dist[u];
         
         cit++;
 
         for (; cit != q.end(); cit++) {
-            if (prob[*cit] > maxProb) {
-                maxProb = prob[*cit];
+            if (dist[*cit] < minDist) {
+                minDist = dist[*cit];
                 u = *cit;
             }
         }
@@ -64,10 +64,10 @@ int ogmaneo::findNextIndex(
         for (; cit != q.end(); cit++) {
             float w = transitions[transitionsStart + u * size + *cit];
 
-            float alt = prob[u] * w * gamma;
+            float alt = dist[u] + 1.0f / std::max(0.0001f, w);
             
-            if (alt > prob[*cit]) {
-                prob[*cit] = alt;
+            if (alt < dist[*cit]) {
+                dist[*cit] = alt;
 
                 prev[*cit] = u;
             }
