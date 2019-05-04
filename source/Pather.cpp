@@ -18,7 +18,8 @@ int ogmaneo::findNextIndex(
     int endIndex,
     int size,
     int weightsStart,
-    const FloatBuffer &weights
+    const FloatBuffer &weights,
+    float gamma
 ) {
     std::vector<float> dist(size, 0.0f);
     std::vector<int> prev(size, -1);
@@ -61,7 +62,7 @@ int ogmaneo::findNextIndex(
         for (int n = 0; n < size; n++) {
             float w = weights[weightsStart + u * size + n];
 
-            float alt = dist[u] * w;
+            float alt = dist[u] * w * gamma;
             
             if (alt > dist[n]) {
                 dist[n] = alt;
@@ -162,7 +163,7 @@ void Pather::transition(
     }
 
     // Pathfind
-    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights);
+    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights, _gamma);
 }
 
 void Pather::reconstruct(
@@ -313,6 +314,7 @@ void Pather::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
     writeBufferToStream(os, &_hiddenCsPrev);
@@ -349,6 +351,7 @@ void Pather::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
     readBufferFromStream(is, &_hiddenCsPrev);
