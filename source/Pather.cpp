@@ -21,7 +21,7 @@ int ogmaneo::findNextIndex(
     const FloatBuffer &weights,
     float gamma
 ) {
-    std::vector<float> dist(size, 0.0f);
+    std::vector<float> dist(size, -1.0f);
     std::vector<int> prev(size, -1);
 
     std::unordered_set<int> q;
@@ -59,15 +59,17 @@ int ogmaneo::findNextIndex(
 
         q.erase(u);
 
-        for (int n = 0; n < size; n++) {
-            float w = weights[weightsStart + u * size + n];
+        cit = q.begin();
+
+        for (; cit != q.end(); cit++) {
+            float w = weights[weightsStart + u * size + *cit];
 
             float alt = dist[u] * w * gamma;
             
-            if (alt > dist[n]) {
-                dist[n] = alt;
+            if (alt > dist[*cit]) {
+                dist[*cit] = alt;
 
-                prev[n] = u;
+                prev[*cit] = u;
             }
         }
     }
@@ -134,13 +136,25 @@ void Pather::transition(
         int endIndex = _hiddenCs[hiddenColumnIndex];
         int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        // float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
+        // if (predIndexPrev != endIndex) {
+        //     int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        // int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        //     _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
+        // }
 
-        // _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // int wi = endIndex + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+
+        // _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            // {
+            //     float target = (hc == startIndex ? 1.0f : 0.0f);
+
+            //     int wi = endIndex + hc * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+
+            //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+            // }
+
             float target = (hc == endIndex ? 1.0f : 0.0f);
 
             int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
