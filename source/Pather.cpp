@@ -130,7 +130,7 @@ void Pather::learnWeights(
 
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        float delta = _alpha * (target - sum);
+        float delta = _alpha * (target - std::exp(sum));
 
         vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
@@ -149,18 +149,25 @@ void Pather::transition(
         int endIndex = _hiddenCs[hiddenColumnIndex];
         int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        // float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
+        int wi = endIndex + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-        // int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        _transitionWeights[wi] += _beta;
 
-        // _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // Normalize
+        float total = 0.0f;
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            float target = (hc == endIndex ? 1.0f : 0.0f);
-
             int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
 
-            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+            total += _transitionWeights[wi] * _transitionWeights[wi];
+        }
+
+        float scale = 1.0f / std::max(0.0001f, std::sqrt(total));
+
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+
+            _transitionWeights[wi] *= scale;
         }
     }
 
@@ -212,7 +219,7 @@ void Pather::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> weightDist(-0.001f, 0.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
