@@ -82,11 +82,12 @@ void Actor::step(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::swap(_hiddenCs[_front], _hiddenCs[_back]);
     std::swap(_hiddenActivations[_front], _hiddenActivations[_back]);
+    std::swap(_hiddenCs[_front], _hiddenCs[_back]);
 
     // Initialize stimulus to 0
     cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    
     // Compute feed stimulus
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
