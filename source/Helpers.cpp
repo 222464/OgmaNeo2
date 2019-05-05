@@ -295,7 +295,7 @@ void ogmaneo::initSMLocalRF(
                 for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
                     Int2 inPos(ix, iy);
 
-                    int inIndex = address2C(inPos, inSize);
+                    int inIndex = address2(inPos, inSize);
 
                     mat._nonZeroValues.push_back(0.0f);
                     mat._columnIndices.push_back(inIndex);
@@ -303,7 +303,7 @@ void ogmaneo::initSMLocalRF(
                     nonZeroInRow++;
                 }
 
-            mat._rowRanges[address2C(outPos, outSize)] = nonZeroInRow;
+            mat._rowRanges[address2(outPos, outSize)] = nonZeroInRow;
         }
 
     mat._nonZeroValues.shrink_to_fit();
@@ -372,7 +372,7 @@ void ogmaneo::initSMLocalRF(
                         for (int iz = 0; iz < inSize.z; iz++) {
                             Int3 inPos(ix, iy, iz);
 
-                            int inIndex = address3C(inPos, inSize);
+                            int inIndex = address3(inPos, inSize);
 
                             mat._nonZeroValues.push_back(0.0f);
                             mat._columnIndices.push_back(inIndex);
@@ -381,7 +381,7 @@ void ogmaneo::initSMLocalRF(
                         }
                     }
 
-                mat._rowRanges[address3C(outPos, outSize)] = nonZeroInRow;
+                mat._rowRanges[address3(outPos, outSize)] = nonZeroInRow;
             }
         }
 

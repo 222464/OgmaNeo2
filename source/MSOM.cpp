@@ -15,7 +15,7 @@ void MSOM::forward(
     std::mt19937 &rng,
     const std::vector<const FloatBuffer*> &inputs
 ) {
-    int hiddenIndex = address2C(pos, _hiddenSize);
+    int hiddenIndex = address2(pos, _hiddenSize);
 
     float sum = 0.0f;
 
@@ -34,7 +34,7 @@ void MSOM::inhibit(
     std::mt19937 &rng,
     FloatBuffer* hiddenStates
 ) {
-    int hiddenIndex = address2C(pos, _hiddenSize);
+    int hiddenIndex = address2(pos, _hiddenSize);
 
     bool highest = true;
 
@@ -45,7 +45,7 @@ void MSOM::inhibit(
 
             Int2 dPos(pos.x + dx, pos.y + dy);
 
-            if (inBounds0(dPos, _hiddenSize) && _hiddenActivations[address2C(dPos, _hiddenSize)] > _hiddenActivations[hiddenIndex]) {
+            if (inBounds0(dPos, _hiddenSize) && _hiddenActivations[address2(dPos, _hiddenSize)] > _hiddenActivations[hiddenIndex]) {
                 highest = false;
 
                 break;
@@ -59,7 +59,7 @@ void MSOM::blur(
     const Int2 &pos,
     std::mt19937 &rng
 ) {
-    int hiddenIndex = address2C(pos, _hiddenSize);
+    int hiddenIndex = address2(pos, _hiddenSize);
 
     float m = 0.0f;
 
@@ -67,7 +67,7 @@ void MSOM::blur(
         for (int dy = -_blurRadius; dy <= _blurRadius; dy++) {
             Int2 dPos(pos.x + dx, pos.y + dy);
 
-            if (inBounds0(dPos, _hiddenSize) && _hiddenStates[address2C(dPos, _hiddenSize)] != 0.0f) {
+            if (inBounds0(dPos, _hiddenSize) && _hiddenStates[address2(dPos, _hiddenSize)] != 0.0f) {
                 float dist = std::abs(dx) + std::abs(dy);
                 float falloff = 1.0f - dist / (2.0f * (_blurRadius + 1));
 
@@ -87,7 +87,7 @@ void MSOM::backward(
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    int visibleIndex = address2C(pos, vld._size);
+    int visibleIndex = address2(pos, vld._size);
     
     vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(1.0f, vl._weights.countsT(*hiddenStates, visibleIndex));
 }
@@ -97,7 +97,7 @@ void MSOM::learn(
     std::mt19937 &rng,
     const std::vector<const FloatBuffer*> &inputs
 ) {
-    int hiddenIndex = address2C(pos, _hiddenSize);
+    int hiddenIndex = address2(pos, _hiddenSize);
 
     if (_hiddenBlurs[hiddenIndex] != 0.0f) {
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -122,7 +122,7 @@ void MSOM::predict(
     std::mt19937 &rng,
     const FloatBuffer* feedBackStates
 ) {
-    int hiddenIndex = address2C(pos, _hiddenSize);
+    int hiddenIndex = address2(pos, _hiddenSize);
 
     _hiddenActivations[hiddenIndex] = -_crossWeights.distance(_hiddenStates, hiddenIndex) / std::max(1, _crossWeights.counts(hiddenIndex));
 
