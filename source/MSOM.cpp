@@ -106,14 +106,16 @@ void MSOM::learn(
 
             vl._weights.hebb(*inputs[vli], hiddenIndex, _alpha * _hiddenBlurs[hiddenIndex]);
         }
+    }
 
-        _crossWeights.hebb(_hiddenStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
+    float delta = _beta * (_hiddenStates[hiddenIndex] - _hiddenPredictions[hiddenIndex]);
     
-        if (!_feedBackStatesPrev.empty()) {
-            assert(!_feedBackWeights._nonZeroValues.empty());
+    _crossWeights.deltas(_hiddenStatesPrev, delta, hiddenIndex);
 
-            _feedBackWeights.hebb(_feedBackStatesPrev, hiddenIndex, _beta * _hiddenBlurs[hiddenIndex]);
-        }
+    if (!_feedBackStatesPrev.empty()) {
+        assert(!_feedBackWeights._nonZeroValues.empty());
+
+        _feedBackWeights.deltas(_feedBackStatesPrev, delta, hiddenIndex);
     }
 }
 
@@ -124,13 +126,15 @@ void MSOM::predict(
 ) {
     int hiddenIndex = address2(pos, _hiddenSize);
 
-    _hiddenActivations[hiddenIndex] = -_crossWeights.distance(_hiddenStates, hiddenIndex) / std::max(1, _crossWeights.counts(hiddenIndex));
+    _hiddenPredictions[hiddenIndex] = _crossWeights.multiply(_hiddenStates, hiddenIndex) / std::max(1, _crossWeights.counts(hiddenIndex));
 
     if (feedBackStates != nullptr) {
         assert(!_feedBackWeights._nonZeroValues.empty());
 
-        _hiddenActivations[hiddenIndex] += -_feedBackWeights.distance(*feedBackStates, hiddenIndex) / std::max(1, _feedBackWeights.counts(hiddenIndex));
+        _hiddenPredictions[hiddenIndex] += _feedBackWeights.multiply(*feedBackStates, hiddenIndex) / std::max(1, _feedBackWeights.counts(hiddenIndex));
     }
+
+    _hiddenPredictions[hiddenIndex] = sigmoid(_hiddenPredictions[hiddenIndex]);
 }
 
 void MSOM::initRandom(
@@ -268,13 +272,13 @@ void MSOM::predict(
     runKernel2(cs, std::bind(MSOM::predictKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
-#ifdef KERNEL_NOTHREAD
-    for (int x = 0; x < _hiddenSize.x; x++)
-        for (int y = 0; y < _hiddenSize.y; y++)
-            inhibit(Int2(x, y), cs._rng, &_hiddenPredictions);
-#else
-    runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenPredictions), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-#endif
+// #ifdef KERNEL_NOTHREAD
+//     for (int x = 0; x < _hiddenSize.x; x++)
+//         for (int y = 0; y < _hiddenSize.y; y++)
+//             inhibit(Int2(x, y), cs._rng, &_hiddenPredictions);
+// #else
+//     runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenPredictions), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+// #endif
 
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < numHidden; x++)
