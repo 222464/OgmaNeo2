@@ -432,7 +432,7 @@ void kernel imLearn(
 
     sum /= (countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
-    float delta = alpha * (visibleActivations[visibleIndex] - exp(sum));
+    float delta = alpha * (visibleActivations[visibleIndex] - sum);
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
 }
