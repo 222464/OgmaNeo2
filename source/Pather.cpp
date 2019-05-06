@@ -144,28 +144,34 @@ void Pather::transition(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
+    int weightsStart = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+
     if (learnEnabled) {
         int startIndex = _hiddenCsPrev[hiddenColumnIndex];
         int endIndex = _hiddenCs[hiddenColumnIndex];
-        int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        // float target = (predIndexPrev == endIndex ? 1.0f : 0.0f);
+        // Decay
+        // for (int i = 0; i < _hiddenSize.z * _hiddenSize.z; i++) {
+        //     int wi = i + weightsStart;
 
-        // int wi = predIndexPrev + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+        //     _transitionWeights[wi] *= _beta;
+        // }
 
-        // _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+        // int wi = endIndex + startIndex * _hiddenSize.z + weightsStart;
+
+        // _transitionWeights[wi] = 1.0f;
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             float target = (hc == endIndex ? 1.0f : 0.0f);
 
-            int wi = hc + startIndex * _hiddenSize.z + hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+            int wi = hc + startIndex * _hiddenSize.z + weightsStart;
 
             _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
         }
     }
 
     // Pathfind
-    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z, _transitionWeights, _gamma);
+    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, weightsStart, _transitionWeights, _gamma);
 }
 
 void Pather::reconstruct(
