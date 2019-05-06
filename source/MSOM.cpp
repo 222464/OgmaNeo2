@@ -89,7 +89,7 @@ void MSOM::backward(
 
     int visibleIndex = address2(pos, vld._size);
     
-    vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(1.0f, vl._weights.countsT(*hiddenStates, visibleIndex));
+    vl._recons[visibleIndex] = vl._weights.multiplyT(*hiddenStates, visibleIndex) / std::max(0.0001f, vl._weights.countsT(*hiddenStates, visibleIndex));
 }
 
 void MSOM::learn(
@@ -108,14 +108,28 @@ void MSOM::learn(
         }
     }
 
-    float delta = _beta * (_hiddenStates[hiddenIndex] - _hiddenPredictions[hiddenIndex]);
-    
-    _crossWeights.deltas(_hiddenStatesPrev, delta, hiddenIndex);
+    _crossTraces.scale(hiddenIndex, _gamma);
 
-    if (!_feedBackStatesPrev.empty()) {
-        assert(!_feedBackWeights._nonZeroValues.empty());
+    if (_hiddenStates[hiddenIndex] != 0.0f)
+        _crossTraces.trace(_hiddenStatesPrev, hiddenIndex);
+}
 
-        _feedBackWeights.deltas(_feedBackStatesPrev, delta, hiddenIndex);
+void MSOM::plan(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const FloatBuffer* feedBackStates,
+    int t
+) {
+    int hiddenIndex = address2(pos, _hiddenSize);
+
+    if (t % 2 == 0) {
+        if (t == 0)
+            _hiddenPathsPing[hiddenIndex] = std::max(_hiddenPathsPong[hiddenIndex] * _gamma, (*feedBackStates)[hiddenIndex]);
+        else
+            _hiddenPathsPing[hiddenIndex] = std::max(_hiddenPathsPong[hiddenIndex], _crossTraces.maxT(_hiddenPathsPong, hiddenIndex)) * _gamma;
+    }
+    else {
+        _hiddenPathsPong[hiddenIndex] = std::max(_hiddenPathsPing[hiddenIndex], _crossTraces.maxT(_hiddenPathsPing, hiddenIndex)) * _gamma;
     }
 }
 
@@ -126,29 +140,65 @@ void MSOM::predict(
 ) {
     int hiddenIndex = address2(pos, _hiddenSize);
 
-    _hiddenPredictions[hiddenIndex] = _crossWeights.multiply(_hiddenStates, hiddenIndex) / std::max(1, _crossWeights.counts(hiddenIndex));
+    // Find touching units
+    std::vector<int> localHiddenIndices;
+    
+    for (int dx = -_planRadius; dx <= _planRadius; dx++)
+        for (int dy = -_planRadius; dy <= _planRadius; dy++) {
+            Int2 dPos(pos.x + dx, pos.y + dy);
 
-    if (feedBackStates != nullptr) {
-        assert(!_feedBackWeights._nonZeroValues.empty());
+            if (inBounds0(dPos, _hiddenSize)) {
+                int otherHiddenIndex = address2(dPos, _hiddenSize);
 
-        _hiddenPredictions[hiddenIndex] += _feedBackWeights.multiply(*feedBackStates, hiddenIndex) / std::max(1, _feedBackWeights.counts(hiddenIndex));
+                if (_hiddenStates[otherHiddenIndex] != 0.0f)
+                    localHiddenIndices.push_back(otherHiddenIndex);
+            }
+        }
+
+    _hiddenPredictions[hiddenIndex] = 0.0f;
+
+    for (int i = 0; i < localHiddenIndices.size(); i++) {
+        bool lowestAbove = false;
+
+        float lowerValue = _hiddenPathsPong[localHiddenIndices[i]];
+        float upperValue = _hiddenPathsPong[hiddenIndex];
+        
+        for (int dx = -_planRadius; dx <= _planRadius; dx++)
+            for (int dy = -_planRadius; dy <= _planRadius; dy++) {
+                Int2 dPos(pos.x + dx, pos.y + dy);
+
+                if (inBounds0(dPos, _hiddenSize)) {
+                    int otherHiddenIndex = address2(dPos, _hiddenSize);
+
+                    if (_hiddenPathsPong[otherHiddenIndex] > lowerValue && _hiddenPathsPong[otherHiddenIndex] <= upperValue) {
+                        lowestAbove = false;
+
+                        goto found;
+                    }
+                }
+            }
+
+        found:
+
+        if (lowestAbove) {
+            _hiddenPredictions[hiddenIndex] = 1.0f;
+
+            break;
+        }
     }
-
-    _hiddenPredictions[hiddenIndex] = sigmoid(_hiddenPredictions[hiddenIndex]);
 }
 
 void MSOM::initRandom(
     ComputeSystem &cs,
     const Int2 &hiddenSize,
-    int predRadius,
-    bool hasFeedBack,
+    int crossRadius,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs
 ) {
     _visibleLayerDescs = visibleLayerDescs;
 
     _hiddenSize = hiddenSize;
 
-    _predRadius = predRadius;
+    _crossRadius = crossRadius;
 
     _visibleLayers.resize(_visibleLayerDescs.size());
 
@@ -179,23 +229,20 @@ void MSOM::initRandom(
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
     _hiddenBlurs = FloatBuffer(numHidden, 0.0f);
+
+    _hiddenPathsPing = FloatBuffer(numHidden, 0.0f);
+    _hiddenPathsPong = FloatBuffer(numHidden, 0.0f);
+
     _hiddenPredictions = FloatBuffer(numHidden, 0.0f);
 
     _hiddenStatesPrev = FloatBuffer(numHidden, 0.0f);
 
-    initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _crossWeights);
+    initSMLocalRF(_hiddenSize, _hiddenSize, _crossRadius, _crossTraces);
 
-    for (int i = 0; i < _crossWeights._nonZeroValues.size(); i++)
-        _crossWeights._nonZeroValues[i] = weightDist(cs._rng);
+    _crossTraces.initT();
 
-    if (hasFeedBack) {
-        _feedBackStatesPrev = FloatBuffer(numHidden, 0.0f);
-
-        initSMLocalRF(_hiddenSize, _hiddenSize, _predRadius, _feedBackWeights);
-
-        for (int i = 0; i < _feedBackWeights._nonZeroValues.size(); i++)
-            _feedBackWeights._nonZeroValues[i] = weightDist(cs._rng);
-    }
+    for (int i = 0; i < _crossTraces._nonZeroValues.size(); i++)
+        _crossTraces._nonZeroValues[i] = 0.0f;
 }
 
 void MSOM::activate(
@@ -264,6 +311,17 @@ void MSOM::predict(
 ) {
     int numHidden = _hiddenSize.x * _hiddenSize.y;
 
+    // Plan
+    for (int t = 0; t < _planIters; t++) {
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < _hiddenSize.x; x++)
+            for (int y = 0; y < _hiddenSize.y; y++)
+                plan(Int2(x, y), cs._rng, feedBackStates, t);
+#else
+        runKernel2(cs, std::bind(MSOM::planKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackStates, t), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+    }
+
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
@@ -272,50 +330,35 @@ void MSOM::predict(
     runKernel2(cs, std::bind(MSOM::predictKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
-// #ifdef KERNEL_NOTHREAD
-//     for (int x = 0; x < _hiddenSize.x; x++)
-//         for (int y = 0; y < _hiddenSize.y; y++)
-//             inhibit(Int2(x, y), cs._rng, &_hiddenPredictions);
-// #else
-//     runKernel2(cs, std::bind(MSOM::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenPredictions), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-// #endif
-
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < numHidden; x++)
         copyFloat(x, cs._rng, &_hiddenStates, &_hiddenStatesPrev);
 #else
     runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenStates, &_hiddenStatesPrev), numHidden, cs._rng, cs._batchSize1);
 #endif
-
-    if (!_feedBackStatesPrev.empty()) {
-        assert(feedBackStates != nullptr);
-
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < numHidden; x++)
-            copyFloat(x, cs._rng, feedBackStates, &_feedBackStatesPrev);
-#else
-        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, feedBackStates, &_feedBackStatesPrev), numHidden, cs._rng, cs._batchSize1);
-#endif
-    }
 }
 
 void MSOM::writeToStream(
     std::ostream &os
 ) const {
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
+    os.write(reinterpret_cast<const char*>(&_crossRadius), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_inhibitRadius), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_blurRadius), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&_planRadius), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&_planIters), sizeof(int));
 
     writeBufferToStream(os, &_hiddenActivations);
     writeBufferToStream(os, &_hiddenStates);
     writeBufferToStream(os, &_hiddenBlurs);
+    writeBufferToStream(os, &_hiddenPathsPing);
+    writeBufferToStream(os, &_hiddenPathsPong);
     writeBufferToStream(os, &_hiddenPredictions);
 
     writeBufferToStream(os, &_hiddenStatesPrev);
-    writeBufferToStream(os, &_feedBackStatesPrev);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -331,25 +374,31 @@ void MSOM::writeToStream(
 
         writeBufferToStream(os, &vl._recons);
     }
+
+    writeSMToStream(os, _crossTraces);
 }
 
 void MSOM::readFromStream(
     std::istream &is
 ) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
+    is.read(reinterpret_cast<char*>(&_crossRadius), sizeof(int));
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_inhibitRadius), sizeof(int));
     is.read(reinterpret_cast<char*>(&_blurRadius), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_planRadius), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_planIters), sizeof(int));
 
     readBufferFromStream(is, &_hiddenActivations);
     readBufferFromStream(is, &_hiddenStates);
     readBufferFromStream(is, &_hiddenBlurs);
+    readBufferFromStream(is, &_hiddenPathsPing);
+    readBufferFromStream(is, &_hiddenPathsPong);
     readBufferFromStream(is, &_hiddenPredictions);
 
     readBufferFromStream(is, &_hiddenStatesPrev);
-    readBufferFromStream(is, &_feedBackStatesPrev);
 
     int numVisibleLayers;
     
@@ -368,4 +417,6 @@ void MSOM::readFromStream(
 
         readBufferFromStream(is, &vl._recons);
     }
+
+    readSMFromStream(is, _crossTraces);
 }

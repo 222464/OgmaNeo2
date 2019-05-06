@@ -38,19 +38,21 @@ public:
 private:
     Int2 _hiddenSize; // Size of hidden/output layer
 
-    int _predRadius;
+    int _crossRadius;
 
     FloatBuffer _hiddenActivations;
     FloatBuffer _hiddenStates;
     FloatBuffer _hiddenBlurs;
+
+    FloatBuffer _hiddenPathsPing;
+    FloatBuffer _hiddenPathsPong;
+
     FloatBuffer _hiddenPredictions;
 
     FloatBuffer _hiddenStatesPrev;
-    FloatBuffer _feedBackStatesPrev;
 
-    // Prediction weights
-    SparseMatrix _crossWeights;
-    SparseMatrix _feedBackWeights; // This one is optional, may not be initialized
+    // Traces
+    SparseMatrix _crossTraces;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -86,6 +88,13 @@ private:
         std::mt19937 &rng,
         const FloatBuffer* hiddenStates,
         int vli
+    );
+
+    void plan(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const FloatBuffer* feedBackStates,
+        int t
     );
 
     void predict(
@@ -139,6 +148,16 @@ private:
         p->backward(pos, rng, hiddenStates, vli);
     }
 
+    static void planKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        MSOM* p,
+        const FloatBuffer* feedBackStates,
+        int t
+    ) {
+        p->plan(pos, rng, feedBackStates, t);
+    }
+
     static void predictKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -150,25 +169,30 @@ private:
 
 public:
     float _alpha; // Feed learning rate
-    float _beta; // Prediction learning rate
+    float _gamma; // Trace decay
+    float _minTrace; // Minimum trace threshold for a prediction to occur
     int _inhibitRadius; // Max activation radius
     int _blurRadius; // Radius of learning
+    int _planRadius; // Radius of planning
+    int _planIters; // Pathing iterations
 
     // Defaults
     MSOM()
     :
     _alpha(0.05f),
-    _beta(8.0f),
+    _gamma(0.98f),
+    _minTrace(0.01f),
     _inhibitRadius(2),
-    _blurRadius(1)
+    _blurRadius(1),
+    _planRadius(3),
+    _planIters(16) // Must be even (implementation detail)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int2 &hiddenSize, // Hidden/output size
-        int predRadius, // Prediction radius
-        bool hasFeedBack, // Whether this layer can receive feed back
+        int crossRadius, // Trace radius
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 

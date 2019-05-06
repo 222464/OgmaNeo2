@@ -69,7 +69,7 @@ struct SparseMatrix {
 	// Generate a transpose, must be called after the original has been created
 	void initT();
 
-	// --- Dense ---
+	// --- Basic Ops ---
 
 	float multiply(
 		const std::vector<float> &in,
@@ -113,84 +113,6 @@ struct SparseMatrix {
 		int column
 	);
 
-	// --- One-Hot Vectors Operations ---
-
-	float multiplyOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float multiplyOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
-	float multiplyOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		int row,
-		int oneHotSize
-	);
-
-	float multiplyOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		int column,
-		int oneHotSize
-	);
-
-	float minOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float minOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
-	float maxOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float maxOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
-	float countsOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &in,
-		int row,
-		int oneHotSize
-	);
-
-	float countsOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &in,
-		int column,
-		int oneHotSize
-	);
-
-	float distanceOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float distanceOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
 	// --- Delta Rules ---
 
 	void deltas(
@@ -205,34 +127,26 @@ struct SparseMatrix {
 		int column
 	);
 
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int row,
-		int oneHotSize
+	// --- Min Max ---
+
+	float min(
+		const std::vector<float> &in,
+		int row
 	);
 
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int column,
-		int oneHotSize
+	float max(
+		const std::vector<float> &in,
+		int row
 	);
 
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int row,
-		int oneHotSize
+	float minT(
+		const std::vector<float> &in,
+		int column
 	);
 
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int column,
-		int oneHotSize
+	float maxT(
+		const std::vector<float> &in,
+		int column
 	);
 
 	// --- Normalization ---
@@ -251,6 +165,18 @@ struct SparseMatrix {
 
 	float magnitude2T(
 		int column
+	);
+
+	// --- Scaling and Setting ---
+
+	void scale(
+		int row,
+		float scale
+	);
+
+	void scaleT(
+		int column,
+		float scale
 	);
 
 	// --- Hebb Rules ---
@@ -279,6 +205,16 @@ struct SparseMatrix {
 		int column,
 		int oneHotSize,
 		float alpha
+	);
+
+	void trace(
+		const std::vector<float> &in,
+		int row
+	);
+
+	void traceT(
+		const std::vector<float> &in,
+		int column
 	);
 
 	// --- Copy ---
