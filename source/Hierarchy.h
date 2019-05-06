@@ -26,7 +26,7 @@ public:
     struct LayerDesc {
         Int3 _hiddenSize; // Size of hidden layer
 
-        int _pRadius; // Sparse coder radius
+        int _radius; // Connectivity radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -35,7 +35,7 @@ public:
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _pRadius(2),
+        _radius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}
