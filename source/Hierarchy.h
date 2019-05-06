@@ -38,7 +38,7 @@ public:
     };
 private:
     // Layers
-    std::vector<MSOM> _scLayers;
+    std::vector<MSOM> _layers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<FloatBuffer>>> _histories;
@@ -97,14 +97,14 @@ public:
 
     // Get the number of layers (scLayers)
     int getNumLayers() const {
-        return _scLayers.size();
+        return _layers.size();
     }
 
     // Retrieve predictions
     const FloatBuffer &getPredictions(
         int i // Index of input layer to get predictions for
     ) const {
-        return _scLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._recons;
+        return _layers.front().getVisibleLayer(i * _inputTemporalHorizon)._recons;
     }
 
     // Whether this layer received on update this timestep
@@ -134,17 +134,17 @@ public:
     }
 
     // Retrieve a sparse coding layer
-    MSOM &getSCLayer(
+    MSOM &getLayer(
         int l // Layer index
     ) {
-        return _scLayers[l];
+        return _layers[l];
     }
 
     // Retrieve a sparse coding layer, const version
-    const MSOM &getSCLayer(
+    const MSOM &getLayer(
         int l // Layer index
     ) const {
-        return _scLayers[l];
+        return _layers[l];
     }
 };
 } // namespace ogmaneo
