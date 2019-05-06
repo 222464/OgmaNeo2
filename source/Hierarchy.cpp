@@ -58,7 +58,7 @@ void Hierarchy::initRandom(
                     int index = t + layerDescs[l]._temporalHorizon * i;
 
                     scVisibleLayerDescs[index]._size = inputSizes[i];
-                    scVisibleLayerDescs[index]._radius = layerDescs[l]._scRadius;
+                    scVisibleLayerDescs[index]._radius = layerDescs[l]._mRadius;
                 }
             }
             
@@ -78,7 +78,7 @@ void Hierarchy::initRandom(
 
             for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                 scVisibleLayerDescs[t]._size = layerDescs[l - 1]._hiddenSize;
-                scVisibleLayerDescs[t]._radius = layerDescs[l]._scRadius;
+                scVisibleLayerDescs[t]._radius = layerDescs[l]._mRadius;
             }
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
@@ -91,7 +91,7 @@ void Hierarchy::initRandom(
         }
 		
         // Create the sparse coding layer
-        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._pRadius, l < _scLayers.size() - 1, scVisibleLayerDescs);
+        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._cRadius, scVisibleLayerDescs);
     }
 }
 
@@ -126,6 +126,7 @@ const Hierarchy &Hierarchy::operator=(
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const FloatBuffer*> &inputs,
+    const FloatBuffer* topFeedBackStates, 
     bool learnEnabled
 ) {
     assert(inputs.size() == _inputSizes.size());
@@ -217,7 +218,7 @@ void Hierarchy::step(
                 feedBackStates = &_scLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._recons;
             }
             else
-                feedBackStates = nullptr;
+                feedBackStates = topFeedBackStates;
 
             if (learnEnabled)
                 _scLayers[l].learn(cs, constGet(_histories[l]));

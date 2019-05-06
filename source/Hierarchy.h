@@ -20,8 +20,8 @@ public:
     struct LayerDesc {
         Int2 _hiddenSize; // Size of hidden layer
 
-        int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction radius
+        int _mRadius; // Mapping radius
+        int _cRadius; // Cross radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -30,8 +30,8 @@ public:
         LayerDesc()
         :
         _hiddenSize(16, 16),
-        _scRadius(8),
-        _pRadius(8),
+        _mRadius(8),
+        _cRadius(8),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}
@@ -81,6 +81,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const FloatBuffer*> &inputs, // Input layer column states
+        const FloatBuffer* topFeedBackStates, // Feed back pathing targets
         bool learnEnabled = true // Whether learning is enabled
     );
 
