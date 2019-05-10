@@ -402,9 +402,9 @@ void kernel aLearn(
     else {
         float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float delta = beta * tanh(deltaAction) * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
+        float delta = (deltaAction > 0.0f ? 1.0f : -1.0f) * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
         
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * delta, hiddenIndex1, visibleSize.z);
     }
 }
 
