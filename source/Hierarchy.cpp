@@ -111,6 +111,8 @@ void Hierarchy::initRandom(
         // Create the sparse coding layer
         _pLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs, l == 0);
     }
+
+    _topRewards = FloatBuffer(_pLayers.back().getHiddenSize().x * _pLayers.back().getHiddenSize().y * _pLayers.back().getHiddenSize().z, 0.0f);
 }
 
 const Hierarchy &Hierarchy::operator=(
@@ -123,7 +125,11 @@ const Hierarchy &Hierarchy::operator=(
     _updates = other._updates;
     _ticks = other._ticks;
     _ticksPerUpdate = other._ticksPerUpdate;
+    _rewards = other._rewards;
+    _rewardCounts = other._rewardCounts;
     _inputSizes = other._inputSizes;
+
+    _topRewards = other._topRewards;
 
     _inputTemporalHorizon = other._inputTemporalHorizon;
 
@@ -306,6 +312,8 @@ void Hierarchy::writeToStream(
 
         _pLayers[l].writeToStream(os);
     }
+
+    os.write(reinterpret_cast<const char*>(_topRewards.data()), _topRewards.size() * sizeof(float));
 }
 
 void Hierarchy::readFromStream(
@@ -362,4 +370,8 @@ void Hierarchy::readFromStream(
 
         _pLayers[l].readFromStream(is);
     }
+
+    _topRewards.resize(_pLayers.back().getHiddenSize().x * _pLayers.back().getHiddenSize().y * _pLayers.back().getHiddenSize().z);
+
+    is.read(reinterpret_cast<char*>(_topRewards.data()), _topRewards.size() * sizeof(float));
 }
