@@ -54,6 +54,11 @@ private:
     std::vector<int> _ticks;
     std::vector<int> _ticksPerUpdate;
 
+    std::vector<float> _rewards;
+    std::vector<float> _rewardCounts;
+
+    FloatBuffer _topRewards;
+
     // Input dimensions
     std::vector<Int3> _inputSizes;
 
@@ -86,7 +91,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        const IntBuffer* topFeedBackCs,
+        float reward,
         bool learnEnabled = true // Whether learning is enabled
     );
 
@@ -109,7 +114,7 @@ public:
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._recons;
+        return _pLayers.front().getVisibleLayer(i * _inputTemporalHorizon)._visibleActions;
     }
 
     // Whether this layer received on update this timestep

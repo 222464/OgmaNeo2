@@ -31,6 +31,9 @@ void Hierarchy::initRandom(
     // Default update state is no update
     _updates.resize(layerDescs.size(), false);
 
+    _rewards.resize(layerDescs.size(), 0.0f);
+    _rewardCounts.resize(layerDescs.size(), 0.0f);
+
     // Cache input sizes
     _inputSizes = inputSizes;
 
@@ -106,7 +109,7 @@ void Hierarchy::initRandom(
         }
 		
         // Create the sparse coding layer
-        _pLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
+        _pLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs, l == 0);
     }
 }
 
@@ -142,7 +145,7 @@ const Hierarchy &Hierarchy::operator=(
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
-    const IntBuffer* topFeedBackCs,
+    float reward,
     bool learnEnabled
 ) {
     assert(inputCs.size() == _inputSizes.size());
@@ -187,6 +190,9 @@ void Hierarchy::step(
 
     // Forward
     for (int l = 0; l < _pLayers.size(); l++) {
+        _rewards[l] += reward;
+        _rewardCounts[l] += 1.0f;
+
         // If is time for layer to tick
         if (l == 0 || _ticks[l] >= _ticksPerUpdate[l]) {
             // Reset tick
@@ -228,14 +234,40 @@ void Hierarchy::step(
     for (int l = _pLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            const IntBuffer* feedBackCs;
+            const FloatBuffer* feedBackRewards;
 
             if (l < _pLayers.size() - 1)
-                feedBackCs = &_pLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._recons;
+                feedBackRewards = &_pLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._visibleRewards;
             else
-                feedBackCs = topFeedBackCs;
+                feedBackRewards = &_topRewards;
 
-            _pLayers[l].stepDown(cs, feedBackCs, learnEnabled);
+            float r;
+            
+            if (l > 0)
+                r = _rewards[l - 1] / std::max(1.0f, _rewardCounts[l - 1]);
+            else
+                r = 0.0f;
+
+            if (l == _pLayers.size() - 1) {
+                for (int x = 0; x < _pLayers[l].getHiddenSize().x; x++)
+                    for (int y = 0; y < _pLayers[l].getHiddenSize().y; y++) {
+                        _topRewards[
+                            address3(Int3(x, y, _pLayers[l].getHiddenCs()[
+                                address2(Int2(x, y), Int2(_pLayers[l].getHiddenSize().x, _pLayers[l].getHiddenSize().y))
+                                ]), _pLayers[l].getHiddenSize())
+                                ] = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
+                    }
+            }
+
+            _pLayers[l].stepDown(cs, constGet(_histories[l]), feedBackRewards, l == 0, r, learnEnabled);
+        }
+    }
+
+    // Clear reward data
+    for (int l = _pLayers.size() - 1; l >= 0; l--) {
+        if (_updates[l]) {
+            _rewards[l] = 0.0f;
+            _rewardCounts[l] = 0.0f;
         }
     }
 }
@@ -256,6 +288,9 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(_updates.data()), _updates.size() * sizeof(char));
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
     os.write(reinterpret_cast<const char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
+
+    os.write(reinterpret_cast<const char*>(_rewards.data()), _rewards.size() * sizeof(float));
+    os.write(reinterpret_cast<const char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
 
     os.write(reinterpret_cast<const char*>(&_inputTemporalHorizon), sizeof(int));
 
@@ -298,9 +333,15 @@ void Hierarchy::readFromStream(
 
     _updates.resize(numLayers);
 
+    _rewards.resize(numLayers);
+    _rewardCounts.resize(numLayers);
+
     is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
     is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
+
+    is.read(reinterpret_cast<char*>(_rewards.data()), _rewards.size() * sizeof(float));
+    is.read(reinterpret_cast<char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
 
     is.read(reinterpret_cast<char*>(&_inputTemporalHorizon), sizeof(int));
 
