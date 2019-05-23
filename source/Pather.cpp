@@ -129,17 +129,13 @@ void Pather::learnFB(
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
 
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+    int visibleIndex = address3(Int3(pos.x, pos.y, targetC), vld._size);
 
-        float target = (vc == targetC ? 1.0f : 0.0f);
+    float sum = vl._fbWeights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._fbWeights.countsT(visibleIndex) / _hiddenSize.z);
 
-        float sum = vl._ffWeights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._ffWeights.countsT(visibleIndex) / _hiddenSize.z);
+    float delta = _fbLearnRate * (reward - sum);
 
-        float delta = _ffLearnRate * (target - sum);
-
-        vl._ffWeights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
-    }
+    vl._fbWeights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
 }
 
 void Pather::transition(
@@ -265,7 +261,7 @@ void Pather::initRandom(
         vl._ffWeights.initT();
 
         for (int i = 0; i < vl._ffWeights._nonZeroValues.size(); i++)
-            vl._ffWeights._nonZeroValues[i] = weightDist(cs._rng);
+            vl._ffWeights._nonZeroValues[i] = ffWeightDist(cs._rng);
 
         if (isFirstLayer)
             vl._visibleActions = IntBuffer(numVisibleColumns, 0);
@@ -311,9 +307,9 @@ void Pather::stepUp(
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < vld._size.x; x++)
                 for (int y = 0; y < vld._size.y; y++)
-                    learnWeights(Int2(x, y), cs._rng, inputCs, vli);
+                    learnFF(Int2(x, y), cs._rng, inputCs, vli);
 #else
-            runKernel2(cs, std::bind(Pather::learnWeightsKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Pather::learnFFKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
         }
     }
@@ -321,29 +317,63 @@ void Pather::stepUp(
 
 void Pather::stepDown(
     ComputeSystem &cs,
+    const std::vector<const IntBuffer*> &inputCs,
     const FloatBuffer* feedBackRewards,
+    bool isFirstLayer,
+    float reward,
     bool learnEnabled
 ) {
+    if (learnEnabled) {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < vld._size.x; x++)
+                for (int y = 0; y < vld._size.y; y++)
+                    learnFB(Int2(x, y), cs._rng, inputCs, vli, reward);
+#else
+            runKernel2(cs, std::bind(Pather::learnFBKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli, reward), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+#endif
+        }
+    }
+
     // Find node on path to goal
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
             transition(Int2(x, y), cs._rng, feedBackCs, learnEnabled);
 #else
-    runKernel2(cs, std::bind(Pather::transitionKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackCs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Pather::transitionKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackRewards, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    if (isFirstLayer) {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
 #ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < vld._size.x; x++)
-            for (int y = 0; y < vld._size.y; y++)
-                reconstruct(Int2(x, y), cs._rng, &_predictedCs, vli);
+            for (int x = 0; x < vld._size.x; x++)
+                for (int y = 0; y < vld._size.y; y++)
+                   backwardActions(Int2(x, y), cs._rng, &_predictedCs, vli);
 #else
-        runKernel2(cs, std::bind(Pather::reconstructKernel, std::placeholders::_1, std::placeholders::_2, this, &_predictedCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Pather::backwardActionsKernel, std::placeholders::_1, std::placeholders::_2, this, &_predictedCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
+        }
+    }
+    else {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < vld._size.x; x++)
+                for (int y = 0; y < vld._size.y; y++)
+                   backwardRewards(Int2(x, y), cs._rng, &_predictedCs, vli);
+#else
+            runKernel2(cs, std::bind(Pather::backwardRewardsKernel, std::placeholders::_1, std::placeholders::_2, this, &_predictedCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+#endif
+        }
     }
 }
 
@@ -355,9 +385,11 @@ void Pather::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
-    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_ffLearnRate), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_fbLearnRate), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_tLearnRate), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_iterations), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
     writeBufferToStream(os, &_hiddenCsPrev);
@@ -376,11 +408,11 @@ void Pather::writeToStream(
 
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
-        writeSMToStream(os, vl._weights);
+        writeSMToStream(os, vl._ffWeights);
+        writeSMToStream(os, vl._fbWeights);
 
-        writeBufferToStream(os, &vl._visibleCounts);
-
-        writeBufferToStream(os, &vl._recons);
+        writeBufferToStream(os, &vl._visibleRewards);
+        writeBufferToStream(os, &vl._visibleActions);
     }
 }
 
@@ -392,9 +424,11 @@ void Pather::readFromStream(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_ffLearnRate), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_fbLearnRate), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_tLearnRate), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_iterations), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
     readBufferFromStream(is, &_hiddenCsPrev);
@@ -419,10 +453,10 @@ void Pather::readFromStream(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        readSMFromStream(is, vl._weights);
+        readSMFromStream(is, vl._ffWeights);
+        readSMFromStream(is, vl._fbWeights);
 
-        readBufferFromStream(is, &vl._visibleCounts);
-
-        readBufferFromStream(is, &vl._recons);
+        readBufferFromStream(is, &vl._visibleRewards);
+        readBufferFromStream(is, &vl._visibleActions);
     }
 }

@@ -209,7 +209,9 @@ public:
 
     void stepDown(
         ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &inputCs, // Input states
         const FloatBuffer* feedBackRewards, // Rewards from layer above or given by user
+        bool isFirstLayer,
         float reward,
         bool learnEnabled // Whether to learn
     );
