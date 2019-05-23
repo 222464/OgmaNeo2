@@ -325,7 +325,7 @@ void Pather::stepDown(
     float reward,
     bool learnEnabled
 ) {
-    if (learnEnabled) {
+    if (learnEnabled && !isFirstLayer) {
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
