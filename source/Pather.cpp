@@ -399,6 +399,7 @@ void Pather::writeToStream(
     writeBufferToStream(os, &_predictedCs);
 
     writeBufferToStream(os, &_transitionWeights);
+    writeBufferToStream(os, &_qs);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -438,6 +439,7 @@ void Pather::readFromStream(
     readBufferFromStream(is, &_predictedCs);
 
     readBufferFromStream(is, &_transitionWeights);
+    readBufferFromStream(is, &_qs);
 
     int numVisibleLayers;
     
