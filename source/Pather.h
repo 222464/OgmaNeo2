@@ -11,14 +11,22 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// Pathfinding
-int findNextIndex(
-    int startIndex,
-    int endIndex,
-    int size,
+// Planning
+void iterate(
+    int numStates,
     int transitionsStart,
+    int rewardsStart,
     const FloatBuffer &transitions,
+    const FloatBuffer &rewards,
+    FloatBuffer &qs,
     float gamma
+);
+
+int getPolicy(
+    int startIndex,
+    int numStates,
+    int transitionsStart,
+    const FloatBuffer &qs
 );
 
 // Sparse coder
@@ -40,11 +48,11 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix _ffWeights; // Feed forward weight matrix
+        SparseMatrix _fbWeights; // Feed back weight matrix
 
-        IntBuffer _visibleCounts; // Number touching
-
-        IntBuffer _recons; // Reconstruction
+        FloatBuffer _visibleRewards; // Reward predictions by feed back matrix
+        IntBuffer _visibleActions; // Actions predictions by transposed feed forward matrix
     };
 
 private:
@@ -56,6 +64,8 @@ private:
     IntBuffer _predictedCs; // Predicted (pathed) states
 
     FloatBuffer _transitionWeights; // Transitioning (state to next state) probability weights
+
+    FloatBuffer _qs; // Q values
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -69,21 +79,36 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void learnWeights(
+    void learnFF(
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
     );
 
+    void learnFB(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli,
+        float reward
+    );
+
     void transition(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* feedBackCs,
+        const FloatBuffer* feedBackRewards,
         bool learnEnabled
     );
 
-    void reconstruct(
+    void backwardActions(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int vli
+    );
+
+    void backwardRewards(
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
@@ -99,54 +124,80 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
-    static void learnWeightsKernel(
+    static void learnFFKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Pather* sc,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
     ) {
-        sc->learnWeights(pos, rng, inputCs, vli);
+        sc->learnFF(pos, rng, inputCs, vli);
+    }
+
+    static void learnFBKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Pather* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli,
+        float reward
+    ) {
+        sc->learnFB(pos, rng, inputCs, vli, reward);
     }
 
     static void transitionKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Pather* sc,
-        const IntBuffer* feedBackCs,
+        const FloatBuffer* feedBackRewards,
         bool learnEnabled
     ) {
-        sc->transition(pos, rng, feedBackCs, learnEnabled);
+        sc->transition(pos, rng, feedBackRewards, learnEnabled);
     }
 
-    static void reconstructKernel(
+    static void backwardActionsKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Pather* sc,
         const IntBuffer* hiddenCs,
         int vli
     ) {
-        sc->reconstruct(pos, rng, hiddenCs, vli);
+        sc->backwardActions(pos, rng, hiddenCs, vli);
+    }
+
+    static void backwardRewardsKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Pather* sc,
+        const IntBuffer* hiddenCs,
+        int vli
+    ) {
+        sc->backwardRewards(pos, rng, hiddenCs, vli);
     }
 
 public:
-    float _alpha; // Weight learning rate
-    float _beta; // Transition learning rate
+    float _ffLearnRate; // FF weight learning rate
+    float _fbLearnRate; // FB weight learning rate
+    float _tLearnRate; // Transition learning rate
     float _gamma; // Distance penalty
+    int _iterations; // Iterations for pathing solution
 
     // Defaults
     Pather()
     :
-    _alpha(0.01f),
-    _beta(0.1f),
-    _gamma(0.9f)
+    _ffLearnRate(0.01f),
+    _fbLearnRate(0.01f),
+    _tLearnRate(0.1f),
+    _gamma(0.98f),
+    _iterations(16)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs, // Descriptors for visible layers
+        bool isFirstLayer // Whether this is the first (bottom-most) layer
     );
 
     // Activate the sparse coder (perform sparse coding)
@@ -158,7 +209,8 @@ public:
 
     void stepDown(
         ComputeSystem &cs, // Compute system
-        const IntBuffer* feedBackCs, // States to reconstruct
+        const FloatBuffer* feedBackRewards, // Rewards from layer above or given by user
+        float reward,
         bool learnEnabled // Whether to learn
     );
 
@@ -199,13 +251,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayers[i]._weights;
     }
 };
 } // namespace ogmaneo

@@ -12,69 +12,48 @@
 
 using namespace ogmaneo;
 
-// Pathfinder
-int ogmaneo::findNextIndex(
-    int startIndex,
-    int endIndex,
-    int size,
+// Planner
+void ogmaneo::iterate(
+    int numStates,
     int transitionsStart,
+    int rewardsStart,
     const FloatBuffer &transitions,
+    const FloatBuffer &rewards,
+    FloatBuffer &qs,
     float gamma
 ) {
-    std::vector<float> prob(size, 0.0f);
-    std::vector<int> prev(size, -1);
+    for (int s = 0; s < numStates; s++) {
+        for (int sp = 0; sp < numStates; sp++) {
+            float maxQ = -999999.0f;
 
-    std::unordered_set<int> q;
+            for (int spp = 0; spp < numStates; spp++)
+                maxQ = std::max(maxQ, qs[transitionsStart + sp * numStates + spp]);
 
-    for (int v = 0; v < size; v++)
-        q.insert(v);
+            qs[transitionsStart + s * numStates + sp] = transitions[transitionsStart + s * numStates + sp] * (rewards[rewardsStart + sp] + gamma * maxQ);
+        }
+    }
+}
 
-    prob[startIndex] = 1.0f;
+int ogmaneo::getPolicy(
+    int startIndex,
+    int numStates,
+    int transitionsStart,
+    const FloatBuffer &qs
+) {
+    float maxQ = -999999.0f;
+    int maxIndex = 0;
 
-    while (!q.empty()) {
-        std::unordered_set<int>::iterator cit = q.begin();
-
-        int u = *cit;
-        float maxProb = prob[u];
+    for (int ap = 0; ap < numStates; ap++) {
+        float q = qs[transitionsStart + startIndex * numStates + ap];
         
-        cit++;
+        if (q > maxQ) {
+            maxQ = q;
 
-        for (; cit != q.end(); cit++) {
-            if (prob[*cit] > maxProb) {
-                maxProb = prob[*cit];
-                u = *cit;
-            }
-        }
-
-        if (u == endIndex) {
-            int prevU = u;
-
-            while (prev[u] != -1) {
-                prevU = u;
-                u = prev[u];
-            }
-
-            return prevU;
-        }
-
-        q.erase(u);
-
-        cit = q.begin();
-
-        for (; cit != q.end(); cit++) {
-            float w = transitions[transitionsStart + u * size + *cit];
-
-            float alt = prob[u] * w * gamma;
-            
-            if (alt > prob[*cit]) {
-                prob[*cit] = alt;
-
-                prev[*cit] = u;
-            }
+            maxIndex = ap;
         }
     }
 
-    return startIndex;
+    return maxIndex;
 }
 
 void Pather::forward(
@@ -97,7 +76,7 @@ void Pather::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._ffWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
         if (sum > maxActivation) {
@@ -110,7 +89,7 @@ void Pather::forward(
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
-void Pather::learnWeights(
+void Pather::learnFF(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs,
@@ -128,23 +107,51 @@ void Pather::learnWeights(
 
         float target = (vc == targetC ? 1.0f : 0.0f);
 
-        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+        float sum = vl._ffWeights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._ffWeights.countsT(visibleIndex) / _hiddenSize.z);
 
-        float delta = _alpha * (target - sum);
+        float delta = _ffLearnRate * (target - sum);
 
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+        vl._ffWeights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+    }
+}
+
+void Pather::learnFB(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const IntBuffer*> &inputCs,
+    int vli,
+    float reward
+) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
+
+    int targetC = (*inputCs[vli])[visibleColumnIndex];
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+
+        float target = (vc == targetC ? 1.0f : 0.0f);
+
+        float sum = vl._ffWeights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._ffWeights.countsT(visibleIndex) / _hiddenSize.z);
+
+        float delta = _ffLearnRate * (target - sum);
+
+        vl._ffWeights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 
 void Pather::transition(
     const Int2 &pos,
     std::mt19937 &rng,
-    const IntBuffer* feedBackCs,
+    const FloatBuffer* feedBackRewards,
     bool learnEnabled
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int weightsStart = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+    int transitionsStart = hiddenColumnIndex * _hiddenSize.z * _hiddenSize.z;
+    int rewardsStart = hiddenColumnIndex * _hiddenSize.z;
 
     if (learnEnabled) {
         int startIndex = _hiddenCsPrev[hiddenColumnIndex];
@@ -164,17 +171,20 @@ void Pather::transition(
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             float target = (hc == endIndex ? 1.0f : 0.0f);
 
-            int wi = hc + startIndex * _hiddenSize.z + weightsStart;
+            int wi = hc + startIndex * _hiddenSize.z + transitionsStart;
 
-            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
+            _transitionWeights[wi] += _tLearnRate * (target - _transitionWeights[wi]);
         }
     }
 
-    // Pathfind
-    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, weightsStart, _transitionWeights, _gamma);
+    // Iteration
+    for (int it = 0; it < _iterations; it++)
+        iterate(_hiddenSize.z, transitionsStart, rewardsStart, _transitionWeights, *feedBackRewards, _qs, _gamma);
+
+    _predictedCs[hiddenColumnIndex] = getPolicy(_hiddenCs[hiddenColumnIndex], _hiddenSize.z, transitionsStart, _qs);
 }
 
-void Pather::reconstruct(
+void Pather::backwardActions(
     const Int2 &pos,
     std::mt19937 &rng,
     const IntBuffer* hiddenCs,
@@ -191,7 +201,7 @@ void Pather::reconstruct(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float sum = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z);
+        float sum = vl._ffWeights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -200,13 +210,32 @@ void Pather::reconstruct(
         }
     }
 
-    vl._recons[visibleColumnIndex] = maxIndex;
+    vl._visibleActions[visibleColumnIndex] = maxIndex;
+}
+
+void Pather::backwardRewards(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    int vli
+) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+
+        vl._visibleRewards[visibleIndex] = vl._fbWeights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._fbWeights.countsT(visibleIndex) / _hiddenSize.z);
+    }
 }
 
 void Pather::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
-    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+    const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+    bool isFirstLayer
 ) {
     _visibleLayerDescs = visibleLayerDescs;
 
@@ -218,7 +247,8 @@ void Pather::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> ffWeightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> fbWeightDist(-0.01f, 0.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -229,21 +259,26 @@ void Pather::initRandom(
         int numVisible = numVisibleColumns * vld._size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._ffWeights);
 
         // Generate transpose (needed for reconstruction)
-        vl._weights.initT();
+        vl._ffWeights.initT();
 
-        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
-            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
+        for (int i = 0; i < vl._ffWeights._nonZeroValues.size(); i++)
+            vl._ffWeights._nonZeroValues[i] = weightDist(cs._rng);
 
-        // Counts
-        vl._visibleCounts = IntBuffer(numVisibleColumns);
+        if (isFirstLayer)
+            vl._visibleActions = IntBuffer(numVisibleColumns, 0);
+        else {
+            vl._visibleRewards = FloatBuffer(numVisible, 0.0f);
 
-        for (int i = 0; i < numVisibleColumns; i++)
-            vl._visibleCounts[i] = vl._weights.countsT(i * vld._size.z) / _hiddenSize.z;
+            initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._fbWeights);
 
-        vl._recons = IntBuffer(numVisibleColumns, 0);
+            vl._fbWeights.initT();
+
+            for (int i = 0; i < vl._fbWeights._nonZeroValues.size(); i++)
+                vl._fbWeights._nonZeroValues[i] = fbWeightDist(cs._rng);
+        }
     }
 
     // Hidden Cs
@@ -286,7 +321,7 @@ void Pather::stepUp(
 
 void Pather::stepDown(
     ComputeSystem &cs,
-    const IntBuffer* feedBackCs,
+    const FloatBuffer* feedBackRewards,
     bool learnEnabled
 ) {
     // Find node on path to goal
