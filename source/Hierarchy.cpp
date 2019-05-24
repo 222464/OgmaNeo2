@@ -257,11 +257,13 @@ void Hierarchy::step(
             if (l == _pLayers.size() - 1) {
                 for (int x = 0; x < _pLayers[l].getHiddenSize().x; x++)
                     for (int y = 0; y < _pLayers[l].getHiddenSize().y; y++) {
-                        _topRewards[
+                        float &topReward = _topRewards[
                             address3(Int3(x, y, _pLayers[l].getHiddenCs()[
                                 address2(Int2(x, y), Int2(_pLayers[l].getHiddenSize().x, _pLayers[l].getHiddenSize().y))
                                 ]), _pLayers[l].getHiddenSize())
-                                ] = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
+                            ];
+
+                        topReward = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
                     }
             }
 

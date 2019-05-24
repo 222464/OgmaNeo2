@@ -186,10 +186,10 @@ public:
     Pather()
     :
     _ffLearnRate(0.01f),
-    _fbLearnRate(0.01f),
+    _fbLearnRate(0.1f),
     _tLearnRate(0.1f),
-    _gamma(0.98f),
-    _iterations(16)
+    _gamma(0.9f),
+    _iterations(2)
     {}
 
     // Create a sparse coding layer with random initialization

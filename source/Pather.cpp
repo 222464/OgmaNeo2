@@ -43,13 +43,13 @@ int ogmaneo::getPolicy(
     float maxQ = -999999.0f;
     int maxIndex = 0;
 
-    for (int ap = 0; ap < numStates; ap++) {
-        float q = qs[transitionsStart + startIndex * numStates + ap];
+    for (int sp = 0; sp < numStates; sp++) {
+        float q = qs[transitionsStart + startIndex * numStates + sp];
         
         if (q > maxQ) {
             maxQ = q;
 
-            maxIndex = ap;
+            maxIndex = sp;
         }
     }
 
@@ -152,17 +152,11 @@ void Pather::transition(
     if (learnEnabled) {
         int startIndex = _hiddenCsPrev[hiddenColumnIndex];
         int endIndex = _hiddenCs[hiddenColumnIndex];
+        int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
-        // Decay
-        // for (int i = 0; i < _hiddenSize.z * _hiddenSize.z; i++) {
-        //     int wi = i + weightsStart;
+        // int wi = predIndexPrev + startIndex * _hiddenSize.z + transitionsStart;
 
-        //     _transitionWeights[wi] *= _beta;
-        // }
-
-        // int wi = endIndex + startIndex * _hiddenSize.z + weightsStart;
-
-        // _transitionWeights[wi] = 1.0f;
+        // _transitionWeights[wi] += _tLearnRate * ((predIndexPrev == endIndex ? 1.0f : 0.0f) - _transitionWeights[wi]);
 
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             float target = (hc == endIndex ? 1.0f : 0.0f);
@@ -172,6 +166,9 @@ void Pather::transition(
             _transitionWeights[wi] += _tLearnRate * (target - _transitionWeights[wi]);
         }
     }
+
+    // for (int i = 0; i < _hiddenSize.z * _hiddenSize.z; i++)
+    //     _qs[transitionsStart + i] = 0.0f;
 
     // Iteration
     for (int it = 0; it < _iterations; it++)
@@ -244,7 +241,7 @@ void Pather::initRandom(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     std::uniform_real_distribution<float> ffWeightDist(0.99f, 1.0f);
-    std::uniform_real_distribution<float> fbWeightDist(-0.01f, 0.0f);
+    std::uniform_real_distribution<float> fbWeightDist(-0.01f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -283,9 +280,14 @@ void Pather::initRandom(
 
     _predictedCs = IntBuffer(numHiddenColumns, 0);
 
-    _transitionWeights = FloatBuffer(numHidden * _hiddenSize.z, 0.0f);
+    _transitionWeights = FloatBuffer(numHidden * _hiddenSize.z, 1.0f);
 
-    _qs = _transitionWeights;
+    _qs = FloatBuffer(numHidden * _hiddenSize.z);
+
+    std::uniform_real_distribution<float> qWeightDist(-0.01f, 0.01f);
+
+    for (int i = 0; i < _qs.size(); i++)
+        _qs[i] = qWeightDist(cs._rng);
 }
 
 void Pather::stepUp(
@@ -325,21 +327,6 @@ void Pather::stepDown(
     float reward,
     bool learnEnabled
 ) {
-    if (learnEnabled && !isFirstLayer) {
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-#ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < vld._size.x; x++)
-                for (int y = 0; y < vld._size.y; y++)
-                    learnFB(Int2(x, y), cs._rng, inputCs, vli, reward);
-#else
-            runKernel2(cs, std::bind(Pather::learnFBKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli, reward), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
-#endif
-        }
-    }
-
     // Find node on path to goal
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
@@ -375,6 +362,21 @@ void Pather::stepDown(
 #else
             runKernel2(cs, std::bind(Pather::backwardRewardsKernel, std::placeholders::_1, std::placeholders::_2, this, &_predictedCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
+        }
+
+        if (learnEnabled) {
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_NOTHREAD
+                for (int x = 0; x < vld._size.x; x++)
+                    for (int y = 0; y < vld._size.y; y++)
+                        learnFB(Int2(x, y), cs._rng, inputCs, vli, reward);
+#else
+                runKernel2(cs, std::bind(Pather::learnFBKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli, reward), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+#endif
+            }
         }
     }
 }
