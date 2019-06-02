@@ -38,6 +38,11 @@ public:
         IntBuffer _reconCs; // Reconstructions
 
         IntBuffer _visibleCounts; // Number touching
+
+        VisibleLayer()
+        :
+        _useInputCs(false)
+        {}
     };
 
 private:
