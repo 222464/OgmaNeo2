@@ -223,6 +223,8 @@ void Hierarchy::step(
                         _scLayers[l].setInputCs(cs, _scLayers[l].getNumVisibleLayers() - 1 - (_ticksPerUpdate[l] - 1 - i), _histories[l][i].get());
                 }
 
+                _scLayers[l].activate(cs);
+
                 _scLayers[l].learn(cs);
             }
 
