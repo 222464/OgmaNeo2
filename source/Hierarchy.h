@@ -9,7 +9,6 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
 
 #include <memory>
 
@@ -27,8 +26,10 @@ public:
     struct LayerDesc {
         Int3 _hiddenSize; // Size of hidden layer
 
-        int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction Radius
+        // Sparse coder radii
+        int _ffRadius; // Feed forward
+        int _fbRadius; // Feed back
+        int _pRadius; // Prediction
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -37,7 +38,8 @@ public:
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _scRadius(2),
+        _ffRadius(2),
+        _fbRadius(2),
         _pRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
@@ -46,7 +48,6 @@ public:
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -89,6 +90,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        const IntBuffer* topFeedBackCs, // Topmost feed back layer
         bool learnEnabled = true // Whether learning is enabled
     );
 
@@ -111,7 +113,9 @@ public:
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front()[i]->getHiddenCs();
+        int index = _scLayers.front().getNumVisibleLayers() - 1 - (_inputSizes.size() - 1 - i);
+
+        return _scLayers.front().getVisibleLayer(index)._reconCs;
     }
 
     // Whether this layer received on update this timestep
@@ -152,20 +156,6 @@ public:
         int l // Layer index
     ) const {
         return _scLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
-    ) {
-        return _pLayers[l];
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
-    ) const {
-        return _pLayers[l];
     }
 };
 } // namespace ogmaneo
