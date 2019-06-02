@@ -318,7 +318,6 @@ void kernel aCount(
 
 void kernel aForward(
     global const int* visibleCs,
-    global float* hiddenValues,
     global float* hiddenActivations,
     global const float* nonZeroValues,
     global const int* rowRanges,
