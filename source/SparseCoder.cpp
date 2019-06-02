@@ -64,7 +64,7 @@ void SparseCoder::reconstruct(
 
         float sum = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        if (maxRecon > sum) {
+        if (sum > maxRecon) {
             maxRecon = sum;
 
             maxIndex = vc;
