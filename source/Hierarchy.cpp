@@ -36,7 +36,8 @@ void Hierarchy::forward(
         _rLayers[l]._activations[hiddenColumnIndex] = sum / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
     }
     else
-        _rLayers[l]._activations[hiddenColumnIndex] = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z) / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+        _rLayers[l]._activations[hiddenColumnIndex] = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l - 1]._activations, hiddenIndex, _scLayers[l - 1].getHiddenSize().z)
+            / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 }
 
 void Hierarchy::backward(
@@ -56,7 +57,8 @@ void Hierarchy::backward(
             for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
                 int visibleIndex = address3(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
 
-                float sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z) / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+                float sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l]._errors, visibleIndex, _scLayers[l].getHiddenSize().z)
+                    / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
                 
                 if (sum > maxValue) {
                     maxValue = sum;
