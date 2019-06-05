@@ -100,9 +100,8 @@ void Hierarchy::learn(
                 _rLayers[l]._weights[vli].deltaOHVsT(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
         }
     }
-    else {
+    else
         _rLayers[l]._weights[0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
-    }
 }
 
 void Hierarchy::initRandom(
