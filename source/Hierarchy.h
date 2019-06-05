@@ -162,7 +162,7 @@ public:
     :
     _alpha(0.01f),
     _gamma(0.98f),
-    _clip(100.0f),
+    _clip(4.0f),
     _maxHistorySamples(32),
     _historyIters(4)
     {}
