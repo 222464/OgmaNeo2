@@ -487,7 +487,7 @@ void SparseMatrix::deltaOHVsT(
 
 void SparseMatrix::deltaOHVs(
 	const std::vector<int> &nonZeroIndices,
-	const std::vector<float> &nonZeroValues,
+	const std::vector<float> &nonZeroScalars,
 	float delta,
 	int row,
 	int oneHotSize
@@ -498,13 +498,13 @@ void SparseMatrix::deltaOHVs(
 		int i = _columnIndices[jj] / oneHotSize;
 		int j = jj + nonZeroIndices[i];
 
-		_nonZeroValues[j] += delta * nonZeroValues[i];
+		_nonZeroValues[j] += delta * nonZeroScalars[i];
 	}
 }
 
 void SparseMatrix::deltaOHVsT(
 	const std::vector<int> &nonZeroIndices,
-	const std::vector<float> &nonZeroValues,
+	const std::vector<float> &nonZeroScalars,
 	float delta,
 	int column,
 	int oneHotSize
@@ -515,7 +515,7 @@ void SparseMatrix::deltaOHVsT(
 		int i = _rowIndices[jj] / oneHotSize;
 		int j = jj + nonZeroIndices[i];
 
-		_nonZeroValues[_nonZeroValueIndices[j]] += delta * nonZeroValues[i];
+		_nonZeroValues[_nonZeroValueIndices[j]] += delta * nonZeroScalars[i];
 	}
 }
 
