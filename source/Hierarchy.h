@@ -49,7 +49,6 @@ public:
         std::vector<IntBuffer> _visibleCounts;
 
         FloatBuffer _activations;
-        FloatBuffer _activationsClipped;
 
         FloatBuffer _errors;
 
@@ -152,6 +151,7 @@ private:
 
 public:
     float _alpha; // Routing learning rate
+    float _beta; // Punishment for large activations
     float _gamma; // Discount factor
     float _clip; // Gradient clip
 
@@ -162,6 +162,7 @@ public:
     Hierarchy()
     :
     _alpha(0.01f),
+    _beta(0.05f),
     _gamma(0.98f),
     _clip(1.0f),
     _maxHistorySamples(32),

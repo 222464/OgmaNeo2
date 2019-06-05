@@ -93,6 +93,9 @@ void Hierarchy::learn(
 
     float delta = _alpha * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[hiddenColumnIndex]));
 
+    if (l < _scLayers.size() - 1)
+        delta += _beta * std::pow(1.0f - _rLayers[l]._activations[hiddenColumnIndex], 3);
+
     if (l == 0) {
         // For each visible layer
         for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
@@ -268,6 +271,7 @@ const Hierarchy &Hierarchy::operator=(
     }
 
     _alpha = other._alpha;
+    _beta = other._beta;
     _gamma = other._gamma;
     _clip = other._clip;
     _maxHistorySamples = other._maxHistorySamples;
@@ -573,6 +577,7 @@ void Hierarchy::writeToStream(
     }
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_clip), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySamples), sizeof(int));
@@ -674,6 +679,7 @@ void Hierarchy::readFromStream(
     }
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_clip), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySamples), sizeof(int));
