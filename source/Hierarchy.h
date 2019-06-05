@@ -151,7 +151,6 @@ private:
 
 public:
     float _alpha; // Routing learning rate
-    float _beta; // Punishment for large activations
     float _gamma; // Discount factor
     float _clip; // Gradient clip
 
@@ -162,7 +161,6 @@ public:
     Hierarchy()
     :
     _alpha(0.1f),
-    _beta(0.001f),
     _gamma(0.98f),
     _clip(1.0f),
     _maxHistorySamples(32),
