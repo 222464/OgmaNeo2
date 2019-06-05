@@ -91,24 +91,17 @@ void Hierarchy::learn(
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
-    float delta = _alpha * _rLayers[l]._errors[hiddenColumnIndex];
+    float delta = _alpha * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[hiddenColumnIndex]));
 
     if (l == 0) {
         // For each visible layer
         for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
-            if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
-                if (l == _scLayers.size() - 1)
-                    _rLayers[l]._weights[vli].deltaOHVsT(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
-                else
-                    _rLayers[l]._weights[vli].deltaOHVsT(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z, 1.0f - _clip, 1.0f + _clip);
-            }
+            if (!_rLayers[l]._weights[vli]._nonZeroValues.empty())
+                _rLayers[l]._weights[vli].deltaOHVsT(*inputCs[vli], delta, hiddenIndex, _inputSizes[vli].z);
         }
     }
     else {
-        if (l == _scLayers.size() - 1)
-            _rLayers[l]._weights[0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
-        else
-            _rLayers[l]._weights[0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z, 1.0f - _clip, 1.0f + _clip);
+        _rLayers[l]._weights[0].deltaOHVsT(*inputCs[0], _rLayers[l - 1]._activations, delta, hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
     }
 }
 
