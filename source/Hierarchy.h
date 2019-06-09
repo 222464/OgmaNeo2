@@ -164,7 +164,7 @@ public:
     :
     _alpha(0.01f),
     _gamma(0.98f),
-    _clip(1.0f),
+    _clip(0.1f),
     _maxHistorySamples(64),
     _historyIters(4)
     {}
