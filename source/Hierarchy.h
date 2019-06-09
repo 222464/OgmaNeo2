@@ -112,6 +112,7 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
+        float clockDiv,
         const std::vector<const IntBuffer*> &inputCs
     );
 
@@ -144,9 +145,10 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
+        float clockDiv,
         const std::vector<const IntBuffer*> &inputCs
     ) {
-        h->learn(pos, rng, hiddenCs, l, inputCs);
+        h->learn(pos, rng, hiddenCs, l, clockDiv, inputCs);
     }
 
 public:
@@ -161,9 +163,9 @@ public:
     Hierarchy()
     :
     _alpha(0.01f),
-    _gamma(0.99f),
+    _gamma(0.98f),
     _clip(1.0f),
-    _maxHistorySamples(32),
+    _maxHistorySamples(64),
     _historyIters(4)
     {}
 
