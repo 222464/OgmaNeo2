@@ -163,8 +163,8 @@ public:
     Hierarchy()
     :
     _alpha(0.01f),
-    _gamma(0.98f),
-    _clip(0.1f),
+    _gamma(0.97f),
+    _clip(1.0f),
     _maxHistorySamples(64),
     _historyIters(4)
     {}
