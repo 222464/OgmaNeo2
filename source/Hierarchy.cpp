@@ -132,7 +132,7 @@ void Hierarchy::initRandom(
     for (int l = 0; l < layerDescs.size(); l++)
         _ticksPerUpdate[l] = l == 0 ? 1 : layerDescs[l]._ticksPerUpdate; // First layer always 1
 
-    std::uniform_real_distribution<float> weightDist(0.9999f, 1.0001f);
+    std::normal_distribution<float> weightDist(0.0f, 1.0f);
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
