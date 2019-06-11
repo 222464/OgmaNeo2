@@ -162,11 +162,11 @@ public:
     // Default
     Hierarchy()
     :
-    _alpha(0.01f),
+    _alpha(0.1f),
     _gamma(0.99f),
-    _clip(0.5f),
-    _maxHistorySamples(16),
-    _historyIters(4)
+    _clip(1.0f),
+    _maxHistorySamples(64),
+    _historyIters(8)
     {}
 
     // Copy
