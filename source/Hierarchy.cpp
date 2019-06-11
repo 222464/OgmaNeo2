@@ -132,7 +132,7 @@ void Hierarchy::initRandom(
     for (int l = 0; l < layerDescs.size(); l++)
         _ticksPerUpdate[l] = l == 0 ? 1 : layerDescs[l]._ticksPerUpdate; // First layer always 1
 
-    std::uniform_real_distribution<float> weightDist(0.9999f, 1.0001f);
+    std::normal_distribution<float> weightDist(0.0f, 1.0f);
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
@@ -233,8 +233,8 @@ void Hierarchy::initRandom(
             }
         }
 
-        _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
-        _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 1.0f);
+        _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0.0f);
+        _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 0.0f);
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
