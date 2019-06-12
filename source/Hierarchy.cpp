@@ -72,14 +72,7 @@ void Hierarchy::initRandom(
 
                 int inSize = inputSizes[i].x * inputSizes[i].y;
 				
-				_histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
-#endif
+				_histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 _historySizes[l][v] = inSize;
 			}
@@ -116,14 +109,7 @@ void Hierarchy::initRandom(
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
 			for (int v = 0; v < _histories[l].size(); v++) {
-                _histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
-#endif
+                _histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 _historySizes[l][v] = inSize;
             }
