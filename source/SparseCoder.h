@@ -31,6 +31,8 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
+
+        IntBuffer _visibleCounts; // Number touching
     };
 
 private:
@@ -47,18 +49,33 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        int vli
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        sc->forward(pos, rng, inputCs);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    ) {
+        sc->learn(pos, rng, inputCs, vli);
     }
 
 public:
@@ -67,7 +84,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f)
+    _alpha(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
