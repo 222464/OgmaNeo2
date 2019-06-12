@@ -297,7 +297,7 @@ void ogmaneo::initSMLocalRF(
                         for (int iz = 0; iz < inSize.z; iz++) {
                             Int3 inPos(ix, iy, iz);
 
-                            int inIndex = address3C(inPos, inSize);
+                            int inIndex = address3(inPos, inSize);
 
                             mat._nonZeroValues.push_back(0.0f);
                             mat._columnIndices.push_back(inIndex);
@@ -306,7 +306,7 @@ void ogmaneo::initSMLocalRF(
                         }
                     }
 
-                mat._rowRanges[address3C(outPos, outSize)] = nonZeroInRow;
+                mat._rowRanges[address3(outPos, outSize)] = nonZeroInRow;
             }
         }
 
@@ -338,6 +338,7 @@ void ogmaneo::writeSMToStream(
     os.write(reinterpret_cast<const char*>(&mat._columns), sizeof(int));
 
     writeBufferToStream(os, &mat._nonZeroValues);
+    writeBufferToStream(os, &mat._nonZeroValueIndices);
     writeBufferToStream(os, &mat._rowRanges);
     writeBufferToStream(os, &mat._columnIndices);
     writeBufferToStream(os, &mat._columnRanges);
@@ -352,6 +353,7 @@ void ogmaneo::readSMFromStream(
     is.read(reinterpret_cast<char*>(&mat._columns), sizeof(int));
 
     readBufferFromStream(is, &mat._nonZeroValues);
+    readBufferFromStream(is, &mat._nonZeroValueIndices);
     readBufferFromStream(is, &mat._rowRanges);
     readBufferFromStream(is, &mat._columnIndices);
     readBufferFromStream(is, &mat._columnRanges);

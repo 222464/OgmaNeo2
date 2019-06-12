@@ -52,7 +52,7 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void learnWeights(
+    void learn(
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
@@ -68,14 +68,14 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
-    static void learnWeightsKernel(
+    static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
         int vli
     ) {
-        sc->learnWeights(pos, rng, inputCs, vli);
+        sc->learn(pos, rng, inputCs, vli);
     }
 
 public:
@@ -84,7 +84,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f)
+    _alpha(1.0f)
     {}
 
     // Create a sparse coding layer with random initialization
