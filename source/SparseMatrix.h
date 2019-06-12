@@ -221,6 +221,24 @@ struct SparseMatrix {
 
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int row,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int column,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &nonZeroScalars,
 		float delta,
 		int row,
@@ -233,6 +251,26 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
 	);
 
 	// --- Normalization ---
