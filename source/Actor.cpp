@@ -124,7 +124,6 @@ void Actor::learn(
         vl._valueWeights.deltaOHVs(*inputCsPrev[vli], deltaValue, hiddenColumnIndex, vld._size.z);
     }
 
-
     // --- Action ---
 
     std::vector<float> activations(_hiddenSize.z);
@@ -161,7 +160,7 @@ void Actor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float deltaAction = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
+        float deltaAction = _beta * std::tanh(tdErrorAction) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
