@@ -124,11 +124,9 @@ void Actor::learn(
         vl._valueWeights.deltaOHVs(*inputCsPrev[vli], deltaValue, hiddenColumnIndex, vld._size.z);
     }
 
-
     // --- Action ---
 
-    std::vector<float> activations(_hiddenSize.z);
-    float maxActivation = -999999.0f;
+    int targetC = (*hiddenCsPrev)[address2(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -143,25 +141,9 @@ void Actor::learn(
             sum += vl._actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
         }
 
-        activations[hc] = sum / std::max(1, _hiddenCounts[hiddenColumnIndex]);
+        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        maxActivation = std::max(maxActivation, activations[hc]);
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-
-        total += activations[hc];
-    }
-
-    int targetC = (*hiddenCsPrev)[address2(pos, Int2(_hiddenSize.x, _hiddenSize.y))];
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        float deltaAction = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.00001f, total));
+        float deltaAction = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
