@@ -255,7 +255,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&historyCapacity), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
-    for (int i = 0; i < _historySize; i++) {
+    for (int i = 0; i < _historySamples.size(); i++) {
         HistorySample &s = _historySamples[i];
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -314,10 +314,10 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         vl._weights.readFromStream(cs, is);
     }
 
-    int historyCapacity, historySize;
+    int historyCapacity;
 
     is.read(reinterpret_cast<char*>(&historyCapacity), sizeof(int));
-    is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
     _historySamples.resize(historyCapacity);
 
