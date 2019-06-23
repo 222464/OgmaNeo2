@@ -376,7 +376,6 @@ void kernel aLearn(
     int3 hiddenSize,
     float alpha,
     float gamma,
-    float tau,
     float reward
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
@@ -388,18 +387,15 @@ void kernel aLearn(
     int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
 
     float maxQ = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
-    float maxQPrev = hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
 
-    for (int c = 1; c < hiddenSize.z; c++) {
+    for (int c = 1; c < hiddenSize.z; c++)
         maxQ = fmax(maxQ, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
-        maxQPrev = fmax(maxQPrev, hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
-    }
 
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
     float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
 
-    float qUpdate = reward + gamma * maxQ * rescale - tau * (maxQPrev * rescale - qPrev * rescale);
+    float qUpdate = reward + gamma * maxQ * rescale;
 
     float errorValue = qUpdate - qPrev * rescale;
     
