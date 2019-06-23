@@ -116,7 +116,7 @@ void Actor::step(
 
     // Activate
     {
-        std::uniform_int_distribution<int> seedDist(0, 99999);
+        std::uniform_int_distribution<int> seedDist(0, 99999999);
 
         int argIndex = 0;
 
