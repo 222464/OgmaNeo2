@@ -98,8 +98,7 @@ void Predictor::learn(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int maxIndex = 0;
-    std::vector<float> activations(_hiddenSize.z);
+    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -114,18 +113,7 @@ void Predictor::learn(
             sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
-        activations[hc] = sum / std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
-        if (activations[hc] > activations[maxIndex])
-            maxIndex = hc;
-    }
-    
-    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(activations[hc]));
+        float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum / std::max(1, _hiddenCounts[hiddenColumnIndex])));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
