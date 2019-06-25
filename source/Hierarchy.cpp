@@ -142,7 +142,7 @@ void Hierarchy::initRandom(
             }
         }
 
-        if (layerDescs[l]._rRadius > 0) {
+        if (layerDescs[l]._rRadius >= 0) {
             SparseCoder::VisibleLayerDesc vld;
 
             vld._size = layerDescs[l]._hiddenSize;
