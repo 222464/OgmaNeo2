@@ -39,7 +39,6 @@ void SparseCoder::forward(
         }
     }
 
-    _hiddenCsPrev[hiddenColumnIndex] = _hiddenCs[hiddenColumnIndex];
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
@@ -122,6 +121,14 @@ void SparseCoder::step(
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    // Copy to prev
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < numHiddenColumns; x++)
+        copyInt(x, cs._rng, &_hiddenCs, &_hiddenCsPrev);
+#else
+    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &_hiddenCsPrev), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
 
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
