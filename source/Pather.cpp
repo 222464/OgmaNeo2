@@ -123,16 +123,28 @@ void Pather::learnWeights(
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
 
+    std::vector<float> recons(vld._size.z);
+    int maxIndex = 0;
+
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float target = (vc == targetC ? 1.0f : 0.0f);
+        recons[vc] = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+        if (recons[vc] > recons[maxIndex])
+            maxIndex = vc;
+    }
 
-        float delta = _alpha * (target - (sum > 0.0f ? sum + 1.0f : std::exp(sum)));
+    if (maxIndex != targetC) {
+        for (int vc = 0; vc < vld._size.z; vc++) {
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+            float target = (vc == targetC ? 1.0f : 0.0f);
+                
+            float delta = _alpha * (target - (recons[vc] > 0.0f ? recons[vc] + 1.0f : std::exp(recons[vc])));
+
+            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+        }
     }
 }
 
@@ -149,6 +161,7 @@ void Pather::transition(
     if (learnEnabled) {
         int startIndex = _hiddenCsPrev[hiddenColumnIndex];
         int endIndex = _hiddenCs[hiddenColumnIndex];
+        int predIndexPrev = _predictedCs[hiddenColumnIndex];
 
         // Decay
         // for (int i = 0; i < _hiddenSize.z * _hiddenSize.z; i++) {
@@ -168,6 +181,16 @@ void Pather::transition(
 
             _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
         }
+
+        // if (predIndexPrev != endIndex) {
+        //     int wi = predIndexPrev + startIndex * _hiddenSize.z + weightsStart;
+
+        //     _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
+        // }
+
+        // int wi = endIndex + startIndex * _hiddenSize.z + weightsStart;
+
+        // _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
     }
 
     // Pathfind
