@@ -136,15 +136,15 @@ void Pather::learnWeights(
     }
 
     //if (maxIndex != targetC) {
-        for (int vc = 0; vc < vld._size.z; vc++) {
-            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-            float target = (vc == targetC ? 1.0f : 0.0f);
-                
-            float delta = _alpha * (target - recons[vc]);
+        float target = (vc == targetC ? 1.0f : 0.0f);
+            
+        float delta = _alpha * (target - (recons[vc] > 0.0f ? 1.0f + recons[vc] : std::exp(recons[vc])));
 
-            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
-        }
+        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+    }
     //}
 }
 
@@ -174,23 +174,23 @@ void Pather::transition(
 
         // _transitionWeights[wi] = 1.0f;
 
-        // for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        //     float target = (hc == endIndex ? 1.0f : 0.0f);
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            float target = (hc == endIndex ? 1.0f : 0.0f);
 
-        //     int wi = hc + startIndex * _hiddenSize.z + weightsStart;
+            int wi = hc + startIndex * _hiddenSize.z + weightsStart;
 
-        //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
-        // }
-
-        if (predIndexPrev != endIndex) {
-            int wi = predIndexPrev + startIndex * _hiddenSize.z + weightsStart;
-
-            _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
+            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
         }
 
-        int wi = endIndex + startIndex * _hiddenSize.z + weightsStart;
+        // if (predIndexPrev != endIndex) {
+        //     int wi = predIndexPrev + startIndex * _hiddenSize.z + weightsStart;
 
-        _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
+        //     _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
+        // }
+
+        // int wi = endIndex + startIndex * _hiddenSize.z + weightsStart;
+
+        // _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
     }
 
     // Pathfind
@@ -241,7 +241,7 @@ void Pather::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
