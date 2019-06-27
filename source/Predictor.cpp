@@ -159,7 +159,7 @@ void Predictor::initRandom(
 
     _hiddenCounts = IntBuffer(numHiddenColumns, 0);
 
-    std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
+    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
