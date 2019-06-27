@@ -76,7 +76,7 @@ void ImageEncoder::learn(
 
         float recon = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
 
-        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - (recon > 0.0f ? 1.0f + recon : std::exp(recon))), visibleIndex, _hiddenSize.z);
+        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - recon), visibleIndex, _hiddenSize.z);
     }
 }
 
