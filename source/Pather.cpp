@@ -141,7 +141,7 @@ void Pather::learnWeights(
 
         float target = (vc == targetC ? 1.0f : 0.0f);
             
-        float delta = _alpha * (target - (recons[vc] > 0.0f ? 1.0f + recons[vc] : std::exp(recons[vc])));
+        float delta = _alpha * (target - recons[vc]);//(recons[vc] > 0.0f ? 1.0f + recons[vc] : std::exp(recons[vc]))
 
         vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
@@ -241,7 +241,7 @@ void Pather::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
