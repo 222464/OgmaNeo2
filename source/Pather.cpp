@@ -13,7 +13,7 @@
 using namespace ogmaneo;
 
 // Pathfinder
-int ogmaneo::findNextIndex(
+std::pair<int, float> ogmaneo::findNextIndex(
     int startIndex,
     int endIndex,
     int size,
@@ -54,7 +54,7 @@ int ogmaneo::findNextIndex(
                 u = prev[u];
             }
 
-            return prevU;
+            return std::make_pair(prevU, maxProb);
         }
 
         q.erase(u);
@@ -74,7 +74,7 @@ int ogmaneo::findNextIndex(
         }
     }
 
-    return startIndex;
+    return std::make_pair(startIndex, 0.0f);
 }
 
 void Pather::forward(
@@ -151,7 +151,8 @@ void Pather::learnWeights(
 void Pather::transition(
     const Int2 &pos,
     std::mt19937 &rng,
-    const IntBuffer* feedBackCs,
+    const IntBuffer* feedBackGoalCs,
+    const IntBuffer* localGoalCs,
     bool learnEnabled
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
@@ -194,7 +195,13 @@ void Pather::transition(
     }
 
     // Pathfind
-    _predictedCs[hiddenColumnIndex] = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackCs)[hiddenColumnIndex], _hiddenSize.z, weightsStart, _transitionWeights, _gamma);
+    std::pair<int, float> feedBackPath = findNextIndex(_hiddenCs[hiddenColumnIndex], (*feedBackGoalCs)[hiddenColumnIndex], _hiddenSize.z, weightsStart, _transitionWeights, _gamma);
+    std::pair<int, float> localPath = findNextIndex(_hiddenCs[hiddenColumnIndex], (*localGoalCs)[hiddenColumnIndex], _hiddenSize.z, weightsStart, _transitionWeights, _gamma);
+
+    if (feedBackPath.second > localPath.second)
+        _predictedCs[hiddenColumnIndex] = feedBackPath.first;
+    else
+        _predictedCs[hiddenColumnIndex] = localPath.first;
 }
 
 void Pather::reconstruct(
@@ -309,16 +316,17 @@ void Pather::stepUp(
 
 void Pather::stepDown(
     ComputeSystem &cs,
-    const IntBuffer* feedBackCs,
+    const IntBuffer* feedBackGoalCs,
+    const IntBuffer* localGoalCs,
     bool learnEnabled
 ) {
     // Find node on path to goal
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            transition(Int2(x, y), cs._rng, feedBackCs, learnEnabled);
+            transition(Int2(x, y), cs._rng, feedBackGoalCs, localGoalCs, learnEnabled);
 #else
-    runKernel2(cs, std::bind(Pather::transitionKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackCs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Pather::transitionKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackGoalCs, localGoalCs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {

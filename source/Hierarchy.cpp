@@ -142,7 +142,7 @@ const Hierarchy &Hierarchy::operator=(
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
-    const IntBuffer* topFeedBackCs,
+    const std::vector<const IntBuffer*> &goalCs,
     bool learnEnabled
 ) {
     assert(inputCs.size() == _inputSizes.size());
@@ -228,14 +228,16 @@ void Hierarchy::step(
     for (int l = _pLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            const IntBuffer* feedBackCs;
+            const IntBuffer* feedBackGoalCs;
 
             if (l < _pLayers.size() - 1)
-                feedBackCs = &_pLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._recons;
+                feedBackGoalCs = &_pLayers[l + 1].getVisibleLayer(_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1])._recons;
             else
-                feedBackCs = topFeedBackCs;
+                feedBackGoalCs = goalCs.back();
 
-            _pLayers[l].stepDown(cs, feedBackCs, learnEnabled);
+            const IntBuffer* localGoalCs = goalCs[l];
+
+            _pLayers[l].stepDown(cs, feedBackGoalCs, localGoalCs, learnEnabled);
         }
     }
 }

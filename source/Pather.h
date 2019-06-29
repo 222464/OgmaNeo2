@@ -12,7 +12,7 @@
 
 namespace ogmaneo {
 // Pathfinding
-int findNextIndex(
+std::pair<int, float> findNextIndex(
     int startIndex,
     int endIndex,
     int size,
@@ -79,7 +79,8 @@ private:
     void transition(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* feedBackCs,
+        const IntBuffer* feedBackGoalCs,
+        const IntBuffer* localGoalCs,
         bool learnEnabled
     );
 
@@ -113,10 +114,11 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Pather* sc,
-        const IntBuffer* feedBackCs,
+        const IntBuffer* feedBackGoalCs,
+        const IntBuffer* localGoalCs,
         bool learnEnabled
     ) {
-        sc->transition(pos, rng, feedBackCs, learnEnabled);
+        sc->transition(pos, rng, feedBackGoalCs, localGoalCs, learnEnabled);
     }
 
     static void reconstructKernel(
@@ -158,7 +160,8 @@ public:
 
     void stepDown(
         ComputeSystem &cs, // Compute system
-        const IntBuffer* feedBackCs, // States to reconstruct
+        const IntBuffer* feedBackGoalCs,
+        const IntBuffer* localGoalCs,
         bool learnEnabled // Whether to learn
     );
 

@@ -86,7 +86,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        const IntBuffer* topFeedBackCs,
+        const std::vector<const IntBuffer*> &goalCs, // Goals for all levels of hierarchy
         bool learnEnabled = true // Whether learning is enabled
     );
 
