@@ -175,23 +175,23 @@ void Pather::transition(
 
         // _transitionWeights[wi] = 1.0f;
 
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            float target = (hc == endIndex ? 1.0f : 0.0f);
+        // for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        //     float target = (hc == endIndex ? 1.0f : 0.0f);
 
-            int wi = hc + startIndex * _hiddenSize.z + weightsStart;
+        //     int wi = hc + startIndex * _hiddenSize.z + weightsStart;
 
-            _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
-        }
-
-        // if (predIndexPrev != endIndex) {
-        //     int wi = predIndexPrev + startIndex * _hiddenSize.z + weightsStart;
-
-        //     _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
+        //     _transitionWeights[wi] += _beta * (target - _transitionWeights[wi]);
         // }
 
-        // int wi = endIndex + startIndex * _hiddenSize.z + weightsStart;
+        if (predIndexPrev != endIndex) {
+            int wi = predIndexPrev + startIndex * _hiddenSize.z + weightsStart;
 
-        // _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
+            _transitionWeights[wi] += _beta * (0.0f - _transitionWeights[wi]);
+        }
+
+        int wi = endIndex + startIndex * _hiddenSize.z + weightsStart;
+
+        _transitionWeights[wi] += _beta * (1.0f - _transitionWeights[wi]);
     }
 
     // Pathfind
