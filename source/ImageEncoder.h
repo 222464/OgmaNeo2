@@ -42,8 +42,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden state
 
-    FloatBuffer _hiddenRates; // Rates
-    
     std::vector<VisibleLayer> _visibleLayers; // Layers
     std::vector<VisibleLayerDesc> _visibleLayerDescs; // Descs
 
@@ -104,7 +102,7 @@ public:
     // Initialize defaults
     ImageEncoder()
     :
-    _alpha(0.01f)
+    _alpha(0.1f)
     {}
 
     // Create a randomly initialized image encoder
