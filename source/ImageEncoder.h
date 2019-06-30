@@ -63,8 +63,7 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActivations,
-        int vli
+        const std::vector<const FloatBuffer*> &inputActivations
     );
 
     static void forwardKernel(
@@ -90,10 +89,9 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActivations,
-        int vli
+        const std::vector<const FloatBuffer*> &inputActivations
     ) {
-        sc->learn(pos, rng, inputActivations, vli);
+        sc->learn(pos, rng, inputActivations);
     }
 
 public:

@@ -63,20 +63,18 @@ void ImageEncoder::backward(
 void ImageEncoder::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputActivations,
-    int vli
+    const std::vector<const FloatBuffer*> &inputActivations
 ) {
-    VisibleLayer &vl = _visibleLayers[vli];
-    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
+    int hiddenIndex = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        float recon = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
-
-        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - recon), visibleIndex, _hiddenSize.z);
+        vl._weights.hebbDecreasing(*inputActivations[vli], hiddenIndex, _alpha);
     }
 }
 
@@ -142,18 +140,13 @@ void ImageEncoder::step(
 #endif
 
     if (learnEnabled) {
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
 #ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < vld._size.x; x++)
-                for (int y = 0; y < vld._size.y; y++)
-                    learn(Int2(x, y), cs._rng, inputActivations, vli);
+        for (int x = 0; x < _hiddenSize.x; x++)
+            for (int y = 0; y < _hiddenSize.y; y++)
+                learn(Int2(x, y), cs._rng, inputActivations);
 #else
-            runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-        }
     }
 }
 
