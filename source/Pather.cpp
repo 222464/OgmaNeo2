@@ -135,17 +135,17 @@ void Pather::learnWeights(
             maxIndex = vc;
     }
 
-    //if (maxIndex != targetC) {
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+    if (maxIndex != targetC) {
+        for (int vc = 0; vc < vld._size.z; vc++) {
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float target = (vc == targetC ? 1.0f : 0.0f);
-            
-        float delta = _alpha * (target - recons[vc]);//(recons[vc] > 0.0f ? 1.0f + recons[vc] : std::exp(recons[vc]))
+            float target = (vc == targetC ? 1.0f : 0.0f);
+                
+            float delta = _alpha * (target - recons[vc]);//(recons[vc] > 0.0f ? 1.0f + recons[vc] : std::exp(recons[vc]))
 
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+        }
     }
-    //}
 }
 
 void Pather::transition(
