@@ -123,28 +123,16 @@ void Pather::learnWeights(
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
 
-    std::vector<float> recons(vld._size.z);
-    int maxIndex = 0;
-
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        recons[vc] = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+        float target = (vc == targetC ? 1.0f : 0.0f);
+            
+        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        if (recons[vc] > recons[maxIndex])
-            maxIndex = vc;
-    }
+        float delta = _alpha * (target - sum);
 
-    if (maxIndex != targetC) {
-        for (int vc = 0; vc < vld._size.z; vc++) {
-            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
-
-            float target = (vc == targetC ? 1.0f : 0.0f);
-                
-            float delta = _alpha * (target - recons[vc]);//(recons[vc] > 0.0f ? 1.0f + recons[vc] : std::exp(recons[vc]))
-
-            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
-        }
+        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 
