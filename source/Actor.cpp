@@ -86,6 +86,7 @@ void Actor::init(
 void Actor::step(
     ComputeSystem &cs,
     const std::vector<cl::Buffer> &visibleCs,
+    const cl::Buffer &hiddenCs,
     std::mt19937 &rng,
     float reward,
     bool learnEnabled
@@ -123,8 +124,6 @@ void Actor::step(
         _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
-        _inhibitKernel.setArg(argIndex++, _epsilon);
-        _inhibitKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -157,7 +156,7 @@ void Actor::step(
                 0, 0, numVisibleColumns * sizeof(cl_int));
         }
 
-        cs.getQueue().enqueueCopyBuffer(_hiddenCs, s._hiddenCs, 0, 0, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueCopyBuffer(hiddenCs, s._hiddenCs, 0, 0, numHiddenColumns * sizeof(cl_int));
 
         s._reward = reward;
     }
@@ -221,7 +220,7 @@ void Actor::step(
                 _learnKernel.setArg(argIndex++, s._visibleCs[vli]);
                 _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
                 _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-                _learnKernel.setArg(argIndex++, s._hiddenCs);
+                _learnKernel.setArg(argIndex++, sNext._hiddenCs);
                 _learnKernel.setArg(argIndex++, _hiddenCounts);
                 _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
                 _learnKernel.setArg(argIndex++, vl._weights._rowRanges);

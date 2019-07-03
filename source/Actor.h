@@ -67,9 +67,8 @@ public:
 
     Actor()
     :
-    _alpha(0.1f),
-    _gamma(0.97f),
-    _epsilon(0.02f),
+    _alpha(0.01f),
+    _gamma(0.98f),
     _historyIters(4)
     {}
 
@@ -85,6 +84,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
+        const cl::Buffer &hiddenCs,
         std::mt19937 &rng,
         float reward,
         bool learnEnabled
