@@ -61,7 +61,7 @@ public:
 
     cl_float _gamma;
 
-    cl_float _epsilon;
+    cl_float _tau;
 
     int _historyIters;
 
@@ -69,6 +69,7 @@ public:
     :
     _alpha(0.1f),
     _gamma(0.99f),
+    _tau(0.5f),
     _historyIters(4)
     {}
 

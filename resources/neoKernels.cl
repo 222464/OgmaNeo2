@@ -367,6 +367,7 @@ void kernel aLearn(
     int3 hiddenSize,
     float alpha,
     float gamma,
+    float tau,
     float reward
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
@@ -378,19 +379,28 @@ void kernel aLearn(
     int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
 
     float maxQ = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    float maxQPrev = hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
 
-    for (int c = 1; c < hiddenSize.z; c++)
+    for (int c = 1; c < hiddenSize.z; c++) {
         maxQ = fmax(maxQ, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
+        maxQPrev = fmax(maxQPrev, hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
+    }
 
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
-    float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
+    maxQ *= rescale;
+    maxQPrev *= rescale;
 
-    float qUpdate = reward + gamma * maxQ * rescale;
+    float qPersist = hiddenActivations[hiddenIndexPrev] * rescale;
+    float qPrev = hiddenActivationsPrev[hiddenIndexPrev] * rescale;
 
-    float errorValue = qUpdate - qPrev * rescale;
+    float dQ = reward + gamma * maxQ - qPrev;
+
+    float dAL = dQ - tau * (maxQPrev - qPrev);
+
+    float dPAL = fmax(dAL, dQ - tau * (maxQ - qPersist));
     
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, hiddenIndexPrev, visibleSize.z);
+    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * dPAL, hiddenIndexPrev, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
