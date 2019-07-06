@@ -399,7 +399,7 @@ void kernel aLearn(
     float dAL = dQ - tau * (maxQPrev - qPrev);
 
     float dPAL = fmax(dAL, dQ - tau * (maxQ - qPersist));
-    
+ 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * dPAL, hiddenIndexPrev, visibleSize.z);
 }
 
@@ -465,7 +465,7 @@ void kernel imLearn(
 
     sum /= max(1, countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
-    float error = visibleActivations[visibleIndex] - sum;//(sum > 0.0f ? sum + 1.0f : exp(sum));
+    float error = visibleActivations[visibleIndex] - (sum > 0.0f ? sum + 1.0f : exp(sum));
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
