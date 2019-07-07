@@ -237,8 +237,8 @@ void Hierarchy::initRandom(
             }
         }
 
-        _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 1.0f);
-        _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 1.0f);
+        _rLayers[l]._activations = FloatBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0.0f);
+        _rLayers[l]._errors = FloatBuffer(_rLayers[l]._activations.size(), 0.0f);
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
