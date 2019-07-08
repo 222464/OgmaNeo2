@@ -48,9 +48,8 @@ public:
         
         std::vector<IntBuffer> _visibleCounts;
 
-        FloatBuffer _activations;
-
-        FloatBuffer _errors;
+        std::vector<FloatBuffer> _errors;
+        std::vector<FloatBuffer> _activations;
 
         IntBuffer _hiddenCounts;
     };
@@ -68,9 +67,8 @@ private:
     std::vector<SparseCoder> _scLayers;
     std::vector<RouteLayer> _rLayers;
 
+    std::vector<FloatBuffer> _qs;
     std::vector<IntBuffer> _actions;
-
-    FloatBuffer _q;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -95,7 +93,8 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int vli,
+        const IntBuffer* inputCs
     );
 
     void backward(
@@ -103,8 +102,7 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
-        int vli,
-        const IntBuffer* inputCs
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     void learn(
@@ -112,7 +110,8 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenCs,
         int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int vli,
+        const IntBuffer* inputCs
     );
 
     static void forwardKernel(
@@ -121,9 +120,10 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int vli,
+        const IntBuffer* inputCs
     ) {
-        h->forward(pos, rng, hiddenCs, l, inputCs);
+        h->forward(pos, rng, hiddenCs, l, vli, inputCs);
     }
 
     static void backwardKernel(
@@ -132,10 +132,9 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
-        int vli,
-        const IntBuffer* inputCs
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        h->backward(pos, rng, hiddenCs, l, vli, inputCs);
+        h->backward(pos, rng, hiddenCs, l, inputCs);
     }
 
     static void learnKernel(
@@ -144,9 +143,10 @@ private:
         Hierarchy* h,
         const IntBuffer* hiddenCs,
         int l,
-        const std::vector<const IntBuffer*> &inputCs
+        int vli,
+        const IntBuffer* inputCs
     ) {
-        h->learn(pos, rng, hiddenCs, l, inputCs);
+        h->learn(pos, rng, hiddenCs, l, vli, inputCs);
     }
 
 public:
