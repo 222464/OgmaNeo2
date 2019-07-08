@@ -526,7 +526,7 @@ void Hierarchy::step(
                 }
 
             // Backward
-            for (int l = 0; l < _scLayers.size(); l++) {
+            for (int l = 0; l < _scLayers.size() - 1; l++) {
                 if (l == 0) {
 #ifdef KERNEL_NOTHREAD
                     for (int x = 0; x < _scLayers[l].getHiddenSize().x; x++)
