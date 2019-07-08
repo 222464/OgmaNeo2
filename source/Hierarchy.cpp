@@ -90,7 +90,7 @@ void Hierarchy::learn(
     int hiddenColumnIndex = address2(pos, Int2(_scLayers[l].getHiddenSize().x, _scLayers[l].getHiddenSize().y));
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
-
+    
     float delta = _alpha * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[hiddenColumnIndex]));
 
     if (l == 0) {
@@ -133,12 +133,12 @@ void Hierarchy::initRandom(
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
-        std::uniform_real_distribution<float> weightDist;
+        std::uniform_real_distribution<float> weightDist(0.999f, 1.001f);
 
-        if (l == _scLayers.size() - 1)
-            weightDist = std::uniform_real_distribution<float>(-0.01f, 0.01f);
-        else
-            weightDist = std::uniform_real_distribution<float>(0.99f, 1.01f);
+        // if (l == _scLayers.size() - 1)
+        //     weightDist = std::uniform_real_distribution<float>(-0.01f, 0.01f);
+        // else
+        //     weightDist = std::uniform_real_distribution<float>(0.99f, 1.01f);
 
         // Histories for all input layers or just the one sparse coder (if not the first layer)
         _histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l]._temporalHorizon : layerDescs[l]._temporalHorizon);
