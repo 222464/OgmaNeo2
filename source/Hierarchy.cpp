@@ -490,9 +490,9 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
                         for (int x = 0; x < _inputSizes[i].x; x++)
                             for (int y = 0; y < _inputSizes[i].y; y++)
-                                forward(Int2(x, y), cs._rng, &s._states[l], l, i, constGet(sNext._actionsPrev));
+                                forward(Int2(x, y), cs._rng, &s._states[l], l, i, &sNext._actionsPrev[i]);
 #else
-                        runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, i, nullptr), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
+                        runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, i, &sNext._actionsPrev[i]), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
 #endif
                     }
                 }
@@ -554,9 +554,9 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
                         for (int x = 0; x < _inputSizes[i].x; x++)
                             for (int y = 0; y < _inputSizes[i].y; y++)
-                                learn(Int2(x, y), cs._rng, &s._states[l], l, i, constGet(sNext._actionsPrev));
+                                learn(Int2(x, y), cs._rng, &s._states[l], l, i, &sNext._actionsPrev[i]);
 #else
-                        runKernel2(cs, std::bind(Hierarchy::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, i, nullptr), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
+                        runKernel2(cs, std::bind(Hierarchy::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, i, &sNext._actionsPrev[i]), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
 #endif
                     }
                 }
