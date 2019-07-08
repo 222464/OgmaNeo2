@@ -63,13 +63,16 @@ public:
 
     cl_float _tau;
 
+    int _steps;
+
     int _historyIters;
 
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.9f),
+    _gamma(0.99f),
     _tau(0.5f),
+    _steps(4),
     _historyIters(4)
     {}
 

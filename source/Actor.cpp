@@ -162,14 +162,23 @@ void Actor::step(
     }
 
     // Learn
-    if (learnEnabled && _historySize > 1) {
-        std::uniform_int_distribution<int> historyDist(0, _historySize - 2);
+    if (learnEnabled && _historySize > _steps) {
+        std::uniform_int_distribution<int> historyDist(0, _historySize - 1 - _steps);
 
         for (int it = 0; it < _historyIters; it++) {
             int t = historyDist(rng);
 
             const HistorySample &s = _historySamples[t];
-            const HistorySample &sNext = _historySamples[t + 1];
+            const HistorySample &sStep = _historySamples[t + _steps];
+
+            float r = 0.0f;
+            float g = 1.0f;
+            
+            for (int t2 = t + 1; t2 < t + _steps; t2++) {
+                r += g * _historySamples[t2]._reward;
+
+                g *= _gamma;
+            }
 
             // Initialize stimulus to 0
             cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
@@ -195,11 +204,11 @@ void Actor::step(
                     cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
                 }
 
-                // sNext
+                // sStep
                 {
                     int argIndex = 0;
 
-                    _forwardKernel.setArg(argIndex++, sNext._visibleCs[vli]);
+                    _forwardKernel.setArg(argIndex++, sStep._visibleCs[vli]);
                     _forwardKernel.setArg(argIndex++, _hiddenActivations[_front]);
                     _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
                     _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
@@ -220,7 +229,7 @@ void Actor::step(
                 _learnKernel.setArg(argIndex++, s._visibleCs[vli]);
                 _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
                 _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-                _learnKernel.setArg(argIndex++, sNext._hiddenCs);
+                _learnKernel.setArg(argIndex++, _historySamples[t + 1]._hiddenCs);
                 _learnKernel.setArg(argIndex++, _hiddenCounts);
                 _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
                 _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
@@ -228,9 +237,9 @@ void Actor::step(
                 _learnKernel.setArg(argIndex++, vld._size);
                 _learnKernel.setArg(argIndex++, _hiddenSize);
                 _learnKernel.setArg(argIndex++, _alpha);
-                _learnKernel.setArg(argIndex++, _gamma);
+                _learnKernel.setArg(argIndex++, g);
                 _learnKernel.setArg(argIndex++, _tau);
-                _learnKernel.setArg(argIndex++, sNext._reward);
+                _learnKernel.setArg(argIndex++, r);
 
                 cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
             }
@@ -247,6 +256,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_tau), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_steps), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
@@ -306,6 +316,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_tau), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_steps), sizeof(int));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);

@@ -366,9 +366,9 @@ void kernel aLearn(
     int3 visibleSize,
     int3 hiddenSize,
     float alpha,
-    float gamma,
+    float g,
     float tau,
-    float reward
+    float r
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -394,7 +394,7 @@ void kernel aLearn(
     float qPersist = hiddenActivations[hiddenIndexPrev] * rescale;
     float qPrev = hiddenActivationsPrev[hiddenIndexPrev] * rescale;
 
-    float dQ = reward + gamma * maxQ - qPrev;
+    float dQ = r + g * maxQ - qPrev;
 
     float dAL = dQ - tau * (maxQPrev - qPrev);
 
