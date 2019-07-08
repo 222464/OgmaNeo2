@@ -333,34 +333,57 @@ void kernel aForward(
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
+    global const int* hiddenCounts,
     int3 hiddenSize,
-    float epsilon,
+    float temperature,
     uint2 seed
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+    
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
 
-    int selectIndex = 0;
+    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
-    if (randFloat(&stateValue) < epsilon)
-        selectIndex = (int)(rand(&stateValue) % hiddenSize.z);
-    else {
-        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
-        // Find max
-        for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+    // Find max
+    for (int c = 1; c < hiddenSize.z; c++) {
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
-            if (value > maxValue) {
-                maxValue = value;
-                selectIndex = c;
-            }
+        maxValue = fmax(maxValue, value);
+    }
+
+    maxValue *= rescale;
+
+    float total = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale;
+
+        total += exp((value - maxValue) * temperature);
+    }
+
+    float cusp = randFloat(&stateValue) * total;
+
+    int selectIndex = 0;
+    float sumSoFar = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale;
+
+        sumSoFar += exp((value - maxValue) * temperature);
+
+        if (sumSoFar > cusp) {
+            selectIndex = c;
+
+            break;
         }
     }
 
     // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = selectIndex;
+    hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
 void kernel aLearn(

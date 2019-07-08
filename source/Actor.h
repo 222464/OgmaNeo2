@@ -61,13 +61,13 @@ public:
 
     cl_float _gamma;
 
-    cl_float _epsilon;
+    cl_float _temperature;
 
     Actor()
     :
-    _alpha(0.1f),
+    _alpha(0.01f),
     _gamma(0.99f),
-    _epsilon(0.01f)
+    _temperature(2.0f)
     {}
 
     void init(
