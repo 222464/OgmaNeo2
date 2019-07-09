@@ -69,10 +69,10 @@ public:
 
     Actor()
     :
-    _alpha(0.1f),
-    _gamma(0.99f),
+    _alpha(0.01f),
+    _gamma(0.98f),
     _tau(0.5f),
-    _steps(4),
+    _steps(8),
     _historyIters(4)
     {}
 

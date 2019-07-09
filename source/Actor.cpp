@@ -174,7 +174,7 @@ void Actor::step(
             float r = 0.0f;
             float g = 1.0f;
             
-            for (int t2 = t + 1; t2 < t + _steps; t2++) {
+            for (int t2 = t + 1; t2 <= t + _steps; t2++) {
                 r += g * _historySamples[t2]._reward;
 
                 g *= _gamma;
