@@ -159,10 +159,12 @@ void Actor::learn(
         total += activations[hc];
     }
 
+    float deltaScaled = _beta * std::tanh(tdErrorAction / std::max(0.0001f, std::sqrt(_hiddenTDVars[hiddenColumnIndex])));
+
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float deltaAction = (tdErrorAction > 0.0f ? _beta : -_beta) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = deltaScaled * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -172,6 +174,8 @@ void Actor::learn(
             vl._actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld._size.z);
         }
     }
+
+    _hiddenTDVars[hiddenColumnIndex] += _delta * (tdErrorAction * tdErrorAction - _hiddenTDVars[hiddenColumnIndex]);
 }
 
 void Actor::initRandom(
@@ -216,11 +220,11 @@ void Actor::initRandom(
             _hiddenCounts[i] += vl._valueWeights.counts(i) / vld._size.z;
     }
 
-    // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
 
-    // Hidden values
     _hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
+
+    _hiddenTDVars = FloatBuffer(numHiddenColumns, 1.0f);
 
     // Create (pre-allocated) history samples
     _historySize = 0;
@@ -255,6 +259,8 @@ const Actor &Actor::operator=(
     _hiddenCs = other._hiddenCs;
 
     _hiddenValues = other._hiddenValues;
+
+    _hiddenTDVars = other._hiddenTDVars;
 
     _hiddenCounts = other._hiddenCounts;
 
@@ -389,6 +395,8 @@ void Actor::writeToStream(
 
     writeBufferToStream(os, &_hiddenValues);
 
+    writeBufferToStream(os, &_hiddenTDVars);
+
     writeBufferToStream(os, &_hiddenCounts);
 
     int numVisibleLayers = _visibleLayers.size();
@@ -442,6 +450,8 @@ void Actor::readFromStream(
     readBufferFromStream(is, &_hiddenCs);
 
     readBufferFromStream(is, &_hiddenValues);
+
+    readBufferFromStream(is, &_hiddenTDVars);
 
     readBufferFromStream(is, &_hiddenCounts);
 
