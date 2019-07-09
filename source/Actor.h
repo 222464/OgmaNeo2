@@ -53,8 +53,6 @@ private:
 
     FloatBuffer _hiddenValues; // Hidden value function output buffer
 
-    FloatBuffer _hiddenTDVars; // TD error variances
-
     IntBuffer _hiddenCounts; // Number of cells touching
 
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
@@ -107,15 +105,13 @@ public:
     float _alpha; // Value learning rate
     float _beta; // Action learning rate
     float _gamma; // Discount factor
-    float _delta; // TD error norm learning rate
 
     // Defaults
     Actor()
     :
     _alpha(0.1f),
     _beta(0.1f),
-    _gamma(0.99f),
-    _delta(0.01f)
+    _gamma(0.99f)
     {}
 
     Actor(
