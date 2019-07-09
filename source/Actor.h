@@ -71,7 +71,8 @@ private:
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        float reward
+        float reward,
+        float gamma
     );
 
     static void forwardKernel(
@@ -90,21 +91,24 @@ private:
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        float reward
+        float reward,
+        float gamma
     ) {
-        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, reward);
+        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, reward, gamma);
     }
 
 public:
     float _alpha; // Learning rate
     float _gamma; // Discount factor
+    int _steps; // N step Q
     int _historyIters; // Number of update iterations on history
 
     // Defaults
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.95f),
+    _gamma(0.99f),
+    _steps(3),
     _historyIters(4)
     {}
 
