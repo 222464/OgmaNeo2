@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -55,16 +55,30 @@ void SparseCoder::learn(
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
 
+    int maxIndex = 0;
+    float maxValue = -999999.0f;
+
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float target = (vc == targetC ? 1.0f : 0.0f);
-
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
 
-        float delta = _alpha * (target - sum);
+        if (sum > maxValue) {
+            maxValue = sum;
 
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+            maxIndex = vc;
+        }
+    }
+
+    if (maxIndex != targetC) {
+        for (int vc = 0; vc < vld._size.z; vc++) {
+            if (vc == targetC)
+                continue;
+
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+
+            vl._weights.deltaOHVsT(_hiddenCs, -_alpha, visibleIndex, _hiddenSize.z);
+        }
     }
 }
 
