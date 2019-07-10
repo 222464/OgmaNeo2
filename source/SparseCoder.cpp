@@ -77,6 +77,8 @@ void SparseCoder::learn(
 
             int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
+            float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+
             vl._weights.deltaOHVsT(_hiddenCs, -_alpha, visibleIndex, _hiddenSize.z);
         }
     }
