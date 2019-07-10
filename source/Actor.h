@@ -109,7 +109,7 @@ public:
     // Defaults
     Actor()
     :
-    _alpha(0.05f),
+    _alpha(0.1f),
     _beta(0.1f),
     _gamma(0.99f)
     {}
@@ -136,6 +136,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &visibleCs,
+        const IntBuffer* hiddenCs,
         float reward,
         bool learnEnabled
     );
