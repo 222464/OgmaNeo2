@@ -471,6 +471,27 @@ void SparseMatrix::hebbOHVs(
 	}
 }
 
+void SparseMatrix::hebbOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	int column,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
+		}
+	}
+}
+
 void SparseMatrix::hebbDecreasingOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
@@ -489,6 +510,28 @@ void SparseMatrix::hebbDecreasingOHVs(
 				continue;
 
 			_nonZeroValues[j] = std::max(0.0f, _nonZeroValues[j] - alpha);
+		}
+	}
+}
+
+void SparseMatrix::hebbDecreasingOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	int column,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			if (dj == targetDJ)
+				continue;
+
+			_nonZeroValues[_nonZeroValueIndices[j]] = std::max(0.0f, _nonZeroValues[_nonZeroValueIndices[j]] - alpha);
 		}
 	}
 }
