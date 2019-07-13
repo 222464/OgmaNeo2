@@ -56,7 +56,9 @@ void ImageEncoder::backward(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        vl._visibleActivations[visibleIndex] = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
+        float recon = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
+        
+        vl._visibleActivations[visibleIndex] = (recon > 0.0f ? 1.0f + recon : std::exp(recon));
     }
 }
 
