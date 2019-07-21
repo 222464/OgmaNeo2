@@ -56,7 +56,9 @@ void ImageEncoder::backward(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        vl._visibleActivations[visibleIndex] = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
+        float recon = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
+        
+        vl._visibleActivations[visibleIndex] = (recon > 0.0f ? 1.0f + recon : std::exp(recon));
     }
 }
 
@@ -95,7 +97,7 @@ void ImageEncoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
