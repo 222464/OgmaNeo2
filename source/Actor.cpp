@@ -79,11 +79,8 @@ void Actor::learn(
         }
     }
 
-    int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
-
     int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
 
-    float nextQ = 0.0f;
     float sum = 0.0f;
 
     // For each visible layer
@@ -91,14 +88,12 @@ void Actor::learn(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        nextQ += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z);
         sum += vl._weights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
     }
 
-    nextQ /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
     sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
     
-    float delta = _alpha * (reward + gamma * nextQ - sum);
+    float delta = _alpha * (reward + gamma * maxActivation - sum);
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
