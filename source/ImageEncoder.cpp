@@ -189,8 +189,6 @@ void ImageEncoder::writeToStream(
 
     writeBufferToStream(os, &_hiddenCs);
 
-    writeBufferToStream(os, &_hiddenRates);
-
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -221,8 +219,6 @@ void ImageEncoder::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
-
-    readBufferFromStream(is, &_hiddenRates);
 
     int numVisibleLayers;
     
