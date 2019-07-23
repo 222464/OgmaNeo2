@@ -46,6 +46,7 @@ public:
         _historyCapacity(16)
         {}
     };
+    
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
