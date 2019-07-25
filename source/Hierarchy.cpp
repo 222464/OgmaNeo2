@@ -187,7 +187,7 @@ void Hierarchy::initRandom(
     for (int l = 0; l < layerDescs.size(); l++) {
         std::uniform_real_distribution<float> weightDist;
 
-        if (l == _scLayers.size() - 1)
+        if (l == 0)
             weightDist = std::uniform_real_distribution<float>(-0.01f, 0.01f);
         else
             weightDist = std::uniform_real_distribution<float>(0.99f, 1.01f);
