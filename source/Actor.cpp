@@ -162,8 +162,9 @@ void Actor::step(
     }
 
     // Learn
-    if (learnEnabled && _historySize > 1) {
+    if (learnEnabled && _historySize > 2) {
         const HistorySample &sPrev = _historySamples[0];
+        const HistorySample &s = _historySamples[1];
 
         cl_float q = 0.0f;
 
@@ -203,7 +204,7 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
             _learnKernel.setArg(argIndex++, _hiddenCs);
-            _learnKernel.setArg(argIndex++, sPrev._hiddenCsPrev);
+            _learnKernel.setArg(argIndex++, s._hiddenCsPrev);
             _learnKernel.setArg(argIndex++, _hiddenCounts);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
