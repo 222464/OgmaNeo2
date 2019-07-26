@@ -333,57 +333,28 @@ void kernel aForward(
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    global const int* hiddenCounts,
-    int3 hiddenSize,
-    float temperature,
-    uint2 seed
+    int3 hiddenSize
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
     
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
-
-    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
-
+    int maxIndex = 0;
     float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
     // Find max
     for (int c = 1; c < hiddenSize.z; c++) {
         float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
-        maxValue = fmax(maxValue, value);
-    }
+        if (value > maxValue) {
+            maxValue = value;
 
-    maxValue *= rescale;
-
-    float total = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale;
-
-        total += exp((value - maxValue) * temperature);
-    }
-
-    float cusp = randFloat(&stateValue) * total;
-
-    int selectIndex = 0;
-    float sumSoFar = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale;
-
-        sumSoFar += exp((value - maxValue) * temperature);
-
-        if (sumSoFar > cusp) {
-            selectIndex = c;
-
-            break;
+            maxIndex = c;
         }
     }
 
-    // Set states
-    hiddenCs[hiddenColumnIndex] = selectIndex;
+    // Set state
+    hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void kernel aLearn(

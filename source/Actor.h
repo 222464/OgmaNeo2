@@ -31,7 +31,7 @@ public:
 
     struct HistorySample {
         std::vector<cl::Buffer> _visibleCs;
-        cl::Buffer _hiddenCs;
+        cl::Buffer _hiddenCsPrev;
     
         float _reward;
     };
@@ -61,13 +61,10 @@ public:
 
     cl_float _gamma;
 
-    cl_float _temperature;
-
     Actor()
     :
     _alpha(0.01f),
-    _gamma(0.99f),
-    _temperature(2.0f)
+    _gamma(0.99f)
     {}
 
     void init(
@@ -82,6 +79,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
+        const cl::Buffer &hiddenCsPrev,
         std::mt19937 &rng,
         float reward,
         bool learnEnabled
