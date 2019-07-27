@@ -304,7 +304,9 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     _historySamples.resize(historyCapacity);
 
     for (int i = 0; i < _historySamples.size(); i++) {
-        _historySamples[i]._visibleCs.resize(_visibleLayers.size());
+        HistorySample &s = _historySamples[i];
+
+        s._visibleCs.resize(_visibleLayers.size());
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
