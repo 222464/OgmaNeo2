@@ -164,7 +164,7 @@ void Actor::step(
     }
 
     // Learn
-    if (learnEnabled && _historySize > 2) {
+    if (learnEnabled && _historySize > 1) {
         const HistorySample &sPrev = _historySamples[0];
         const HistorySample &s = _historySamples[1];
 
