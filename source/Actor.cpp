@@ -177,7 +177,7 @@ void Actor::step(
         }
 
         // Initialize stimulus to 0
-        cs.getQueue().enqueueFillBuffer(_hiddenActivationsPartial, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+        cs.getQueue().enqueueFillBuffer(_hiddenActivationsPartial, static_cast<cl_float>(0.0f), 0, numHiddenColumns * sizeof(cl_float));
 
         // Compute feed stimulus
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -195,7 +195,7 @@ void Actor::step(
             _forwardPartialKernel.setArg(argIndex++, vld._size);
             _forwardPartialKernel.setArg(argIndex++, _hiddenSize);
 
-            cs.getQueue().enqueueNDRangeKernel(_forwardPartialKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+            cs.getQueue().enqueueNDRangeKernel(_forwardPartialKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
