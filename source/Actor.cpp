@@ -57,7 +57,8 @@ void Actor::init(
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
  
     // Stimulus
-    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
+    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+    _hiddenActivationsPartial = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_float));
 
     // History samples
     _historySize = 0;
@@ -79,6 +80,7 @@ void Actor::init(
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "aForward");
+    _forwardPartialKernel = cl::Kernel(prog.getProgram(), "aForwardPartial");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 }
@@ -95,7 +97,7 @@ void Actor::step(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     // Initialize stimulus to 0
-    cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
     // Compute feed stimulus
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -105,7 +107,7 @@ void Actor::step(
         int argIndex = 0;
 
         _forwardKernel.setArg(argIndex++, visibleCs[vli]);
-        _forwardKernel.setArg(argIndex++, _hiddenActivations[_front]);
+        _forwardKernel.setArg(argIndex++, _hiddenActivations);
         _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
         _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
         _forwardKernel.setArg(argIndex++, vl._weights._columnIndices);
@@ -121,7 +123,7 @@ void Actor::step(
 
         int argIndex = 0;
 
-        _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
+        _inhibitKernel.setArg(argIndex++, _hiddenActivations);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
 
@@ -175,7 +177,7 @@ void Actor::step(
         }
 
         // Initialize stimulus to 0
-        cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+        cs.getQueue().enqueueFillBuffer(_hiddenActivationsPartial, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
         // Compute feed stimulus
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -184,15 +186,16 @@ void Actor::step(
 
             int argIndex = 0;
 
-            _forwardKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
-            _forwardKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
-            _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
-            _forwardKernel.setArg(argIndex++, vl._weights._columnIndices);
-            _forwardKernel.setArg(argIndex++, vld._size);
-            _forwardKernel.setArg(argIndex++, _hiddenSize);
+            _forwardPartialKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
+            _forwardPartialKernel.setArg(argIndex++, s._hiddenCsPrev);
+            _forwardPartialKernel.setArg(argIndex++, _hiddenActivationsPartial);
+            _forwardPartialKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+            _forwardPartialKernel.setArg(argIndex++, vl._weights._rowRanges);
+            _forwardPartialKernel.setArg(argIndex++, vl._weights._columnIndices);
+            _forwardPartialKernel.setArg(argIndex++, vld._size);
+            _forwardPartialKernel.setArg(argIndex++, _hiddenSize);
 
-            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+            cs.getQueue().enqueueNDRangeKernel(_forwardPartialKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
         }
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -202,8 +205,8 @@ void Actor::step(
             int argIndex = 0;
 
             _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
-            _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
-            _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
+            _learnKernel.setArg(argIndex++, _hiddenActivations);
+            _learnKernel.setArg(argIndex++, _hiddenActivationsPartial);
             _learnKernel.setArg(argIndex++, _hiddenCs);
             _learnKernel.setArg(argIndex++, s._hiddenCsPrev);
             _learnKernel.setArg(argIndex++, _hiddenCounts);
@@ -279,7 +282,9 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
-    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
+    // Stimulus
+    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+    _hiddenActivationsPartial = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_float));
 
     int numVisibleLayers;
     
@@ -324,6 +329,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "aForward");
+    _forwardPartialKernel = cl::Kernel(prog.getProgram(), "aForwardPartial");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 

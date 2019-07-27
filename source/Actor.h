@@ -45,7 +45,8 @@ private:
 
     cl::Buffer _hiddenCs;
 
-    DoubleBuffer _hiddenActivations;
+    cl::Buffer _hiddenActivations;
+    cl::Buffer _hiddenActivationsPartial;
 
     std::vector<HistorySample> _historySamples;
 
@@ -53,6 +54,7 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
+    cl::Kernel _forwardPartialKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
 
