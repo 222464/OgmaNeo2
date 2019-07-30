@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -23,7 +23,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size(4, 4, 16),
+        _size({ 4, 4, 16 }),
         _radius(2)
         {}
     };
@@ -84,7 +84,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.1f)
+    _alpha(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
