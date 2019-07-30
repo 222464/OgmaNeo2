@@ -169,7 +169,7 @@ void Actor::learn(
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        float deltaAction = _beta * tdErrorAction * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum));
+        float deltaAction = (tdErrorAction > 0.0f ? _beta : 0.0f) * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
