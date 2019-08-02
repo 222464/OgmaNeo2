@@ -189,8 +189,6 @@ void ImageEncoder::writeToStream(
 
     writeBufferToStream(os, &_hiddenCs);
 
-    writeBufferToStream(os, &_hiddenRates);
-
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -222,8 +220,6 @@ void ImageEncoder::readFromStream(
 
     readBufferFromStream(is, &_hiddenCs);
 
-    readBufferFromStream(is, &_hiddenRates);
-
     int numVisibleLayers;
     
     is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -243,5 +239,10 @@ void ImageEncoder::readFromStream(
         readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._visibleActivations);
+
+        vl._visibleCounts = IntBuffer(numVisibleColumns);
+
+        for (int i = 0; i < numVisibleColumns; i++)
+            vl._visibleCounts[i] = std::max(1, vl._weights.countsT(i * vld._size.z) / _hiddenSize.z);
     }
 }
