@@ -607,8 +607,6 @@ void Hierarchy::writeToStream(
 
         _scLayers[l].writeToStream(os);
 
-        writeBufferToStream(os, &_rLayers[l]._activations);
-        writeBufferToStream(os, &_rLayers[l]._errors);
         writeBufferToStream(os, &_rLayers[l]._hiddenCounts);
 
         for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
@@ -619,6 +617,9 @@ void Hierarchy::writeToStream(
             if (exists) {
                 writeSMToStream(os, _rLayers[l]._weights[v]);
                 writeBufferToStream(os, &_rLayers[l]._visibleCounts[v]);
+                        
+                writeBufferToStream(os, &_rLayers[l]._activations[v]);
+                writeBufferToStream(os, &_rLayers[l]._errors[v]);
             }
         }
     }
@@ -699,18 +700,22 @@ void Hierarchy::readFromStream(
 
         _scLayers[l].readFromStream(is);
 
-        readBufferFromStream(is, &_rLayers[l]._activations);
-        readBufferFromStream(is, &_rLayers[l]._errors);
-        readBufferFromStream(is, &_rLayers[l]._hiddenCounts);
-
         if (l == 0) {
             _rLayers[l]._weights.resize(_inputSizes.size());
             _rLayers[l]._visibleCounts.resize(_inputSizes.size());
+
+            _rLayers[l]._activations.resize(_inputSizes.size());
+            _rLayers[l]._errors.resize(_inputSizes.size());
         }
         else {
             _rLayers[l]._weights.resize(1);
             _rLayers[l]._visibleCounts.resize(1);
+
+            _rLayers[l]._activations.resize(1);
+            _rLayers[l]._errors.resize(1);
         }
+
+        readBufferFromStream(is, &_rLayers[l]._hiddenCounts);
 
         for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
             char exists;
@@ -720,6 +725,9 @@ void Hierarchy::readFromStream(
             if (exists) {
                 readSMFromStream(is, _rLayers[l]._weights[v]);
                 readBufferFromStream(is, &_rLayers[l]._visibleCounts[v]);
+
+                readBufferFromStream(is, &_rLayers[l]._activations[v]);
+                readBufferFromStream(is, &_rLayers[l]._errors[v]);
             }
         }
     }
