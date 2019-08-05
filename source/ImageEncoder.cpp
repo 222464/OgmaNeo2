@@ -205,6 +205,8 @@ void ImageEncoder::writeToStream(
         writeSMToStream(os, vl._weights);
 
         writeBufferToStream(os, &vl._visibleActivations);
+
+        writeBufferToStream(os, &vl._visibleCounts);
     }
 }
 
@@ -240,9 +242,6 @@ void ImageEncoder::readFromStream(
 
         readBufferFromStream(is, &vl._visibleActivations);
 
-        vl._visibleCounts = IntBuffer(numVisibleColumns);
-
-        for (int i = 0; i < numVisibleColumns; i++)
-            vl._visibleCounts[i] = std::max(1, vl._weights.countsT(i * vld._size.z) / _hiddenSize.z);
+        readBufferFromStream(is, &vl._visibleCounts);
     }
 }
