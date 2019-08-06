@@ -18,7 +18,7 @@ void Actor::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int maxIndex = 0;
+    std::vector<float> activations(_hiddenSize.z);
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -36,14 +36,37 @@ void Actor::forward(
 
         sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
+        activations[hc] = sum;
 
-            maxIndex = hc;
+        maxActivation = std::max(maxActivation, sum);
+    }
+
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+        
+        total += activations[hc];
+    }
+
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    float cusp = dist01(rng) * total;
+
+    int selectIndex = 0;
+    float sumSoFar = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        sumSoFar += activations[hc];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = hc;
+
+            break;
         }
     }
 
-    _hiddenCs[hiddenColumnIndex] = maxIndex;
+    _hiddenCs[hiddenColumnIndex] = selectIndex;
 
     _hiddenActivations[hiddenColumnIndex] = maxActivation;
 }
@@ -145,7 +168,7 @@ void Actor::initRandom(
             _historySamples[i]->_inputCs[vli] = IntBuffer(numVisibleColumns);
         }
 
-        _historySamples[i]->_hiddenCsPrev = IntBuffer(numHiddenColumns);
+        _historySamples[i]->_hiddenCs = IntBuffer(numHiddenColumns);
     }
 }
 
@@ -182,7 +205,6 @@ const Actor &Actor::operator=(
 void Actor::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
-    const IntBuffer* hiddenCsPrev,
     float reward,
     bool learnEnabled
 ) {
@@ -234,9 +256,9 @@ void Actor::step(
         // Copy hidden Cs
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, hiddenCsPrev, &s._hiddenCsPrev);
+            copyInt(x, cs._rng, &_hiddenCs, &s._hiddenCs);
 #else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s._hiddenCsPrev), numHiddenColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &s._hiddenCs), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
         s._reward = reward;
@@ -245,7 +267,6 @@ void Actor::step(
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize == _historySamples.size()) {
         const HistorySample &sPrev = *_historySamples[0];
-        const HistorySample &s = *_historySamples[1];
 
         // Compute (partial) Q value, rest is completed in the kernel
         float q = 0.0f;
@@ -261,9 +282,9 @@ void Actor::step(
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < _hiddenSize.x; x++)
             for (int y = 0; y < _hiddenSize.y; y++)
-                learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &s._hiddenCsPrev, q, g);
+                learn(Int2(x, y), cs._rng, constGet(sPrev._inputCs), &sPrev._hiddenCs, q, g);
 #else
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &s._hiddenCsPrev, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._inputCs), &sPrev._hiddenCs, q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
     }
 }
@@ -313,7 +334,7 @@ void Actor::writeToStream(
         for (int vli = 0; vli < _visibleLayers.size(); vli++)
             writeBufferToStream(os, &s._inputCs[vli]);
 
-        writeBufferToStream(os, &s._hiddenCsPrev);
+        writeBufferToStream(os, &s._hiddenCs);
 
         os.write(reinterpret_cast<const char*>(&s._reward), sizeof(float));
     }
@@ -373,7 +394,7 @@ void Actor::readFromStream(
         for (int vli = 0; vli < _visibleLayers.size(); vli++)
             readBufferFromStream(is, &s._inputCs[vli]);
 
-        readBufferFromStream(is, &s._hiddenCsPrev);;
+        readBufferFromStream(is, &s._hiddenCs);;
 
         is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
     }
