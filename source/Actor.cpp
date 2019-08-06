@@ -49,9 +49,9 @@ void Actor::forward(
         total += activations[hc];
     }
 
-    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+    std::uniform_real_distribution<float> cuspDist(0.0f, total);
 
-    float cusp = dist01(rng) * total;
+    float cusp = cuspDist(rng);
 
     int selectIndex = 0;
     float sumSoFar = 0.0f;
