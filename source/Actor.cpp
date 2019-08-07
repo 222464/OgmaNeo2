@@ -162,7 +162,7 @@ void Actor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float deltaAction = (tdErrorAction > 0.0f ? _beta : -_beta) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = _beta * tdErrorAction * (hc == targetC ? 1.0f : 0.0f);// - activations[hc] / std::max(0.0001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -345,7 +345,7 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && _historySize > 2) {
+    if (learnEnabled && _historySize > 1) {
         const HistorySample &sPrev = *_historySamples[0];
 
         // Compute (partial) Q value, rest is completed in the kernel
