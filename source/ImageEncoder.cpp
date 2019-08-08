@@ -202,6 +202,8 @@ void ImageEncoder::writeToStream(
         writeSMToStream(os, vl._weights);
 
         writeBufferToStream(os, &vl._visibleActivations);
+
+        writeBufferToStream(os, &vl._visibleCounts);
     }
 }
 
@@ -233,5 +235,7 @@ void ImageEncoder::readFromStream(
         readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._visibleActivations);
+
+        readBufferFromStream(is, &vl._visibleCounts);
     }
 }
