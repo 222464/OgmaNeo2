@@ -198,9 +198,6 @@ void SparseCoder::readFromStream(
 
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
         readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._visibleCounts);

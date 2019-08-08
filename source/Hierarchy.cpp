@@ -354,11 +354,10 @@ void Hierarchy::readFromStream(
     _scLayers.resize(numLayers);
     _aLayers.resize(numLayers);
 
-    _ticks.resize(numLayers);
-
     _histories.resize(numLayers);
     _historySizes.resize(numLayers);
     
+    _ticks.resize(numLayers);
     _ticksPerUpdate.resize(numLayers);
 
     _updates.resize(numLayers);
