@@ -394,7 +394,7 @@ void Actor::readFromStream(
         for (int vli = 0; vli < _visibleLayers.size(); vli++)
             readBufferFromStream(is, &s._inputCs[vli]);
 
-        readBufferFromStream(is, &s._hiddenCs);;
+        readBufferFromStream(is, &s._hiddenCs);
 
         is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
     }
