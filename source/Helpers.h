@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -262,7 +262,9 @@ void writeBufferToStream(
     int size = buf->size();
 
     os.write(reinterpret_cast<const char*>(&size), sizeof(int));
-    os.write(reinterpret_cast<const char*>(buf->data()), size * sizeof(T));
+
+    if (size > 0)
+        os.write(reinterpret_cast<const char*>(buf->data()), size * sizeof(T));
 }
 
 template <class T>
@@ -274,10 +276,14 @@ void readBufferFromStream(
 
     is.read(reinterpret_cast<char*>(&size), sizeof(int));
 
-    if (buf->size() != size)
-        buf->resize(size);
+    if (size == 0)
+        buf->clear();
+    else {
+        if (buf->size() != size)
+            buf->resize(size);
 
-    is.read(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
+        is.read(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
+    }
 }
 
 // --- Sparse Matrix Generation ---
