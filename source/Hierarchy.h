@@ -151,6 +151,7 @@ private:
 
 public:
     float _alpha; // Routing learning rate
+    float _beta; // Routing learning
     float _gamma; // Discount factor
     float _clip; // Gradient clip
 
