@@ -57,7 +57,7 @@ void ImageEncoder::backward(
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
         float recon = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
-
+        
         vl._visibleActivations[visibleIndex] = (recon > 0.0f ? 1.0f + recon : std::exp(recon));
     }
 }
@@ -197,14 +197,13 @@ void ImageEncoder::writeToStream(
         const VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
 
         writeBufferToStream(os, &vl._visibleActivations);
+
+        writeBufferToStream(os, &vl._visibleCounts);
     }
 }
 
@@ -231,13 +230,12 @@ void ImageEncoder::readFromStream(
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
         readSMFromStream(is, vl._weights);
 
         readBufferFromStream(is, &vl._visibleActivations);
+
+        readBufferFromStream(is, &vl._visibleCounts);
     }
 }
