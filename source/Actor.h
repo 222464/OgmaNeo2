@@ -105,15 +105,13 @@ public:
     float _alpha; // Value learning rate
     float _beta; // Action learning rate
     float _gamma; // Discount factor
-    float _clip; // Gradient clip
 
     // Defaults
     Actor()
     :
-    _alpha(0.001f),
-    _beta(0.1f),
-    _gamma(0.98f),
-    _clip(1.0f)
+    _alpha(0.1f),
+    _beta(1.0f),
+    _gamma(0.98f)
     {}
 
     Actor(
