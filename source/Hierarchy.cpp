@@ -80,8 +80,13 @@ void Hierarchy::forward(
             sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-                
-        _rLayers[l]._activations[vli][visibleColumnIndex] = std::min(2.0f, std::max(0.0f, sum));
+    
+        if (sum < 0.0f)
+            _rLayers[l]._activations[vli][visibleColumnIndex] = sum * _leak;
+        else if (sum > 2.0f)
+            _rLayers[l]._activations[vli][visibleColumnIndex] = 2.0f + (sum - 2.0f) * _leak;
+        else
+            _rLayers[l]._activations[vli][visibleColumnIndex] = sum;
     }
 }
 
@@ -109,7 +114,7 @@ void Hierarchy::backward(
 
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : 0.0f);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : _leak);
     }
     else {
         float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l].getHiddenSize().z);
@@ -118,7 +123,7 @@ void Hierarchy::backward(
 
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : 0.0f);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : _leak);
     }
 }
 
@@ -340,6 +345,7 @@ const Hierarchy &Hierarchy::operator=(
     _alpha = other._alpha;
     _beta = other._beta;
     _gamma = other._gamma;
+    _leak = other._leak;
     _maxHistorySamples = other._maxHistorySamples;
     _historyIters = other._historyIters;
 
@@ -631,6 +637,7 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_leak), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySamples), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
@@ -739,6 +746,7 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_leak), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySamples), sizeof(int));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
