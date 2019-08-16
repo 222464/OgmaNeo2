@@ -100,6 +100,7 @@ private:
 public:
     float _alpha; // Learning rate
     float _gamma; // Discount factor
+    float _clip; // Gradient clip
     int _steps; // N step Q
     int _historyIters; // Number of update iterations on history
 
@@ -107,8 +108,9 @@ public:
     Actor()
     :
     _alpha(0.1f),
-    _gamma(0.95f),
-    _steps(5),
+    _gamma(0.99f),
+    _clip(1.0f),
+    _steps(3),
     _historyIters(4)
     {}
 
