@@ -112,8 +112,8 @@ public:
     :
     _alpha(0.01f),
     _beta(0.5f),
-    _gamma(0.97f),
-    _clip(0.5f)
+    _gamma(0.99f),
+    _clip(1.0f)
     {}
 
     Actor(
