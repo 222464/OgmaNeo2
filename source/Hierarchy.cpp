@@ -13,6 +13,17 @@
 
 using namespace ogmaneo;
 
+void Hierarchy::combine(
+    int pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    const IntBuffer* feedBackCs,
+    IntBuffer* combinedCs,
+    const Int3 &hiddenSize
+) {
+    (*combinedCs)[pos] = (*hiddenCs)[pos] + (*feedBackCs)[pos] * hiddenSize.z;
+}
+
 void Hierarchy::initRandom(
     ComputeSystem &cs,
     const std::vector<Int3> &inputSizes,
