@@ -40,6 +40,8 @@ private:
 
     IntBuffer _hiddenCounts; // Number of units touching
 
+    FloatBuffer _hiddenBiases; // Biases
+
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;

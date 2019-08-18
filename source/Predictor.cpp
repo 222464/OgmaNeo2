@@ -105,7 +105,7 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = 0.0f;
+        float sum = _hiddenBiases[hiddenIndex];
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -139,6 +139,9 @@ void Predictor::learn(
             vl._weights.deltaOHVs(*inputCsPlus[vli], -_alpha, hiddenIndexMax, vld._size.z);
             vl._weights.deltaOHVs(*inputCsMinus[vli], _alpha, hiddenIndexMax, vld._size.z);
         }
+
+        _hiddenBiases[hiddenIndexMax] -= _alpha;
+        _hiddenBiases[hiddenIndexTarget] += _alpha;
     }
 }
 
@@ -180,6 +183,8 @@ void Predictor::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
+
+    _hiddenBiases = FloatBuffer(numHidden, 0.0f);
 }
 
 void Predictor::activate(
@@ -233,6 +238,8 @@ void Predictor::writeToStream(
 
     writeBufferToStream(os, &_hiddenCounts);
 
+    writeBufferToStream(os, &_hiddenBiases);
+
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -260,6 +267,8 @@ void Predictor::readFromStream(
     readBufferFromStream(is, &_hiddenCs);
 
     readBufferFromStream(is, &_hiddenCounts);
+
+    readBufferFromStream(is, &_hiddenBiases);
 
     int numVisibleLayers;
     
