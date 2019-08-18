@@ -49,6 +49,8 @@ private:
     // Layers
     std::vector<SparseCoder> _scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+    std::vector<IntBuffer> _combinedStatesInfer;
+    std::vector<IntBuffer> _combinedStatesLearn;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -62,6 +64,27 @@ private:
 
     // Input dimensions
     std::vector<Int3> _inputSizes;
+
+    void combine(
+        int pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        const IntBuffer* feedBackCs,
+        IntBuffer* combinedCs,
+        const Int3 &hiddenSize
+    );
+
+    static void combineKernel(
+        int pos,
+        std::mt19937 &rng,
+        Hierarchy* h,
+        const IntBuffer* hiddenCs,
+        const IntBuffer* feedBackCs,
+        IntBuffer* combinedCs,
+        const Int3 &hiddenSize
+    ) {
+        h->combine(pos, rng, hiddenCs, feedBackCs, combinedCs, hiddenSize);
+    }
 
 public:
     // Default
