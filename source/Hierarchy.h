@@ -29,6 +29,7 @@ public:
 
         int _scRadius; // Sparse coder radius
         int _pRadius; // Prediction Radius
+        int _rRadius; // Recurrent radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -39,8 +40,9 @@ public:
         _hiddenSize(4, 4, 16),
         _scRadius(2),
         _pRadius(2),
-        _ticksPerUpdate(2),
-        _temporalHorizon(2)
+        _rRadius(2),
+        _ticksPerUpdate(1),
+        _temporalHorizon(1)
         {}
     };
 private:
