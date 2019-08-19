@@ -63,7 +63,7 @@ void Predictor::forward(
 //     for (int hc = 0; hc < _hiddenSize.z; hc++) {
 //         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-//         float sum = 0.0f;
+//         float sum = _hiddenBiases[hiddenIndex];
 
 //         // For each visible layer
 //         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -87,6 +87,8 @@ void Predictor::forward(
 //             vl._weights.deltaOHVs(*inputCsPlus[vli], delta, hiddenIndex, vld._size.z);
 //             vl._weights.deltaOHVs(*inputCsMinus[vli], -delta, hiddenIndex, vld._size.z);
 //         }
+
+//         _hiddenBiases[hiddenIndex] += delta;
 //     }
 // }
 
