@@ -14,6 +14,7 @@ using namespace ogmaneo;
 void Predictor::forward(
     const Int2 &pos,
     std::mt19937 &rng,
+    const IntBuffer* hiddenTargetCs,
     const std::vector<const IntBuffer*> &inputCsPlus,
     const std::vector<const IntBuffer*> &inputCsMinus
 ) {
@@ -25,7 +26,7 @@ void Predictor::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _hiddenBiases[hiddenIndex];
+        float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 1.0f : 0.0f);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -63,7 +64,7 @@ void Predictor::forward(
 //     for (int hc = 0; hc < _hiddenSize.z; hc++) {
 //         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-//         float sum = _hiddenBiases[hiddenIndex];
+//         float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 1.0f : 0.0f);
 
 //         // For each visible layer
 //         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -87,8 +88,6 @@ void Predictor::forward(
 //             vl._weights.deltaOHVs(*inputCsPlus[vli], delta, hiddenIndex, vld._size.z);
 //             vl._weights.deltaOHVs(*inputCsMinus[vli], -delta, hiddenIndex, vld._size.z);
 //         }
-
-//         _hiddenBiases[hiddenIndex] += delta;
 //     }
 // }
 
@@ -107,7 +106,7 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _hiddenBiases[hiddenIndex];
+        float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 1.0f : 0.0f);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -141,9 +140,6 @@ void Predictor::learn(
             vl._weights.deltaOHVs(*inputCsPlus[vli], -_alpha, hiddenIndexMax, vld._size.z);
             vl._weights.deltaOHVs(*inputCsMinus[vli], _alpha, hiddenIndexMax, vld._size.z);
         }
-
-        _hiddenBiases[hiddenIndexMax] -= _alpha;
-        _hiddenBiases[hiddenIndexTarget] += _alpha;
     }
 }
 
@@ -185,12 +181,11 @@ void Predictor::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    _hiddenBiases = FloatBuffer(numHidden, 0.0f);
 }
 
 void Predictor::activate(
     ComputeSystem &cs,
+    const IntBuffer* hiddenTargetCs,
     const std::vector<const IntBuffer*> &inputCsPlus,
     const std::vector<const IntBuffer*> &inputCsMinus
 ) {
@@ -201,9 +196,9 @@ void Predictor::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputCsPlus, inputCsMinus);
+            forward(Int2(x, y), cs._rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
 #else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
@@ -240,8 +235,6 @@ void Predictor::writeToStream(
 
     writeBufferToStream(os, &_hiddenCounts);
 
-    writeBufferToStream(os, &_hiddenBiases);
-
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -269,8 +262,6 @@ void Predictor::readFromStream(
     readBufferFromStream(is, &_hiddenCs);
 
     readBufferFromStream(is, &_hiddenCounts);
-
-    readBufferFromStream(is, &_hiddenBiases);
 
     int numVisibleLayers;
     

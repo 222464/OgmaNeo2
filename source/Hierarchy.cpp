@@ -310,7 +310,7 @@ void Hierarchy::step(
                     if (learnEnabled) 
                         _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsLearnPlus, feedBackCsLearnMinus);
 
-                    _pLayers[l][p]->activate(cs, feedBackCsInferPlus, feedBackCsInferMinus);
+                    _pLayers[l][p]->activate(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCsInferPlus, feedBackCsInferMinus);
                 }
             }
         }

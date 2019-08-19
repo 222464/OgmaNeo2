@@ -40,8 +40,6 @@ private:
 
     IntBuffer _hiddenCounts; // Number of units touching
 
-    FloatBuffer _hiddenBiases; // Biases
-
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -51,6 +49,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
+        const IntBuffer* hiddenTargetCs,
         const std::vector<const IntBuffer*> &inputCsPlus,
         const std::vector<const IntBuffer*> &inputCsMinus
     );
@@ -67,10 +66,11 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
+        const IntBuffer* hiddenTargetCs,
         const std::vector<const IntBuffer*> &inputCsPlus,
         const std::vector<const IntBuffer*> &inputCsMinus
     ) {
-        p->forward(pos, rng, inputCsPlus, inputCsMinus);
+        p->forward(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
     }
 
     static void learnKernel(
@@ -103,6 +103,7 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
+        const IntBuffer* hiddenTargetCs,
         const std::vector<const IntBuffer*> &inputCsPlus,
         const std::vector<const IntBuffer*> &inputCsMinus
     );
