@@ -91,6 +91,11 @@ struct SparseMatrix {
 		int row
 	);
 
+    void fill(
+        int row,
+        float value
+    );
+
 	// --- Transpose ---
 
 	float multiplyT(
@@ -112,6 +117,11 @@ struct SparseMatrix {
 		const std::vector<float> &in,
 		int column
 	);
+
+    void fillT(
+        int column,
+        float value
+    );
 
 	// --- One-Hot Vectors Operations ---
 
@@ -221,6 +231,24 @@ struct SparseMatrix {
 
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int row,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int column,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &nonZeroScalars,
 		float delta,
 		int row,
@@ -233,6 +261,26 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
 	);
 
 	// --- Normalization ---
@@ -301,6 +349,48 @@ struct SparseMatrix {
 	void hebbErrorsT(
 		const std::vector<float> &errors,
 		int column
+	);
+
+    // --- ART specific ---
+
+    float artActivate(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+        const SparseMatrix &deltas,
+        const SparseMatrix &sigmas,
+        float alpha
+	);
+
+    float artMatchT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+    void artDepleteDeltaT(
+        const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+        const SparseMatrix &tBU
+    );
+
+    void artDepleteSigma(
+        const std::vector<int> &nonZeroIndices,
+        const std::vector<float> &matches,
+		int row,
+        int oneHotSize,
+        const SparseMatrix &tBU,
+        float minVigilance
+    );
+    
+    void artLearnTTD(
+		const std::vector<int> &nonZeroIndices,
+        const std::vector<float> &matches,
+		int row,
+		int oneHotSize,
+        SparseMatrix &tBU, // learn BU while at it
+        float beta
 	);
 };
 } // namespace ogmaneo

@@ -150,6 +150,18 @@ float SparseMatrix::counts(
 	return sum;
 }
 
+void SparseMatrix::fill(
+	int row,
+    float value
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] = value;
+}
+
 float SparseMatrix::multiplyT(
 	const std::vector<float> &in,
 	int column
@@ -201,6 +213,18 @@ float SparseMatrix::countsT(
 		sum += in[_rowIndices[j]];
 
 	return sum;
+}
+
+void SparseMatrix::fillT(
+	int column,
+    float value
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		_nonZeroValues[_nonZeroValueIndices[j]] = value;
 }
 
 float SparseMatrix::multiplyOHVs(
@@ -487,7 +511,41 @@ void SparseMatrix::deltaOHVsT(
 
 void SparseMatrix::deltaOHVs(
 	const std::vector<int> &nonZeroIndices,
-	const std::vector<float> &nonZeroValues,
+	float delta,
+	int row,
+	int oneHotSize,
+	float lowerBound,
+	float upperBound
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		_nonZeroValues[j] = std::min(upperBound, std::max(lowerBound, _nonZeroValues[j] + delta));
+	}
+}
+
+void SparseMatrix::deltaOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	float delta,
+	int column,
+	int oneHotSize,
+	float lowerBound,
+	float upperBound
+) {
+	int nextIndex = column + 1;
+
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		_nonZeroValues[_nonZeroValueIndices[j]] = std::min(upperBound, std::max(lowerBound, _nonZeroValues[_nonZeroValueIndices[j]] + delta));
+	}
+}
+
+void SparseMatrix::deltaOHVs(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroScalars,
 	float delta,
 	int row,
 	int oneHotSize
@@ -498,13 +556,13 @@ void SparseMatrix::deltaOHVs(
 		int i = _columnIndices[jj] / oneHotSize;
 		int j = jj + nonZeroIndices[i];
 
-		_nonZeroValues[j] += delta * nonZeroValues[i];
+		_nonZeroValues[j] += delta * nonZeroScalars[i];
 	}
 }
 
 void SparseMatrix::deltaOHVsT(
 	const std::vector<int> &nonZeroIndices,
-	const std::vector<float> &nonZeroValues,
+	const std::vector<float> &nonZeroScalars,
 	float delta,
 	int column,
 	int oneHotSize
@@ -515,7 +573,45 @@ void SparseMatrix::deltaOHVsT(
 		int i = _rowIndices[jj] / oneHotSize;
 		int j = jj + nonZeroIndices[i];
 
-		_nonZeroValues[_nonZeroValueIndices[j]] += delta * nonZeroValues[i];
+		_nonZeroValues[_nonZeroValueIndices[j]] += delta * nonZeroScalars[i];
+	}
+}
+
+void SparseMatrix::deltaOHVs(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroScalars,
+	float delta,
+	int row,
+	int oneHotSize,
+	float lowerBound,
+	float upperBound
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = _columnIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		_nonZeroValues[j] = std::min(upperBound, std::max(lowerBound, _nonZeroValues[j] + delta * nonZeroScalars[i]));
+	}
+}
+
+void SparseMatrix::deltaOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroScalars,
+	float delta,
+	int column,
+	int oneHotSize,
+	float lowerBound,
+	float upperBound
+) {
+	int nextIndex = column + 1;
+
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int i = _rowIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		_nonZeroValues[_nonZeroValueIndices[j]] = std::min(upperBound, std::max(lowerBound, _nonZeroValues[_nonZeroValueIndices[j]] + delta * nonZeroScalars[i]));
 	}
 }
 
@@ -683,4 +779,112 @@ void SparseMatrix::hebbErrorsT(
 	
 	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
 		_nonZeroValues[_nonZeroValueIndices[j]] += errors[_rowIndices[j]];
+}
+
+float SparseMatrix::artActivate(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+    const SparseMatrix &deltas,
+    const SparseMatrix &sigmas,
+    float alpha
+) {
+	float sum0 = 0.0f;
+    float sum1 = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		sum0 += std::max(0.0f, 1.0f - _nonZeroValues[j] - deltas._nonZeroValues[j]);
+	}
+
+    for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+        sum1 += std::max(0.0f, _nonZeroValues[j] - sigmas._nonZeroValues[j]);
+
+	return sum0 + (1.0f - alpha) * sum1;
+}
+
+float SparseMatrix::artMatchT(
+	const std::vector<int> &nonZeroIndices,
+	int column,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		sum += std::max(0.0f, 1.0f - _nonZeroValues[_nonZeroValueIndices[j]]);
+	}
+
+	return std::min(1.0f, sum);
+}
+
+void SparseMatrix::artDepleteDeltaT(
+    const std::vector<int> &nonZeroIndices,
+    int column,
+    int oneHotSize,
+    const SparseMatrix &tBU
+) {
+    int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		_nonZeroValues[_nonZeroValueIndices[j]] = std::max(_nonZeroValues[_nonZeroValueIndices[j]], std::max(0.0f, 1.0f - tBU._nonZeroValues[tBU._nonZeroValueIndices[j]]));
+	}
+}
+
+void SparseMatrix::artDepleteSigma(
+    const std::vector<int> &nonZeroIndices,
+    const std::vector<float> &matches,
+    int row,
+    int oneHotSize,
+    const SparseMatrix &tBU,
+    float minVigilance
+) {
+    int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetJ = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+        if (matches[targetJ] < minVigilance) {
+            for (int dj = 0; dj < oneHotSize; dj++) {
+                int j = jj + dj;
+
+                _nonZeroValues[j] = std::max(_nonZeroValues[j], tBU._nonZeroValues[j]);
+            }
+        }
+    }
+}
+
+void SparseMatrix::artLearnTTD(
+    const std::vector<int> &nonZeroIndices,
+    const std::vector<float> &matches,
+    int row,
+    int oneHotSize,
+    SparseMatrix &tBU,
+    float beta
+) {
+    int nextIndex = row + 1;
+	
+    for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+        for (int dj = 0; dj < oneHotSize; dj++) {
+            int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+            _nonZeroValues[j] += beta * std::max(0.0f, matches[j] - target) / std::max(0.0001f, matches[j]) * std::max(0.0f, 1.0f - _nonZeroValues[j]);
+            _nonZeroValues[j] = std::min(1.0f, _nonZeroValues[j]);
+
+            tBU._nonZeroValues[j] += beta * std::max(0.0f, 1.0f - tBU._nonZeroValues[j] - target);
+            tBU._nonZeroValues[j] = std::min(1.0f, tBU._nonZeroValues[j]);
+        }
+    }
 }
