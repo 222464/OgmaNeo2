@@ -51,6 +51,7 @@ void Predictor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs,
+    const IntBuffer* hiddenTargetCsPrev,
     const std::vector<const IntBuffer*> &inputCsPlus,
     const std::vector<const IntBuffer*> &inputCsMinus
 ) {
@@ -64,7 +65,7 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 1.0f : 0.0f);
+        float sum = ((*hiddenTargetCsPrev)[hiddenColumnIndex] == hc ? 1.0f : 0.0f);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -95,6 +96,7 @@ void Predictor::learn(
 //     const Int2 &pos,
 //     std::mt19937 &rng,
 //     const IntBuffer* hiddenTargetCs,
+//     const IntBuffer* hiddenTargetCsPrev,
 //     const std::vector<const IntBuffer*> &inputCsPlus,
 //     const std::vector<const IntBuffer*> &inputCsMinus
 // ) {
@@ -106,7 +108,7 @@ void Predictor::learn(
 //     for (int hc = 0; hc < _hiddenSize.z; hc++) {
 //         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-//         float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 1.0f : 0.0f);
+//         float sum = ((*hiddenTargetCsPrev)[hiddenColumnIndex] == hc ? 1.0f : 0.0f);
 
 //         // For each visible layer
 //         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -181,6 +183,7 @@ void Predictor::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
+    _hiddenTargetCsPrev = IntBuffer(numHiddenColumns, 0);
 }
 
 void Predictor::activate(
@@ -200,6 +203,14 @@ void Predictor::activate(
 #else
     runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+
+    // Copy
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < numHiddenColumns; x++)
+        copyInt(x, cs._rng, hiddenTargetCs, &_hiddenTargetCsPrev);
+#else
+    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenTargetCs, &_hiddenTargetCsPrev), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
 }
 
 void Predictor::learn(
@@ -215,9 +226,9 @@ void Predictor::learn(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            learn(Int2(x, y), cs._rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
+            learn(Int2(x, y), cs._rng, hiddenTargetCs, &_hiddenTargetCsPrev, inputCsPlus, inputCsMinus);
 #else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, &_hiddenTargetCsPrev, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
@@ -232,6 +243,7 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
+    writeBufferToStream(os, &_hiddenTargetCsPrev);
 
     writeBufferToStream(os, &_hiddenCounts);
 
@@ -260,6 +272,7 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
+    readBufferFromStream(is, &_hiddenTargetCsPrev);
 
     readBufferFromStream(is, &_hiddenCounts);
 

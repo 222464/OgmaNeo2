@@ -37,6 +37,7 @@ private:
     Int3 _hiddenSize; // Size of the output/hidden/prediction
 
     IntBuffer _hiddenCs; // Hidden state
+    IntBuffer _hiddenTargetCsPrev; // Target hidden state
 
     IntBuffer _hiddenCounts; // Number of units touching
 
@@ -58,6 +59,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
+        const IntBuffer* hiddenTargetCsPrev,
         const std::vector<const IntBuffer*> &inputCsPlus,
         const std::vector<const IntBuffer*> &inputCsMinus
     );
@@ -78,10 +80,11 @@ private:
         std::mt19937 &rng,
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
+        const IntBuffer* hiddenTargetCsPrev,
         const std::vector<const IntBuffer*> &inputCsPlus,
         const std::vector<const IntBuffer*> &inputCsMinus
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
+        p->learn(pos, rng, hiddenTargetCs, hiddenTargetCsPrev, inputCsPlus, inputCsMinus);
     }
 
 public:
