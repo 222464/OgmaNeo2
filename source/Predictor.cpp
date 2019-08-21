@@ -67,7 +67,7 @@ void Predictor::learn(
             sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
-        float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum / std::max(1, _hiddenCounts[hiddenColumnIndex])));
+        float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum / std::max(1, _hiddenCounts[hiddenColumnIndex])));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
