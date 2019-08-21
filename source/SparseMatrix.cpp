@@ -781,29 +781,38 @@ void SparseMatrix::hebbErrorsT(
 		_nonZeroValues[_nonZeroValueIndices[j]] += errors[_rowIndices[j]];
 }
 
-float SparseMatrix::artActivate(
+float SparseMatrix::artActivate0(
 	const std::vector<int> &nonZeroIndices,
 	int row,
 	int oneHotSize,
-    const SparseMatrix &deltas,
-    const SparseMatrix &sigmas,
-    float alpha
+    const SparseMatrix &deltas
 ) {
-	float sum0 = 0.0f;
-    float sum1 = 0.0f;
+	float sum = 0.0f;
 
 	int nextIndex = row + 1;
 	
 	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
 		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
 
-		sum0 += std::max(0.0f, 1.0f - _nonZeroValues[j] - deltas._nonZeroValues[j]);
+		sum += std::max(0.0f, 1.0f - _nonZeroValues[j] - deltas._nonZeroValues[j]);
 	}
+	return sum;
+}
+
+float SparseMatrix::artActivate1(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+    const SparseMatrix &sigmas
+) {
+    float sum = 0.0f;
+
+	int nextIndex = row + 1;
 
     for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-        sum1 += std::max(0.0f, _nonZeroValues[j] - sigmas._nonZeroValues[j]);
+        sum += std::max(0.0f, _nonZeroValues[j] - sigmas._nonZeroValues[j]);
 
-	return sum0 + (1.0f - alpha) * sum1;
+	return sum;
 }
 
 float SparseMatrix::artMatchT(

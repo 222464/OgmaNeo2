@@ -43,18 +43,22 @@ void SparseCoder::activate(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = 0.0f;
+        float sum0 = 0.0f;
+        float sum1 = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._tBU.artActivate(*inputCs[vli], hiddenIndex, vld._size.z, vl._deltas, vl._sigmas, _alpha);
+            sum0 += vl._tBU.artActivate0(*inputCs[vli], hiddenIndex, vld._size.z, vl._deltas);
+            sum1 += vl._tBU.artActivate1(*inputCs[vli], hiddenIndex, vld._size.z, vl._sigmas);
         }
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
+        float act = sum0 / (_alpha + _hiddenCounts[hiddenColumnIndex] - sum1);
+
+        if (act > maxActivation) {
+            maxActivation = act;
 
             maxIndex = hc;
         }

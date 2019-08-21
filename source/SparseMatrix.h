@@ -353,13 +353,18 @@ struct SparseMatrix {
 
     // --- ART specific ---
 
-    float artActivate(
+    float artActivate0(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize,
-        const SparseMatrix &deltas,
-        const SparseMatrix &sigmas,
-        float alpha
+        const SparseMatrix &deltas
+	);
+
+    float artActivate1(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+        const SparseMatrix &sigmas
 	);
 
     float artMatchT(

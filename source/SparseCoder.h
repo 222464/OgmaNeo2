@@ -140,9 +140,9 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.5f),
-    _beta(0.01f),
-    _minVigilance(0.95f),
+    _alpha(1.0f),
+    _beta(0.001f),
+    _minVigilance(0.9f),
     _iters(8)
     {}
 
