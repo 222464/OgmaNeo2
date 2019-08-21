@@ -16,9 +16,6 @@ void SparseCoder::clear(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
@@ -41,7 +38,7 @@ void SparseCoder::activate(
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    float maxActivation = 0.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -58,6 +55,7 @@ void SparseCoder::activate(
 
         if (sum > maxActivation) {
             maxActivation = sum;
+
             maxIndex = hc;
         }
     }
@@ -81,7 +79,7 @@ void SparseCoder::match0(
         for (int vc = 0; vc < vld._size.z; vc++) {
             int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-            vl._f1[visibleIndex] = vl._tTD.artMatchT(_hiddenCs, visibleIndex, _hiddenSize.z);// / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+            vl._f1[visibleIndex] = vl._tTD.artMatchT(_hiddenCs, visibleIndex, _hiddenSize.z);
         }
     }
     else {
@@ -89,7 +87,7 @@ void SparseCoder::match0(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, targetC), vld._size);
 
-        vl._f1[visibleIndex] = vl._tTD.artMatchT(_hiddenCs, visibleIndex, _hiddenSize.z);// / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+        vl._f1[visibleIndex] = vl._tTD.artMatchT(_hiddenCs, visibleIndex, _hiddenSize.z);
     }
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
@@ -126,8 +124,6 @@ void SparseCoder::learn(
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
-
-    float sum = 0.0f;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -176,6 +172,8 @@ void SparseCoder::initRandom(
         for (int i = 0; i < vl._tBU._nonZeroValues.size(); i++) {
             vl._tBU._nonZeroValues[i] = smallDist(cs._rng);
             vl._tTD._nonZeroValues[i] = 0.0f;
+            vl._deltas._nonZeroValues[i] = 0.0f;
+            vl._sigmas._nonZeroValues[i] = 0.0f;
         }
 
         // Generate transposes (needed for reconstruction)

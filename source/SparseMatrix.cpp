@@ -1,5 +1,5 @@
 #include "SparseMatrix.h"
-
+#include <iostream>
 using namespace ogmaneo;
 
 void SparseMatrix::init(
@@ -852,7 +852,7 @@ void SparseMatrix::artDepleteSigma(
 	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
 		int targetJ = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
 
-        if (matches[targetJ] < minVigilance) {
+        if (matches[_columnIndices[targetJ]] < minVigilance) {
             for (int dj = 0; dj < oneHotSize; dj++) {
                 int j = jj + dj;
 
@@ -880,11 +880,9 @@ void SparseMatrix::artLearnTTD(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-            _nonZeroValues[j] += beta * std::max(0.0f, matches[j] - target) / std::max(0.0001f, matches[j]) * std::max(0.0f, 1.0f - _nonZeroValues[j]);
-            _nonZeroValues[j] = std::min(1.0f, _nonZeroValues[j]);
-
+            _nonZeroValues[j] += beta * std::max(0.0f, matches[_columnIndices[j]] - target) / std::max(0.0001f, matches[_columnIndices[j]]) * std::max(0.0f, 1.0f - _nonZeroValues[j]);
+   
             tBU._nonZeroValues[j] += beta * std::max(0.0f, 1.0f - tBU._nonZeroValues[j] - target);
-            tBU._nonZeroValues[j] = std::min(1.0f, tBU._nonZeroValues[j]);
         }
     }
 }
