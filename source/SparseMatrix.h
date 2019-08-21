@@ -361,7 +361,6 @@ struct SparseMatrix {
 	);
 
     float artActivate1(
-		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize,
         const SparseMatrix &sigmas

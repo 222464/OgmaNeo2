@@ -52,10 +52,10 @@ void SparseCoder::activate(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum0 += vl._tBU.artActivate0(*inputCs[vli], hiddenIndex, vld._size.z, vl._deltas);
-            sum1 += vl._tBU.artActivate1(*inputCs[vli], hiddenIndex, vld._size.z, vl._sigmas);
+            sum1 += vl._tBU.artActivate1(hiddenIndex, vld._size.z, vl._sigmas);
         }
 
-        float act = sum0 / (_alpha + _hiddenCounts[hiddenColumnIndex] - sum1);
+        float act = sum0 + (1.0f - _alpha) * sum1;
 
         if (act > maxActivation) {
             maxActivation = act;

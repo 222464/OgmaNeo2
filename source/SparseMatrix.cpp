@@ -800,7 +800,6 @@ float SparseMatrix::artActivate0(
 }
 
 float SparseMatrix::artActivate1(
-	const std::vector<int> &nonZeroIndices,
 	int row,
 	int oneHotSize,
     const SparseMatrix &sigmas
