@@ -42,7 +42,7 @@ void SparseCoder::forward(
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
-void SparseCoder::learnWeights(
+void SparseCoder::learn(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs,
@@ -146,9 +146,9 @@ void SparseCoder::step(
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < vld._size.x; x++)
                 for (int y = 0; y < vld._size.y; y++)
-                    learnWeights(Int2(x, y), cs._rng, inputCs, vli);
+                    learn(Int2(x, y), cs._rng, inputCs, vli);
 #else
-            runKernel2(cs, std::bind(SparseCoder::learnWeightsKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
         }
     }
