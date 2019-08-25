@@ -136,12 +136,6 @@ void SparseCoder::initRandom(
 
         for (int i = 0; i < numHiddenColumns; i++)
             _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
-
-        // Counts
-        vl._visibleCounts = IntBuffer(numVisibleColumns);
-
-        for (int i = 0; i < numVisibleColumns; i++)
-            vl._visibleCounts[i] = vl._weights.countsT(i * vld._size.z) / _hiddenSize.z;
     }
 
     _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
@@ -194,7 +188,7 @@ void SparseCoder::step(
         runKernel2(cs, std::bind(SparseCoder::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
-        if (it == _explainIters - 1) {
+        if (it < _explainIters - 1) {
             // Update temps
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < numHiddenColumns; x++)
@@ -242,8 +236,6 @@ void SparseCoder::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
-
-        writeBufferToStream(os, &vl._visibleCounts);
     }
 }
 
@@ -279,7 +271,5 @@ void SparseCoder::readFromStream(
         int numVisible = numVisibleColumns * vld._size.z;
 
         readSMFromStream(is, vl._weights);
-
-        readBufferFromStream(is, &vl._visibleCounts);
     }
 }
