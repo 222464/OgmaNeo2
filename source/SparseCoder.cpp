@@ -60,7 +60,7 @@ void SparseCoder::inhibit(
 
         float sum = _laterals.multiplyOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.counts(hiddenIndex) / _hiddenSize.z);
 
-        _hiddenActivations[hiddenIndex] += (1.0f - sigmoid(sum)) * _hiddenStimuli[hiddenIndex];
+        _hiddenActivations[hiddenIndex] += _hiddenStimuli[hiddenIndex] - sum;
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
