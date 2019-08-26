@@ -267,6 +267,18 @@ struct SparseMatrix {
 
 	// --- Hebb Rules ---
 
+	void hebbDec(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbDecT(
+		const std::vector<float> &in,
+		int column,
+		float alpha
+	);
+
 	void hebb(
 		const std::vector<float> &in,
 		int row,
