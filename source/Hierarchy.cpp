@@ -141,7 +141,7 @@ void Hierarchy::learn(
         if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
             int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
-            float delta = _alpha * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[vli][visibleColumnIndex]));
+            float delta = _alpha * _rLayers[l]._errors[vli][visibleColumnIndex];
 
             if (l == _scLayers.size() - 1)
                 _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -156,7 +156,7 @@ void Hierarchy::learn(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        float delta = _beta * std::min(_clip, std::max(-_clip, _rLayers[l]._errors[vli][visibleColumnIndex]));
+        float delta = _beta * _rLayers[l]._errors[vli][visibleColumnIndex];
 
         if (l == _scLayers.size() - 1)
             _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -534,7 +534,7 @@ void Hierarchy::step(
                 for (int i = 0; i < _rLayers.front()._errors[vli].size(); i++) {
                     float targetQ = baseQ + g * _qs[vli][i];
 
-                    _rLayers.front()._errors[vli][i] = targetQ - _rLayers.front()._activations[vli][i];
+                    _rLayers.front()._errors[vli][i] = std::min(_clip, std::max(-_clip, targetQ - _rLayers.front()._activations[vli][i]));
                 }
 
             // Backward
