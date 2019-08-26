@@ -86,7 +86,7 @@ void ImageEncoder::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebb(*inputActivations[vli], hiddenIndex, _alpha);
+            vl._weights.hebbDec(*inputActivations[vli], hiddenIndex, _alpha);
         }
 
         _laterals.hebbOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta);
