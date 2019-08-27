@@ -27,7 +27,8 @@ public:
         Int3 _hiddenSize; // Size of hidden layer
 
         int _scRadius; // Sparse coder radius
-        int _rRadius; // Prediction Radius
+        int _rRadius; // Routing radius
+        int _lRadius; // Lateral radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -161,8 +162,8 @@ public:
     :
     _alpha(0.01f),
     _gamma(0.99f),
-    _maxHistorySamples(64),
-    _historyIters(6)
+    _maxHistorySamples(32),
+    _historyIters(4)
     {}
 
     // Copy
