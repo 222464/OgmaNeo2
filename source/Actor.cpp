@@ -97,7 +97,7 @@ void Actor::learn(
 
     // --- Value Prev ---
 
-    float newValue = q + g * _hiddenValues[hiddenColumnIndex];
+    float newValue = (1.0f - _gamma) * q + g * _hiddenValues[hiddenColumnIndex];
 
     float value = 0.0f;
 
@@ -114,7 +114,7 @@ void Actor::learn(
     float tdErrorValue = newValue - value;
     float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
 
-    float deltaValue = _alpha * std::min(_clip, std::max(-_clip, tdErrorValue));
+    float deltaValue = _alpha * tdErrorValue;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -262,7 +262,6 @@ const Actor &Actor::operator=(
     _alpha = other._alpha;
     _beta = other._beta;
     _gamma = other._gamma;
-    _clip = other._clip;
 
     _historySamples.resize(other._historySamples.size());
 
@@ -381,7 +380,6 @@ void Actor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_clip), sizeof(float));
 
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
@@ -436,7 +434,6 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_clip), sizeof(float));
 
     is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
