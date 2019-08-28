@@ -105,13 +105,15 @@ public:
     float _alpha; // Value learning rate
     float _beta; // Action learning rate
     float _gamma; // Discount factor
+    float _temperature; // Temperature of Boltzmann exploration
 
     // Defaults
     Actor()
     :
-    _alpha(0.1f),
+    _alpha(0.01f),
     _beta(0.5f),
-    _gamma(0.95f)
+    _gamma(0.97f),
+    _temperature(0.1f)
     {}
 
     Actor(
