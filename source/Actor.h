@@ -100,7 +100,6 @@ private:
 public:
     float _alpha; // Learning rate
     float _gamma; // Discount factor
-    float _clip; // Gradient clip
     int _steps; // N step Q
     int _historyIters; // Number of update iterations on history
 
@@ -109,7 +108,6 @@ public:
     :
     _alpha(0.01f),
     _gamma(0.98f),
-    _clip(1.0f),
     _steps(3),
     _historyIters(4)
     {}
