@@ -100,15 +100,13 @@ public:
     float _alpha; // Forward learning rate
     float _beta; // Lateral learning rate
     int _explainIters; // Explaining-away iterations
-    float _minVigilance; // Minimum vigilance threshold
 
     // Defaults
     ImageEncoder()
     :
     _alpha(0.001f),
     _beta(0.001f),
-    _explainIters(3),
-    _minVigilance(0.8f)
+    _explainIters(3)
     {}
 
     // Create a sparse coding layer with random initialization

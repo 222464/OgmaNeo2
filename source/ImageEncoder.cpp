@@ -78,9 +78,9 @@ void ImageEncoder::learn(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
+    {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
-    if (_hiddenActivations[hiddenIndex] / (1 + _explainIters) > _minVigilance) {
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
@@ -112,7 +112,7 @@ void ImageEncoder::initRandom(
 
     _hiddenCounts = IntBuffer(numHiddenColumns, 0);
 
-    std::uniform_real_distribution<float> forwardWeightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> forwardWeightDist(1.0f, 1.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -204,9 +204,6 @@ void ImageEncoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_explainIters), sizeof(int));
-    os.write(reinterpret_cast<const char*>(&_minVigilance), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCounts);
 
@@ -235,9 +232,6 @@ void ImageEncoder::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_explainIters), sizeof(int));
-    is.read(reinterpret_cast<char*>(&_minVigilance), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCounts);
 
