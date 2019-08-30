@@ -137,6 +137,8 @@ void ImageEncoder::initRandom(
     _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
+    _hiddenRates = FloatBuffer(numHidden, 1.0f);
+
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
     _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
