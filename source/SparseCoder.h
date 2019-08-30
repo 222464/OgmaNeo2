@@ -39,7 +39,6 @@ private:
 
     FloatBuffer _hiddenStimuli;
     FloatBuffer _hiddenActivations;
-    FloatBuffer _hiddenRates;
 
     IntBuffer _hiddenCs; // Hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
@@ -101,15 +100,13 @@ private:
 public:
     float _alpha; // Forward learning rate
     float _beta; // Lateral learning rate
-    float _gamma; // Hidden rate decay
     int _explainIters; // Explaining-away iterations
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.5f),
-    _beta(0.5f),
-    _gamma(0.98f),
+    _alpha(0.001f),
+    _beta(0.001f),
     _explainIters(3)
     {}
 
