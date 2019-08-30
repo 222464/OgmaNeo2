@@ -86,10 +86,12 @@ void ImageEncoder::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebb(*inputActivations[vli], hiddenIndex, _alpha);
+            vl._weights.hebb(*inputActivations[vli], hiddenIndex, _alpha * _hiddenRates[hiddenIndex]);
         }
 
-        _laterals.hebbOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta);
+        _laterals.hebbOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta * _hiddenRates[hiddenIndex]);
+
+        _hiddenRates[hiddenIndex] *= _gamma;
     }
 }
 
@@ -209,6 +211,8 @@ void ImageEncoder::writeToStream(
 
     writeBufferToStream(os, &_hiddenCs);
 
+    writeBufferToStream(os, &_hiddenRates);
+
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -236,6 +240,11 @@ void ImageEncoder::readFromStream(
     readBufferFromStream(is, &_hiddenCounts);
 
     readBufferFromStream(is, &_hiddenCs);
+
+    readBufferFromStream(is, &_hiddenRates);
+
+    _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
+    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
     _hiddenCsTemp = IntBuffer(_hiddenCs.size());
 
