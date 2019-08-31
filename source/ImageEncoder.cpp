@@ -237,6 +237,9 @@ void ImageEncoder::readFromStream(
 
     readBufferFromStream(is, &_hiddenCs);
 
+    _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
+    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
+
     _hiddenCsTemp = IntBuffer(_hiddenCs.size());
 
     int numVisibleLayers;

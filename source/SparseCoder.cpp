@@ -248,6 +248,9 @@ void SparseCoder::readFromStream(
     readBufferFromStream(is, &_hiddenCs);
     readBufferFromStream(is, &_hiddenCsPrev);
 
+    _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
+    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
+
     _hiddenCsTemp = IntBuffer(_hiddenCs.size());
 
     int numVisibleLayers;
