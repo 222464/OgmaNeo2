@@ -20,8 +20,6 @@ public:
 
         int _radius; // Radius onto input
 
-        unsigned char _noDiagonal; // For recurrent connections
-
         // Defaults
         VisibleLayerDesc()
         :
@@ -107,8 +105,8 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.001f),
-    _beta(0.001f),
+    _alpha(0.01f),
+    _beta(0.01f),
     _explainIters(3)
     {}
 
