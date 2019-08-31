@@ -152,8 +152,10 @@ private:
     }
 
 public:
-    float _alpha; // Learning rate
+    float _alpha; // Output learning rate
+    float _beta; // Routing learning rate
     float _gamma; // Discount factor
+    float _leak; // Leaky ReLU
 
     int _maxHistorySamples; // Maximum number of history samples
     int _historyIters; // Number of times to iterate over history
@@ -162,7 +164,9 @@ public:
     Hierarchy()
     :
     _alpha(0.01f),
+    _beta(0.01f),
     _gamma(0.99f),
+    _leak(0.01f),
     _maxHistorySamples(32),
     _historyIters(4)
     {}
