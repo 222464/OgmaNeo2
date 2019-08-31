@@ -20,6 +20,8 @@ public:
 
         int _radius; // Radius onto input
 
+        unsigned char _noDiagonal; // For recurrent connections
+
         // Defaults
         VisibleLayerDesc()
         :
