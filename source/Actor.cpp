@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "Actor.h"
-#include <iostream>
+
 using namespace ogmaneo;
 
 void Actor::forward(
@@ -47,14 +47,12 @@ void Actor::forward(
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
-void Actor::learn(
+void Actor::qUpdate(
     const Int2 &pos,
     std::mt19937 &rng,
     const FloatBuffer* hiddenQs,
-    const std::vector<const IntBuffer*> &inputCs,
     FloatBuffer* hiddenQsPrev,
     const IntBuffer* hiddenCsPrev,
-    const std::vector<const IntBuffer*> &inputCsPrev,
     float reward,
     float gamma
 ) {
@@ -74,7 +72,16 @@ void Actor::learn(
     float targetQ = (1.0f - _gamma) * reward + gamma * maxActivation;
 
     (*hiddenQsPrev)[hiddenIndexPrev] = targetQ;
-    
+}
+
+void Actor::learn(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const FloatBuffer* hiddenQsPrev,
+    const std::vector<const IntBuffer*> &inputCsPrev
+) {
+    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
@@ -267,6 +274,32 @@ void Actor::step(
         s._reward = reward;
     }
 
+    // Update Q values
+    for (int t = _historySize - _steps; t >= 0; t--) {
+
+        const HistorySample &sNext = *_historySamples[t + _steps];
+        const HistorySample &s = *_historySamples[t + 1];
+        HistorySample &sPrev = *_historySamples[t];
+
+        float r = 0.0f;
+        float g = 1.0f;
+
+        for (int t2 = t + 1; t2 <= t + _steps; t2++) {
+            r += g * _historySamples[t2]->_reward;
+
+            g *= _gamma;
+        }
+
+        // Learn kernel
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < _hiddenSize.x; x++)
+            for (int y = 0; y < _hiddenSize.y; y++)
+                qUpdate(Int2(x, y), cs._rng, &sNext._hiddenQs, &sPrev._hiddenQs, &s._hiddenCsPrev, r, g);
+#else
+        runKernel2(cs, std::bind(Actor::qUpdateKernel, std::placeholders::_1, std::placeholders::_2, this, &sNext._hiddenQs, &sPrev._hiddenQs, &s._hiddenCsPrev, r, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+    }
+
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize > _steps) {
         std::uniform_int_distribution<int> sampleDist(0, _historySize - 1 - _steps);
@@ -291,9 +324,9 @@ void Actor::step(
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, &sNext._hiddenQs, constGet(sNext._inputCs), &sPrev._hiddenQs, &s._hiddenCsPrev, constGet(sPrev._inputCs), r, g);
+                    learn(Int2(x, y), cs._rng, &sPrev._hiddenQs, constGet(sPrev._inputCs));
 #else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &sNext._hiddenQs, constGet(sNext._inputCs), &sPrev._hiddenQs, &s._hiddenCsPrev, constGet(sPrev._inputCs), r, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &sPrev._hiddenQs, constGet(sPrev._inputCs)), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
         }
     }

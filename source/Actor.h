@@ -67,16 +67,21 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void learn(
+    void qUpdate(
         const Int2 &pos,
         std::mt19937 &rng,
         const FloatBuffer* hiddenQs,
-        const std::vector<const IntBuffer*> &inputCs,
         FloatBuffer* hiddenQsPrev,
         const IntBuffer* hiddenCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrev,
         float reward,
         float gamma
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const FloatBuffer* hiddenQsPrev,
+        const std::vector<const IntBuffer*> &inputCsPrev
     );
 
     static void forwardKernel(
@@ -88,19 +93,27 @@ private:
         a->forward(pos, rng, inputCs);
     }
 
-    static void learnKernel(
+    static void qUpdateKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
         const FloatBuffer* hiddenQs,
-        const std::vector<const IntBuffer*> &inputCs,
         FloatBuffer* hiddenQsPrev,
         const IntBuffer* hiddenCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrev,
         float reward,
         float gamma
     ) {
-        a->learn(pos, rng, hiddenQs, inputCs, hiddenQsPrev, hiddenCsPrev, inputCsPrev, reward, gamma);
+        a->qUpdate(pos, rng, hiddenQs, hiddenQsPrev, hiddenCsPrev, reward, gamma);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Actor* a,
+        const FloatBuffer* hiddenQsPrev,
+        const std::vector<const IntBuffer*> &inputCsPrev
+    ) {
+        a->learn(pos, rng, hiddenQsPrev, inputCsPrev);
     }
 
 public:
