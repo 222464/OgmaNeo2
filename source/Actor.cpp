@@ -275,7 +275,7 @@ void Actor::step(
     }
 
     // Update Q values
-    for (int t = _historySize - _steps; t >= 0; t--) {
+    for (int t = _historySize - _steps - 1; t >= 0; t--) {
 
         const HistorySample &sNext = *_historySamples[t + _steps];
         const HistorySample &s = *_historySamples[t + 1];
