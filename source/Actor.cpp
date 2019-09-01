@@ -69,7 +69,7 @@ void Actor::qUpdate(
 
     int hiddenIndexPrev = address3(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), _hiddenSize);
 
-    float targetQ = (1.0f - _gamma) * reward + gamma * maxActivation;
+    float targetQ = reward + gamma * maxActivation;
 
     (*hiddenQsPrev)[hiddenIndexPrev] = targetQ;
 }
