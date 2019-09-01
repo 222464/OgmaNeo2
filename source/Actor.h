@@ -37,6 +37,7 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> _inputCs;
         IntBuffer _hiddenCsPrev;
+        FloatBuffer _hiddenQs;
         
         float _reward;
     };
@@ -48,6 +49,7 @@ private:
     int _historySize;
 
     IntBuffer _hiddenCs; // Hidden states
+    FloatBuffer _hiddenQs;
 
     IntBuffer _hiddenCounts; // Number of units touching hidden columns
 
@@ -68,7 +70,9 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
+        const FloatBuffer* hiddenQs,
         const std::vector<const IntBuffer*> &inputCs,
+        FloatBuffer* hiddenQsPrev,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
         float reward,
@@ -88,13 +92,15 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
+        const FloatBuffer* hiddenQs,
         const std::vector<const IntBuffer*> &inputCs,
+        FloatBuffer* hiddenQsPrev,
         const IntBuffer* hiddenCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrev,
         float reward,
         float gamma
     ) {
-        a->learn(pos, rng, inputCs, hiddenCsPrev, inputCsPrev, reward, gamma);
+        a->learn(pos, rng, hiddenQs, inputCs, hiddenQsPrev, hiddenCsPrev, inputCsPrev, reward, gamma);
     }
 
 public:
@@ -106,8 +112,8 @@ public:
     // Defaults
     Actor()
     :
-    _alpha(0.1f),
-    _gamma(0.97f),
+    _alpha(0.01f),
+    _gamma(0.98f),
     _steps(3),
     _historyIters(4)
     {}
