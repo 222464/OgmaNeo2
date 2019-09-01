@@ -302,7 +302,7 @@ void Actor::step(
 
     // Learn (if have sufficient samples)
     if (learnEnabled && _historySize > _steps) {
-        std::uniform_int_distribution<int> sampleDist(0, _historySize - 1 - _steps);
+        std::uniform_int_distribution<int> sampleDist(0, _historySize - _steps - 1);
 
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
