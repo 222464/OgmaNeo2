@@ -33,37 +33,8 @@ void ImageEncoder::forward(
             sum += vl._weights.multiply(*inputActivations[vli], hiddenIndex);
         }
 
-        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
-        _hiddenActivations[hiddenIndex] = _hiddenStimuli[hiddenIndex] = sum;
-
         if (sum > maxActivation) {
             maxActivation = sum;
-            maxIndex = hc;
-        }
-    }
-
-    _hiddenCsTemp[hiddenColumnIndex] = maxIndex;
-}
-
-void ImageEncoder::inhibit(
-    const Int2 &pos,
-    std::mt19937 &rng
-) {
-    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
-
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        float sum = _laterals.multiplyNoDiagonalOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.counts(hiddenIndex) / _hiddenSize.z - 1); // -1 for missing diagonal
-
-        _hiddenActivations[hiddenIndex] += (1.0f - sum) * _hiddenStimuli[hiddenIndex];
-
-        if (_hiddenActivations[hiddenIndex] > maxActivation) {
-            maxActivation = _hiddenActivations[hiddenIndex];
             maxIndex = hc;
         }
     }
@@ -71,38 +42,54 @@ void ImageEncoder::inhibit(
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
+void ImageEncoder::backward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    int vli
+) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+
+        float recon = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
+        
+        vl._visibleActivations[visibleIndex] = (recon > 0.0f ? 1.0f + recon : std::exp(recon));
+    }
+}
+
 void ImageEncoder::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputActivations
+    const std::vector<const FloatBuffer*> &inputActivations,
+    int vli
 ) {
-    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    if (_hiddenCs[hiddenColumnIndex] != _hiddenCsPrev[hiddenColumnIndex]) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-            vl._weights.hebb(*inputActivations[vli], hiddenIndex, _alpha);
-        }
+        float recon = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / static_cast<float>(vl._visibleCounts[visibleColumnIndex]);
 
-        _laterals.hebbOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta);
+        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - (recon > 0.0f ? 1.0f + recon : std::exp(recon))), visibleIndex, _hiddenSize.z);
     }
 }
 
 void ImageEncoder::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
-    int lateralRadius,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs
 ) {
     _visibleLayerDescs = visibleLayerDescs;
 
     _hiddenSize = hiddenSize;
-    _lateralRadius = lateralRadius;
 
     _visibleLayers.resize(_visibleLayerDescs.size());
 
@@ -110,9 +97,7 @@ void ImageEncoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    _hiddenCounts = IntBuffer(numHiddenColumns, 0);
-
-    std::uniform_real_distribution<float> forwardWeightDist(1.0f, 1.01f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -126,26 +111,21 @@ void ImageEncoder::initRandom(
         initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
-            vl._weights._nonZeroValues[i] = forwardWeightDist(cs._rng);
+            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
-        for (int i = 0; i < numHiddenColumns; i++)
-            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z);
+        // Generate transpose (needed for reconstruction)
+        vl._weights.initT();
+
+        vl._visibleActivations = FloatBuffer(numVisible, 0.0f);
+
+        vl._visibleCounts = IntBuffer(numVisibleColumns);
+
+        for (int i = 0; i < numVisibleColumns; i++)
+            vl._visibleCounts[i] = std::max(1, vl._weights.countsT(i * vld._size.z) / _hiddenSize.z);
     }
-
-    _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
-    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
-    _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
-    _hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
-
-    std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
-
-    initSMLocalRF(_hiddenSize, _hiddenSize, _lateralRadius, _laterals);
-
-    for (int i = 0; i < _laterals._nonZeroValues.size(); i++)
-        _laterals._nonZeroValues[i] = lateralWeightDist(cs._rng);
 }
 
 void ImageEncoder::step(
@@ -154,15 +134,6 @@ void ImageEncoder::step(
     bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
-    // Copy to prev
-#ifdef KERNEL_NOTHREAD
-    for (int x = 0; x < numHiddenColumns; x++)
-        copyInt(x, cs._rng, &_hiddenCs, &_hiddenCsPrev);
-#else
-    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &_hiddenCsPrev), numHiddenColumns, cs._rng, cs._batchSize1);
-#endif
 
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
@@ -172,34 +143,36 @@ void ImageEncoder::step(
     runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
-    // Iterate
-    for (int it = 0; it < _explainIters; it++) {
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < _hiddenSize.x; x++)
-            for (int y = 0; y < _hiddenSize.y; y++)
-                inhibit(Int2(x, y), cs._rng);
-#else
-        runKernel2(cs, std::bind(ImageEncoder::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-#endif
+    if (learnEnabled) {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        if (it < _explainIters - 1) {
-            // Update temps
 #ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < numHiddenColumns; x++)
-                copyInt(x, cs._rng, &_hiddenCs, &_hiddenCsTemp);
+            for (int x = 0; x < vld._size.x; x++)
+                for (int y = 0; y < vld._size.y; y++)
+                    learn(Int2(x, y), cs._rng, inputActivations, vli);
 #else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &_hiddenCsTemp), numHiddenColumns, cs._rng, cs._batchSize1);
+            runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
         }
     }
+}
 
-    if (learnEnabled) {
+void ImageEncoder::reconstruct(
+    ComputeSystem &cs,
+    const IntBuffer* hiddenCs
+) {
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
 #ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < _hiddenSize.x; x++)
-            for (int y = 0; y < _hiddenSize.y; y++)
-                learn(Int2(x, y), cs._rng, inputActivations);
+        for (int x = 0; x < vld._size.x; x++)
+            for (int y = 0; y < vld._size.y; y++)
+                backward(Int2(x, y), cs._rng, hiddenCs, vli);
 #else
-        runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(ImageEncoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
     }
 }
@@ -214,10 +187,7 @@ void ImageEncoder::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
-    writeBufferToStream(os, &_hiddenCounts);
-
     writeBufferToStream(os, &_hiddenCs);
-    writeBufferToStream(os, &_hiddenCsPrev);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -230,6 +200,10 @@ void ImageEncoder::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
+
+        writeBufferToStream(os, &vl._visibleActivations);
+
+        writeBufferToStream(os, &vl._visibleCounts);
     }
 }
 
@@ -243,15 +217,7 @@ void ImageEncoder::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
-    readBufferFromStream(is, &_hiddenCounts);
-
     readBufferFromStream(is, &_hiddenCs);
-    readBufferFromStream(is, &_hiddenCsPrev);
-
-    _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
-    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
-
-    _hiddenCsTemp = IntBuffer(_hiddenCs.size());
 
     int numVisibleLayers;
     
@@ -266,9 +232,10 @@ void ImageEncoder::readFromStream(
 
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
         readSMFromStream(is, vl._weights);
+
+        readBufferFromStream(is, &vl._visibleActivations);
+
+        readBufferFromStream(is, &vl._visibleCounts);
     }
 }
