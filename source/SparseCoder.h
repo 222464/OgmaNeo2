@@ -23,7 +23,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4, 16 }),
+        _size(4, 4, 16),
         _radius(2)
         {}
     };
@@ -84,7 +84,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f)
+    _alpha(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization

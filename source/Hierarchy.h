@@ -28,7 +28,6 @@ public:
 
         int _scRadius; // Sparse coder radius
         int _rRadius; // Routing radius
-        int _lRadius; // Lateral radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
