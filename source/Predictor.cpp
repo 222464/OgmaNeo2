@@ -14,171 +14,63 @@ using namespace ogmaneo;
 void Predictor::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs
+    const std::vector<const FloatBuffer*> &inputStates
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
-
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._weights.multiply(*inputStates[vli], hiddenIndex);
+            count += vl._weights.counts(hiddenIndex);
         }
-
-        if (sum > maxActivation) {
-            maxActivation = sum;
-
-            maxIndex = hc;
-        }
+    
+        _hiddenStates[hiddenIndex] = std::tanh(sum / std::max(1, count));
     }
-
-    _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void Predictor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCs
+    const FloatBuffer* hiddenTargetStates,
+    const std::vector<const FloatBuffer*> &inputStates
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
-
-    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._weights.multiply(*inputStates[vli], hiddenIndex);
+            count += vl._weights.counts(hiddenIndex);
         }
 
-        float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum / std::max(1, _hiddenCounts[hiddenColumnIndex])));
+        float delta = _alpha * ((*hiddenTargetStates)[hiddenIndex] - std::tanh(sum / std::max(1, count)));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z);
+            vl._weights.deltas(*inputStates[vli], delta, hiddenIndex);
         }
     }
 }
-
-// void Predictor::learn(
-//     const Int2 &pos,
-//     std::mt19937 &rng,
-//     const IntBuffer* hiddenTargetCs,
-//     const std::vector<const IntBuffer*> &inputCs
-// ) {
-//     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
-
-//     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
-
-//     int maxIndex = 0;
-//     float maxActivation = -999999.0f;
-//     std::vector<float> activations(_hiddenSize.z);
-
-//     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-//         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-//         float sum = 0.0f;
-
-//         // For each visible layer
-//         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-//             VisibleLayer &vl = _visibleLayers[vli];
-//             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-//             sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-//         }
-
-//         activations[hc] = sum / std::max(1, _hiddenCounts[hiddenColumnIndex]);
-
-//         if (activations[hc] > maxActivation) {
-//             maxActivation = activations[hc];
-
-//             maxIndex = hc;
-//         }
-//     }
-
-//     if (maxIndex != targetC) {
-//         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-//             int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-//             float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(activations[hc]));
-
-//             // For each visible layer
-//             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-//                 VisibleLayer &vl = _visibleLayers[vli];
-//                 const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-//                 vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z);
-//             }
-//         }
-//     }
-// }
-
-// void Predictor::learn(
-//     const Int2 &pos,
-//     std::mt19937 &rng,
-//     const IntBuffer* hiddenTargetCs,
-//     const std::vector<const IntBuffer*> &inputCs
-// ) {
-//     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
-
-//     int maxIndex = 0;
-//     float maxActivation = -999999.0f;
-
-//     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-//         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-//         float sum = 0.0f;
-
-//         // For each visible layer
-//         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-//             VisibleLayer &vl = _visibleLayers[vli];
-//             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-//             sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-//         }
-
-//         if (sum > maxActivation) {
-//             maxActivation = sum;
-
-//             maxIndex = hc;
-//         }
-//     }
-
-//     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
-
-//     if (maxIndex != targetC) {
-//         int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
-//         int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
-
-//         // For each visible layer
-//         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-//             VisibleLayer &vl = _visibleLayers[vli];
-//             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-//             vl._weights.deltaOHVs(*inputCs[vli], _alpha, hiddenIndexTarget, vld._size.z);
-//             vl._weights.deltaOHVs(*inputCs[vli], -_alpha, hiddenIndexMax, vld._size.z);
-//         }
-//     }
-// }
 
 void Predictor::initRandom(
     ComputeSystem &cs,
@@ -195,8 +87,6 @@ void Predictor::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    _hiddenCounts = IntBuffer(numHiddenColumns, 0);
-
     std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create layers
@@ -207,22 +97,19 @@ void Predictor::initRandom(
         int numVisibleColumns = vld._size.x * vld._size.y;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vld._dropRatio, vl._weights);
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
-
-        for (int i = 0; i < numHiddenColumns; i++)
-            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
     }
 
     // Hidden Cs
-    _hiddenCs = IntBuffer(numHiddenColumns, 0);
+    _hiddenStates = FloatBuffer(numHidden, 0.0f);
 }
 
 void Predictor::activate(
     ComputeSystem &cs,
-    const std::vector<const IntBuffer*> &inputCs
+    const std::vector<const FloatBuffer*> &inputStates
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -231,16 +118,16 @@ void Predictor::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputCs);
+            forward(Int2(x, y), cs._rng, inputStates);
 #else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
 void Predictor::learn(
     ComputeSystem &cs,
-    const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCs
+    const FloatBuffer* hiddenTargetStates,
+    const std::vector<const FloatBuffer*> &inputStates
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -249,9 +136,9 @@ void Predictor::learn(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            learn(Int2(x, y), cs._rng, hiddenTargetCs, inputCs);
+            learn(Int2(x, y), cs._rng, hiddenTargetStates, inputStates);
 #else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetStates, inputStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
@@ -265,9 +152,7 @@ void Predictor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
-    writeBufferToStream(os, &_hiddenCs);
-
-    writeBufferToStream(os, &_hiddenCounts);
+    writeBufferToStream(os, &_hiddenStates);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -293,9 +178,7 @@ void Predictor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
-    readBufferFromStream(is, &_hiddenCs);
-
-    readBufferFromStream(is, &_hiddenCounts);
+    readBufferFromStream(is, &_hiddenStates);
 
     int numVisibleLayers;
     

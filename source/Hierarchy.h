@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "SparseCoder.h"
+#include "Reservior.h"
 #include "Predictor.h"
 
 #include <memory>
@@ -45,13 +45,11 @@ public:
     };
 private:
     // Layers
-    std::vector<SparseCoder> _scLayers;
+    std::vector<Reservior> _scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
-    std::vector<IntBuffer> _combinedStatesInfer;
-    std::vector<IntBuffer> _combinedStatesLearn;
 
     // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
+    std::vector<std::vector<std::shared_ptr<FloatBuffer>>> _histories;
     std::vector<std::vector<int>> _historySizes;
 
     // Per-layer values

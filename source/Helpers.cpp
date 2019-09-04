@@ -249,8 +249,11 @@ void ogmaneo::initSMLocalRF(
     const Int3 &inSize,
     const Int3 &outSize,
     int radius,
+    float dropRatio,
     SparseMatrix &mat
 ) {
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
     int numOut = outSize.x * outSize.y * outSize.z;
 
     // Projection constant
@@ -289,14 +292,16 @@ void ogmaneo::initSMLocalRF(
                 for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
                     for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
                         for (int iz = 0; iz < inSize.z; iz++) {
-                            Int3 inPos(ix, iy, iz);
+                            if (dist01(rng) >= dropRatio) {
+                                Int3 inPos(ix, iy, iz);
 
-                            int inIndex = address3(inPos, inSize);
+                                int inIndex = address3(inPos, inSize);
 
-                            mat._nonZeroValues.push_back(0.0f);
-                            mat._columnIndices.push_back(inIndex);
-                            
-                            nonZeroInRow++;
+                                mat._nonZeroValues.push_back(0.0f);
+                                mat._columnIndices.push_back(inIndex);
+                                
+                                nonZeroInRow++;
+                            }
                         }
                     }
 

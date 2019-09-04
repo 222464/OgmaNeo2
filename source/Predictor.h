@@ -20,11 +20,14 @@ public:
 
         int _radius; // Radius onto input
 
+        float _dropRatio;
+
         // Defaults
         VisibleLayerDesc()
         :
         _size(4, 4, 16),
-        _radius(2)
+        _radius(2),
+        _dropRatio(0.0f)
         {}
     };
 
@@ -36,9 +39,7 @@ public:
 private:
     Int3 _hiddenSize; // Size of the output/hidden/prediction
 
-    IntBuffer _hiddenCs; // Hidden state
-
-    IntBuffer _hiddenCounts; // Number of units touching
+    FloatBuffer _hiddenStates; // Hidden states
 
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
@@ -49,33 +50,33 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const FloatBuffer*> &inputStates
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const FloatBuffer* hiddenTargetStates,
+        const std::vector<const FloatBuffer*> &inputStates
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const FloatBuffer*> &inputStates
     ) {
-        p->forward(pos, rng, inputCs);
+        p->forward(pos, rng, inputStates);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const FloatBuffer* hiddenTargetStates,
+        const std::vector<const FloatBuffer*> &inputStates
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCs);
+        p->learn(pos, rng, hiddenTargetStates, inputStates);
     }
 
 public:
@@ -84,7 +85,7 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(1.0f)
+    _alpha(0.01f)
     {}
 
     // Create with random initialization
@@ -97,14 +98,14 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const FloatBuffer*> &inputStates
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
-        const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const FloatBuffer* hiddenTargetStates,
+        const std::vector<const FloatBuffer*> &inputStates
     );
 
     // Write to stream
@@ -137,8 +138,8 @@ public:
     }
 
     // Get the hidden activations (predictions)
-    const IntBuffer &getHiddenCs() const {
-        return _hiddenCs;
+    const FloatBuffer &getHiddenStates() const {
+        return _hiddenStates;
     }
 
     // Get the hidden size

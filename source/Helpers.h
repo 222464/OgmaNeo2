@@ -293,6 +293,7 @@ void initSMLocalRF(
     const Int3 &inSize, // Size of input field
     const Int3 &outSize, // Size of output field
     int radius, // Radius of output onto input
+    float dropRatio, // Ratio of weights dropped
     SparseMatrix &mat // Matrix to fill
 );
 
