@@ -250,7 +250,8 @@ void ogmaneo::initSMLocalRF(
     const Int3 &outSize,
     int radius,
     float dropRatio,
-    SparseMatrix &mat
+    SparseMatrix &mat,
+    std::mt19937 &rng
 ) {
     std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 

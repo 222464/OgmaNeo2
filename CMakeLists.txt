@@ -35,7 +35,6 @@ set(SOURCES
     "${SOURCE_PATH}/Reservior.cpp"
     "${SOURCE_PATH}/Predictor.cpp"
     "${SOURCE_PATH}/Hierarchy.cpp"
-    "${SOURCE_PATH}/ImageEncoder.cpp"
 	"${SOURCE_PATH}/SparseMatrix.cpp"
 )
 
@@ -44,7 +43,6 @@ set(HEADERS
     "${SOURCE_PATH}/Reservior.h"
     "${SOURCE_PATH}/Predictor.h"
     "${SOURCE_PATH}/Hierarchy.h"
-    "${SOURCE_PATH}/ImageEncoder.h"
 	"${SOURCE_PATH}/SparseMatrix.h"
 )
 

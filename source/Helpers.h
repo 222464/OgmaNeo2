@@ -294,7 +294,8 @@ void initSMLocalRF(
     const Int3 &outSize, // Size of output field
     int radius, // Radius of output onto input
     float dropRatio, // Ratio of weights dropped
-    SparseMatrix &mat // Matrix to fill
+    SparseMatrix &mat, // Matrix to fill
+    std::mt19937 &rng // RNG
 );
 
 // --- Sparse Matrix Serialization ---

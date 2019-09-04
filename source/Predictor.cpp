@@ -97,7 +97,7 @@ void Predictor::initRandom(
         int numVisibleColumns = vld._size.x * vld._size.y;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vld._dropRatio, vl._weights);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vld._dropRatio, vl._weights, cs._rng);
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
