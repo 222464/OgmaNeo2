@@ -27,60 +27,37 @@ public:
     struct LayerDesc {
         Int3 _hiddenSize; // Size of hidden layer
 
-        int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction Radius
+        int _rfRadius; // Revervior forward radius
+        int _rrRadius; // Reservior recurrent radius
+        int _pRadius; // Predictor radius
 
-        int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
+        float _rfScale;
+        float _rfDropRatio;
+        float _rrScale;
+        float _rrDropRatio;
 
-        int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
+        float _pDropRatio;
 
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _scRadius(2),
+        _rfRadius(2),
+        _rrRadius(2),
         _pRadius(2),
-        _ticksPerUpdate(2),
-        _temporalHorizon(2)
+        _rfScale(1.0f),
+        _rfDropRatio(0.5f),
+        _rrScale(1.0f),
+        _rrDropRatio(0.5f),
+        _pDropRatio(0.5f)
         {}
     };
 private:
     // Layers
-    std::vector<Reservior> _scLayers;
+    std::vector<Reservior> _rLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
-
-    // Histories
-    std::vector<std::vector<std::shared_ptr<FloatBuffer>>> _histories;
-    std::vector<std::vector<int>> _historySizes;
-
-    // Per-layer values
-    std::vector<char> _updates;
-
-    std::vector<int> _ticks;
-    std::vector<int> _ticksPerUpdate;
 
     // Input dimensions
     std::vector<Int3> _inputSizes;
-
-    void combine(
-        int pos,
-        std::mt19937 &rng,
-        const IntBuffer* hiddenCs,
-        const IntBuffer* feedBackCs,
-        IntBuffer* combinedCs,
-        const Int3 &hiddenSize
-    );
-
-    static void combineKernel(
-        int pos,
-        std::mt19937 &rng,
-        Hierarchy* h,
-        const IntBuffer* hiddenCs,
-        const IntBuffer* feedBackCs,
-        IntBuffer* combinedCs,
-        const Int3 &hiddenSize
-    ) {
-        h->combine(pos, rng, hiddenCs, feedBackCs, combinedCs, hiddenSize);
-    }
 
 public:
     // Default
@@ -109,8 +86,8 @@ public:
     // Simulation step/tick
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        const IntBuffer* topFeedBackCs,
+        const std::vector<const FloatBuffer*> &inputStates, // Input layer column states
+        const FloatBuffer* goalStates,
         bool learnEnabled = true // Whether learning is enabled
     );
 
@@ -126,35 +103,14 @@ public:
 
     // Get the number of layers (scLayers)
     int getNumLayers() const {
-        return _scLayers.size();
+        return _rLayers.size();
     }
 
     // Retrieve predictions
-    const IntBuffer &getPredictionCs(
+    const FloatBuffer &getPredictionStates(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front()[i]->getHiddenCs();
-    }
-
-    // Whether this layer received on update this timestep
-    bool getUpdate(
-        int l // Layer index
-    ) const {
-        return _updates[l];
-    }
-
-    // Get current layer ticks, relative to previous layer
-    int getTicks(
-        int l // Layer Index
-    ) const {
-        return _ticks[l];
-    }
-
-    // Get layer ticks per update, relative to previous layer
-    int getTicksPerUpdate(
-        int l // Layer Index
-    ) const {
-        return _ticksPerUpdate[l];
+        return _pLayers.front()[i]->getHiddenStates();
     }
 
     // Get input sizes
@@ -162,18 +118,18 @@ public:
         return _inputSizes;
     }
 
-    // Retrieve a sparse coding layer
-    SparseCoder &getSCLayer(
+    // Retrieve a reservior layer
+    Reservior &getRLayer(
         int l // Layer index
     ) {
-        return _scLayers[l];
+        return _rLayers[l];
     }
 
-    // Retrieve a sparse coding layer, const version
-    const SparseCoder &getSCLayer(
+    // Retrieve a reservior layer, const version
+    const Reservior &getSCLayer(
         int l // Layer index
     ) const {
-        return _scLayers[l];
+        return _rLayers[l];
     }
 
     // Retrieve predictor layer(s)
