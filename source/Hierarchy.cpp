@@ -52,6 +52,7 @@ void Hierarchy::initRandom(
 
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDescs[0]._scale = layerDescs[l]._pScale;
             pVisibleLayerDescs[0]._dropRatio = layerDescs[l]._pDropRatio;
 
             // Create actors
@@ -78,6 +79,7 @@ void Hierarchy::initRandom(
 
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDescs[0]._scale = layerDescs[l]._pScale;
             pVisibleLayerDescs[0]._dropRatio = layerDescs[l]._pDropRatio;
 
             // Create actors

@@ -37,6 +37,7 @@ public:
         float _rrDropRatio;
         float _rbScale;
 
+        float _pScale;
         float _pDropRatio;
 
         LayerDesc()
@@ -50,6 +51,7 @@ public:
         _rrScale(2.0f),
         _rrDropRatio(0.5f),
         _rbScale(2.0f),
+        _pScale(4.0f),
         _pDropRatio(0.0f)
         {}
     };

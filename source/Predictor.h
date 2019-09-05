@@ -20,6 +20,7 @@ public:
 
         int _radius; // Radius onto input
 
+        float _scale;
         float _dropRatio;
 
         // Defaults
@@ -27,6 +28,7 @@ public:
         :
         _size(4, 4, 16),
         _radius(2),
+        _scale(4.0f),
         _dropRatio(0.0f)
         {}
     };
