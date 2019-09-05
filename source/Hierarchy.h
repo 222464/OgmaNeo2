@@ -45,10 +45,10 @@ public:
         _rrRadius(2),
         _pRadius(2),
         _rfScale(1.0f),
-        _rfDropRatio(0.5f),
-        _rrScale(1.0f),
+        _rfDropRatio(0.0f),
+        _rrScale(0.1f),
         _rrDropRatio(0.5f),
-        _pDropRatio(0.5f)
+        _pDropRatio(0.0f)
         {}
     };
 private:
