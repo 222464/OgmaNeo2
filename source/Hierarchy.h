@@ -51,7 +51,7 @@ public:
         _rrScale(2.0f),
         _rrDropRatio(0.5f),
         _rbScale(1.0f),
-        _pScale(4.0f),
+        _pScale(8.0f),
         _pDropRatio(0.0f)
         {}
     };
