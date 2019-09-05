@@ -35,6 +35,7 @@ public:
         float _rfDropRatio;
         float _rrScale;
         float _rrDropRatio;
+        float _rbScale;
 
         float _pDropRatio;
 
@@ -48,6 +49,7 @@ public:
         _rfDropRatio(0.0f),
         _rrScale(2.0f),
         _rrDropRatio(0.5f),
+        _rbScale(2.0f),
         _pDropRatio(0.0f)
         {}
     };

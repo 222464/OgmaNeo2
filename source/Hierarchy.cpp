@@ -101,7 +101,7 @@ void Hierarchy::initRandom(
         }
 		
         // Create the sparse coding layer
-        _rLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, rVisibleLayerDescs);
+        _rLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, rVisibleLayerDescs, layerDescs[l]._rbScale);
 
         _differencesInfer[l] = FloatBuffer(_rLayers[l].getHiddenStates().size(), 0.0f);
     }

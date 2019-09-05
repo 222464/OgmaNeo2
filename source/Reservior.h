@@ -44,6 +44,8 @@ private:
     FloatBuffer _hiddenStates; // Hidden states
     FloatBuffer _hiddenStatesPrev; // Previous tick hidden states
 
+    FloatBuffer _hiddenBiases; // Bias weights
+
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -72,7 +74,8 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs, // Descriptors for visible layers
+        float biasScale // Scale for bias weights
     );
 
     // Activate the sparse coder (perform sparse coding)

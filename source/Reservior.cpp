@@ -20,7 +20,7 @@ void Reservior::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = 0.0f;
+        float sum = _hiddenBiases[hiddenIndex];
         int count = 0;
 
         // For each visible layer
@@ -38,7 +38,8 @@ void Reservior::forward(
 void Reservior::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
-    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+    const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+    float biasScale
 ) {
     _visibleLayerDescs = visibleLayerDescs;
 
@@ -67,9 +68,17 @@ void Reservior::initRandom(
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
     }
 
-    // Hidden Cs
+    // Hidden states
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
     _hiddenStatesPrev = FloatBuffer(numHidden, 0.0f);
+
+    // Biases
+    _hiddenBiases = FloatBuffer(numHidden);
+
+    std::normal_distribution<float> biasDist(0.0f, biasScale);
+
+    for (int i = 0; i < numHidden; i++)
+        _hiddenBiases[i] = biasDist(cs._rng);
 }
 
 void Reservior::step(
@@ -107,6 +116,8 @@ void Reservior::writeToStream(
     writeBufferToStream(os, &_hiddenStates);
     writeBufferToStream(os, &_hiddenStatesPrev);
 
+    writeBufferToStream(os, &_hiddenBiases);
+
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -131,6 +142,8 @@ void Reservior::readFromStream(
 
     readBufferFromStream(is, &_hiddenStates);
     readBufferFromStream(is, &_hiddenStatesPrev);
+
+    readBufferFromStream(is, &_hiddenBiases);
 
     int numVisibleLayers;
     
