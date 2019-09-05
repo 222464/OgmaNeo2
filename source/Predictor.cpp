@@ -60,7 +60,9 @@ void Predictor::learn(
             count += vl._weights.counts(hiddenIndex);
         }
 
-        float delta = _alpha * ((*hiddenTargetStates)[hiddenIndex] - std::tanh(sum / std::max(1, count)));
+        float predState = std::tanh(sum / std::max(1, count));
+
+        float delta = _alpha * ((*hiddenTargetStates)[hiddenIndex] - predState);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
