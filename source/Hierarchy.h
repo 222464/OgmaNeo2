@@ -131,7 +131,7 @@ public:
     }
 
     // Retrieve a reservior layer, const version
-    const Reservior &getSCLayer(
+    const Reservior &getRLayer(
         int l // Layer index
     ) const {
         return _rLayers[l];
