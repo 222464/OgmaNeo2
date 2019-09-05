@@ -28,7 +28,7 @@ public:
         :
         _size(4, 4, 16),
         _radius(2),
-        _scale(4.0f),
+        _scale(1.0f),
         _dropRatio(0.0f)
         {}
     };
