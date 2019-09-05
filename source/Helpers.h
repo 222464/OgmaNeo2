@@ -145,6 +145,15 @@ void copyFloat(
     FloatBuffer* dst // Destination buffer
 );
 
+// Difference kernel
+void diffFloat(
+    int pos, // Position
+    std::mt19937 &rng, // Generator
+    const FloatBuffer* srcLeft, // Positive
+    const FloatBuffer* srcRight, // Negative
+    FloatBuffer* dst // Destination buffer
+);
+
 // --- Bounds ---
 
 // Bounds check from (0, 0) to upperBound

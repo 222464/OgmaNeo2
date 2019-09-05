@@ -157,6 +157,16 @@ void ogmaneo::copyFloat(
     (*dst)[pos] = (*src)[pos];
 }
 
+void ogmaneo::diffFloat(
+    int pos,
+    std::mt19937 &rng,
+    const FloatBuffer* srcLeft,
+    const FloatBuffer* srcRight,
+    FloatBuffer* dst
+) {
+    (*dst)[pos] = (*srcLeft)[pos] - (*srcRight)[pos];
+}
+
 std::vector<IntBuffer*> ogmaneo::get(
     std::vector<std::shared_ptr<IntBuffer>> &v
 ) {

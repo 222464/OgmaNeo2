@@ -56,6 +56,9 @@ private:
     std::vector<Reservior> _rLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
 
+    std::vector<FloatBuffer> _differencesInfer;
+    std::vector<FloatBuffer> _differencesLearn;
+
     // Input dimensions
     std::vector<Int3> _inputSizes;
 
