@@ -184,7 +184,7 @@ void Hierarchy::step(
         // Step actor layers
         for (int p = 0; p < _pLayers[l].size(); p++) {
             if (_pLayers[l][p] != nullptr) {
-                if (learnEnabled) 
+                if (learnEnabled && l > 0) 
                     _pLayers[l][p]->learn(cs, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), { &_differencesLearn[l] });
 
                 _pLayers[l][p]->activate(cs, { &_differencesInfer[l] });
