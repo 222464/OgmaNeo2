@@ -155,7 +155,7 @@ void Hierarchy::step(
 
         // Add recurrent if needed
         if (fullLayerInputs.size() < _rLayers[l].getNumVisibleLayers())
-            fullLayerInputs.push_back(&_rLayers[l].getHiddenStates());
+            fullLayerInputs.push_back(&_rLayers[l].getHiddenStatesPrev());
 
         _rLayers[l].step(cs, fullLayerInputs);
     }
