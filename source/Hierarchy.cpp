@@ -114,7 +114,7 @@ void Hierarchy::backward(
 
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : _leak);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : _leak * error);
     }
     else {
         float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l].getHiddenSize().z);
@@ -123,7 +123,7 @@ void Hierarchy::backward(
 
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : _leak);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : _leak * error);
     }
 }
 
