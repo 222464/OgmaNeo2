@@ -53,8 +53,6 @@ private:
 
     FloatBuffer _hiddenValues; // Hidden value function output buffer
 
-    IntBuffer _hiddenCounts; // Number of cells touching
-
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
 
     // Visible layers and descriptors
