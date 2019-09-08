@@ -27,8 +27,7 @@ public:
         Int3 _hiddenSize; // Size of hidden layer
 
         int _scRadius; // Sparse coder radius
-        int _rRadius; // Routing Radius
-        int _lRadius; // Lateral radius
+        int _rRadius; // Routing radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -39,7 +38,6 @@ public:
         _hiddenSize(4, 4, 16),
         _scRadius(2),
         _rRadius(2),
-        _lRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}
@@ -153,9 +151,7 @@ private:
 
 public:
     float _alpha; // Output learning rate
-    float _beta; // Routing learning rate
     float _gamma; // Discount factor
-    float _leak; // Leaky ReLU
 
     int _maxHistorySamples; // Maximum number of history samples
     int _historyIters; // Number of times to iterate over history
@@ -164,9 +160,7 @@ public:
     Hierarchy()
     :
     _alpha(0.01f),
-    _beta(0.01f),
     _gamma(0.99f),
-    _leak(0.01f),
     _maxHistorySamples(32),
     _historyIters(4)
     {}
