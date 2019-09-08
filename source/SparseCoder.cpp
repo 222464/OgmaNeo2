@@ -78,7 +78,7 @@ void SparseCoder::learn(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    {
+    if (_hiddenCs[hiddenColumnIndex] != _hiddenCsPrev[hiddenColumnIndex]) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
         // For each visible layer
