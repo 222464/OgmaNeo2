@@ -222,7 +222,7 @@ void Hierarchy::initRandom(
                     _rLayers[l]._activations[i] = FloatBuffer(inputSizes[i].x * inputSizes[i].y, 0.0f);
                     _rLayers[l]._errors[i] = FloatBuffer(inputSizes[i].x * inputSizes[i].y, 0.0f);
 
-                    initSMLocalRF(layerDescs[l]._hiddenSize, inputSizes[i], layerDescs[l]._rRadius, _rLayers[l]._weights[i], 0.0f, cs._rng);
+                    initSMLocalRF(layerDescs[l]._hiddenSize, inputSizes[i], layerDescs[l]._rRadius, _rLayers[l]._weights[i]);
 
                     _rLayers[l]._weights[i].initT();
 
@@ -280,7 +280,7 @@ void Hierarchy::initRandom(
             _rLayers[l]._activations[0] = FloatBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y, 0.0f);
             _rLayers[l]._errors[0] = FloatBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y, 0.0f);
 
-            initSMLocalRF(layerDescs[l]._hiddenSize, layerDescs[l - 1]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[0], 0.0f, cs._rng);
+            initSMLocalRF(layerDescs[l]._hiddenSize, layerDescs[l - 1]._hiddenSize, layerDescs[l]._rRadius, _rLayers[l]._weights[0]);
 
             _rLayers[l]._weights[0].initT();
 
@@ -316,7 +316,7 @@ void Hierarchy::initRandom(
         }
 
         // Create the sparse coding layer
-        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
+        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._lRadius, scVisibleLayerDescs);
     }
 }
 
