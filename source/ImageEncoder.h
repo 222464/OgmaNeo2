@@ -102,7 +102,7 @@ public:
     // Initialize defaults
     ImageEncoder()
     :
-    _alpha(0.5f)
+    _alpha(0.1f)
     {}
 
     // Create a randomly initialized image encoder
