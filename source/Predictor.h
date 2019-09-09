@@ -39,8 +39,6 @@ private:
     IntBuffer _hiddenCs; // Hidden state
     IntBuffer _hiddenTargetCsPrev; // Target hidden state
 
-    IntBuffer _hiddenCounts; // Number of units touching
-
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
