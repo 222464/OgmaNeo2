@@ -221,24 +221,6 @@ struct SparseMatrix {
 
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int row,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
-	);
-
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int column,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
-	);
-
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &nonZeroScalars,
 		float delta,
 		int row,
@@ -251,26 +233,6 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
-	);
-
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int row,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
-	);
-
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int column,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
 	);
 
 	// --- Normalization ---
@@ -305,6 +267,18 @@ struct SparseMatrix {
 
 	// --- Hebb Rules ---
 
+	void hebbDec(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbDecT(
+		const std::vector<float> &in,
+		int column,
+		float alpha
+	);
+
 	void hebb(
 		const std::vector<float> &in,
 		int row,
@@ -314,6 +288,20 @@ struct SparseMatrix {
 	void hebbT(
 		const std::vector<float> &in,
 		int column,
+		float alpha
+	);
+
+	void hebbDecOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
+	void hebbDecOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
 		float alpha
 	);
 
@@ -339,6 +327,14 @@ struct SparseMatrix {
 	void hebbErrorsT(
 		const std::vector<float> &errors,
 		int column
+	);
+
+	// --- Special ---
+
+	float multiplyNoDiagonalOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
 	);
 };
 } // namespace ogmaneo
