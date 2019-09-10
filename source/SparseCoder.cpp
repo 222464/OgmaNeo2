@@ -7,7 +7,6 @@
 // ----------------------------------------------------------------------------
 
 #include "SparseCoder.h"
-#include <iostream>
 
 using namespace ogmaneo;
 
@@ -40,7 +39,7 @@ void SparseCoder::forward(
 
         _hiddenActivations[hiddenIndex] = _hiddenStimuli[hiddenIndex] = sum;
 
-        if (_hiddenUsages[hiddenIndex] > 0 && sum > maxActivation) {
+        if (sum > maxActivation) {
             maxActivation = sum;
             maxIndex = hc;
         }
@@ -65,7 +64,7 @@ void SparseCoder::inhibit(
 
         _hiddenActivations[hiddenIndex] += (1.0f - sum) * _hiddenStimuli[hiddenIndex];
 
-        if (_hiddenUsages[hiddenIndex] > 0 && _hiddenActivations[hiddenIndex] > maxActivation) {
+        if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
             maxIndex = hc;
         }
@@ -84,37 +83,17 @@ void SparseCoder::learn(
     int hiddenIndexMax = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
     float vigilance = _hiddenActivations[hiddenIndexMax] / (_explainIters + 1);
-    std::cout << vigilance << std::endl;
-    if (vigilance > _minVigilance) {
+    
+    if (vigilance < _minVigilance || _hiddenUsages[hiddenIndexMax] == 0) {
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, _alpha);
+            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, _hiddenUsages[hiddenIndexMax] == 1 ? _alpha : 1.0f);
         }
 
-        _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _beta);    
-    }
-    else {
-        // Find unused
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-            if (_hiddenUsages[hiddenIndex] == 0) {
-                hiddenIndexMax = hiddenIndex;
-
-                break;
-            }
-        }
-
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, 1.0f);
-        }
+        _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _hiddenUsages[hiddenIndexMax] == 1 ? _beta : 0.0f);    
     }
 
     _hiddenUsages[hiddenIndexMax] = 1;
@@ -137,7 +116,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> forwardWeightDist(0.0f, 0.01f);
+    std::uniform_real_distribution<float> forwardWeightDist(1.0f, 1.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {

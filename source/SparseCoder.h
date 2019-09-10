@@ -104,9 +104,9 @@ public:
     // Defaults
     SparseCoder()
     :
-    _minVigilance(0.9f),
-    _alpha(0.001f),
-    _beta(0.001f),
+    _minVigilance(0.92f),
+    _alpha(0.01f),
+    _beta(0.01f),
     _explainIters(3)
     {}
 
@@ -157,11 +157,6 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
-    }
-
-    // Get the hidden states
-    const IntBuffer &getHiddenCsPrev() const {
-        return _hiddenCsPrev;
     }
 
     // Get the hidden size
