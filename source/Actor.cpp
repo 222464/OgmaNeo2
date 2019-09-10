@@ -101,7 +101,7 @@ void Actor::learn(
 
     // --- Value Prev ---
 
-    float newValue = (1.0f - _gamma) * q + g * _hiddenValues[hiddenColumnIndex];
+    float newValue = q + g * _hiddenValues[hiddenColumnIndex];
 
     float value = 0.0f;
     int valueCount = 0;
@@ -170,7 +170,7 @@ void Actor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float deltaAction = (tdErrorAction > 0.0f ? _beta : -_beta) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = _beta * std::tanh(tdErrorAction) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -198,7 +198,7 @@ void Actor::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
+    std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
