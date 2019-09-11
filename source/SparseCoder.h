@@ -35,86 +35,53 @@ public:
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
-    int _lateralRadius;
-
-    FloatBuffer _hiddenStimuli;
-    FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
-    IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    IntBuffer _hiddenUsages; // Hidden state usage
 
-    SparseMatrix _laterals;
+    IntBuffer _hiddenStatuses; // Status indices
+
+    IntBuffer _hiddenCounts;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-    
+
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void inhibit(
-        const Int2 &pos,
-        std::mt19937 &rng
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputCs);
-    }
-
-    static void inhibitKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc
-    ) {
-        sc->inhibit(pos, rng);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
-    ) {
-        sc->learn(pos, rng, inputCs);
+        sc->forward(pos, rng, inputCs, learnEnabled);
     }
 
 public:
-    float _minVigilance; // Minimum vigilance
-    float _alpha; // Forward learning rate
-    float _beta; // Lateral learning rate
-    int _explainIters; // Explaining-away iterations
+    float _alpha; // Activation parameter
+    float _beta; // Weight learning rate
+    float _minVigilance; // Minimum vigilance threshold
 
     // Defaults
     SparseCoder()
     :
-    _minVigilance(0.9f),
-    _alpha(0.01f),
-    _beta(0.01f),
-    _explainIters(3)
+    _alpha(0.001f),
+    _beta(0.1f),
+    _minVigilance(0.7f)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
-        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 

@@ -249,7 +249,9 @@ void ogmaneo::initSMLocalRF(
     const Int3 &inSize,
     const Int3 &outSize,
     int radius,
-    SparseMatrix &mat
+    SparseMatrix &mat,
+    float columnDropRatio,
+    std::mt19937 &rng
 ) {
     int numOut = outSize.x * outSize.y * outSize.z;
 
@@ -269,16 +271,15 @@ void ogmaneo::initSMLocalRF(
 
     mat._columnIndices.reserve(weightsSize);
 
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
     // Initialize weight matrix
     for (int ox = 0; ox < outSize.x; ox++)
         for (int oy = 0; oy < outSize.y; oy++) {
             Int2 visiblePositionCenter = project(Int2(ox, oy), outToIn);
 
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - radius, visiblePositionCenter.y - radius);
-
             // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterLowerBound(std::max(0, visiblePositionCenter.x - radius), std::max(0, visiblePositionCenter.y - radius));
             Int2 iterUpperBound(std::min(inSize.x - 1, visiblePositionCenter.x + radius), std::min(inSize.y - 1, visiblePositionCenter.y + radius));
 
             for (int oz = 0; oz < outSize.z; oz++) {
@@ -288,15 +289,17 @@ void ogmaneo::initSMLocalRF(
 
                 for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
                     for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
-                        for (int iz = 0; iz < inSize.z; iz++) {
-                            Int3 inPos(ix, iy, iz);
+                        if (dist01(rng) >= columnDropRatio) {
+                            for (int iz = 0; iz < inSize.z; iz++) {
+                                Int3 inPos(ix, iy, iz);
 
-                            int inIndex = address3(inPos, inSize);
+                                int inIndex = address3(inPos, inSize);
 
-                            mat._nonZeroValues.push_back(0.0f);
-                            mat._columnIndices.push_back(inIndex);
-                            
-                            nonZeroInRow++;
+                                mat._nonZeroValues.push_back(0.0f);
+                                mat._columnIndices.push_back(inIndex);
+                                
+                                nonZeroInRow++;
+                            }
                         }
                     }
 
