@@ -293,9 +293,7 @@ void initSMLocalRF(
     const Int3 &inSize, // Size of input field
     const Int3 &outSize, // Size of output field
     int radius, // Radius of output onto input
-    SparseMatrix &mat, // Matrix to fill
-    float columnDropRatio, // Ratio of columns to leave unconnected
-    std::mt19937 &rng // RNG
+    SparseMatrix &mat // Matrix to fill
 );
 
 // --- Sparse Matrix Serialization ---

@@ -193,7 +193,7 @@ void ImageEncoder::initRandom(
         int numVisible = numVisibleColumns * vld._size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights, 0.0f, cs._rng);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = 1.0f;
