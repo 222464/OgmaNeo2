@@ -163,8 +163,8 @@ void ImageEncoder::forward(
 
             if (found)
                 vl._weights.hebbDecreasing(*inputActs[vli], hiddenIndexMax, commit ? 1.0f : _beta);
-            else
-                vl._weights.hebb(*inputActs[vli], hiddenIndexMax, _beta);
+            //else
+            //    vl._weights.hebb(*inputActs[vli], hiddenIndexMax, _beta);
         }
     }
 }
