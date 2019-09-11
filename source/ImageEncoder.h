@@ -72,7 +72,7 @@ public:
     ImageEncoder()
     :
     _alpha(0.01f),
-    _beta(0.5f),
+    _beta(0.01f),
     _minVigilance(0.99f)
     {}
 
