@@ -82,19 +82,15 @@ void SparseCoder::learn(
 
     int hiddenIndexMax = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
-    float vigilance = _hiddenActivations[hiddenIndexMax] / (_explainIters + 1);
-    
-    if (vigilance < _minVigilance || _hiddenUsages[hiddenIndexMax] == 0) {
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, _hiddenUsages[hiddenIndexMax] == 1 ? _alpha : 1.0f);
-        }
-
-        _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _hiddenUsages[hiddenIndexMax] == 1 ? _beta : 0.0f);    
+        vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, _hiddenUsages[hiddenIndexMax] == 1 ? _alpha : 1.0f);
     }
+
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _hiddenUsages[hiddenIndexMax] == 1 ? _beta : 0.0f);    
 
     _hiddenUsages[hiddenIndexMax] = 1;
 }

@@ -96,7 +96,6 @@ private:
     }
 
 public:
-    float _minVigilance; // Minimum vigilance
     float _alpha; // Forward learning rate
     float _beta; // Lateral learning rate
     int _explainIters; // Explaining-away iterations
@@ -104,9 +103,8 @@ public:
     // Defaults
     SparseCoder()
     :
-    _minVigilance(0.9f),
-    _alpha(0.01f),
-    _beta(0.01f),
+    _alpha(0.001f),
+    _beta(0.001f),
     _explainIters(3)
     {}
 
