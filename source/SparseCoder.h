@@ -31,8 +31,6 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-
-        IntBuffer _visibleCounts; // Number touching
     };
 
 private:

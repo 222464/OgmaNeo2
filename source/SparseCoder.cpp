@@ -60,7 +60,7 @@ void SparseCoder::learn(
 
         float target = (vc == targetC ? 1.0f : 0.0f);
 
-        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._visibleCounts[visibleColumnIndex]);
+        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
 
         float delta = _alpha * (target - (sum > 0.0f ? 1.0f + sum : std::exp(sum)));
 
@@ -101,12 +101,6 @@ void SparseCoder::initRandom(
 
         // Generate transpose (needed for reconstruction)
         vl._weights.initT();
-
-        // Counts
-        vl._visibleCounts = IntBuffer(numVisibleColumns);
-
-        for (int i = 0; i < numVisibleColumns; i++)
-            vl._visibleCounts[i] = vl._weights.countsT(i * vld._size.z) / _hiddenSize.z;
     }
 
     // Hidden Cs
@@ -168,8 +162,6 @@ void SparseCoder::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
-
-        writeBufferToStream(os, &vl._visibleCounts);
     }
 }
 
@@ -202,7 +194,5 @@ void SparseCoder::readFromStream(
         int numVisible = numVisibleColumns * vld._size.z;
 
         readSMFromStream(is, vl._weights);
-
-        readBufferFromStream(is, &vl._visibleCounts);
     }
 }
