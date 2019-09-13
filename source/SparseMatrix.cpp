@@ -150,6 +150,31 @@ float SparseMatrix::counts(
 	return sum;
 }
 
+void SparseMatrix::fill(
+	int row,
+    float value
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] = value;
+}
+
+float SparseMatrix::total(
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += _nonZeroValues[j];
+
+	return sum;
+}
+
 float SparseMatrix::multiplyT(
 	const std::vector<float> &in,
 	int column
@@ -199,6 +224,31 @@ float SparseMatrix::countsT(
 	
 	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
 		sum += in[_rowIndices[j]];
+
+	return sum;
+}
+
+void SparseMatrix::fillT(
+	int column,
+    float value
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		_nonZeroValues[_nonZeroValueIndices[j]] = value;
+}
+
+float SparseMatrix::totalT(
+	int column
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		sum += _nonZeroValues[_nonZeroValueIndices[j]];
 
 	return sum;
 }
@@ -695,6 +745,28 @@ void SparseMatrix::hebbT(
 		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (in[_rowIndices[j]] - _nonZeroValues[_nonZeroValueIndices[j]]);
 }
 
+void SparseMatrix::hebbDecreasing(
+	const std::vector<float> &in,
+	int row,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] += alpha * (std::min(in[_columnIndices[j]], _nonZeroValues[j]) - _nonZeroValues[j]);
+}
+
+void SparseMatrix::hebbDecreasingT(
+	const std::vector<float> &in,
+	int column,
+	float alpha
+) {
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (std::min(in[_rowIndices[j]], _nonZeroValues[_nonZeroValueIndices[j]]) - _nonZeroValues[_nonZeroValueIndices[j]]);
+}
+
 void SparseMatrix::hebbOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
@@ -755,4 +827,60 @@ void SparseMatrix::hebbErrorsT(
 	
 	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
 		_nonZeroValues[_nonZeroValueIndices[j]] += errors[_rowIndices[j]];
+}
+
+void SparseMatrix::hebbDecreasingOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[j] += alpha * (std::min(target, _nonZeroValues[j]) - _nonZeroValues[j]);
+		}
+	}
+}
+
+void SparseMatrix::hebbDecreasingOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	int column,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (std::min(target, _nonZeroValues[_nonZeroValueIndices[j]]) - _nonZeroValues[_nonZeroValueIndices[j]]);
+		}
+	}
+}
+
+float SparseMatrix::addMins(
+	const std::vector<float> &in,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += std::min(_nonZeroValues[j], in[_columnIndices[j]]);
+
+	return sum;
 }

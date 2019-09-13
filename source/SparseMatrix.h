@@ -91,6 +91,15 @@ struct SparseMatrix {
 		int row
 	);
 
+    void fill(
+        int row,
+        float value
+    );
+
+    float total(
+        int row
+    );
+
 	// --- Transpose ---
 
 	float multiplyT(
@@ -112,6 +121,15 @@ struct SparseMatrix {
 		const std::vector<float> &in,
 		int column
 	);
+
+    void fillT(
+        int column,
+        float value
+    );
+
+    float totalT(
+        int column
+    );
 
 	// --- One-Hot Vectors Operations ---
 
@@ -317,6 +335,18 @@ struct SparseMatrix {
 		float alpha
 	);
 
+	void hebbDecreasing(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbDecreasingT(
+		const std::vector<float> &in,
+		int column,
+		float alpha
+	);
+
 	void hebbOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
@@ -339,6 +369,27 @@ struct SparseMatrix {
 	void hebbErrorsT(
 		const std::vector<float> &errors,
 		int column
+	);
+
+    void hebbDecreasingOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
+    void hebbDecreasingOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+		float alpha
+	);
+
+	// --- ART-specific ---
+
+	float addMins(
+		const std::vector<float> &in,
+		int row
 	);
 };
 } // namespace ogmaneo

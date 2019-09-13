@@ -269,16 +269,15 @@ void ogmaneo::initSMLocalRF(
 
     mat._columnIndices.reserve(weightsSize);
 
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
     // Initialize weight matrix
     for (int ox = 0; ox < outSize.x; ox++)
         for (int oy = 0; oy < outSize.y; oy++) {
             Int2 visiblePositionCenter = project(Int2(ox, oy), outToIn);
 
-            // Lower corner
-            Int2 fieldLowerBound(visiblePositionCenter.x - radius, visiblePositionCenter.y - radius);
-
             // Bounds of receptive field, clamped to input size
-            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterLowerBound(std::max(0, visiblePositionCenter.x - radius), std::max(0, visiblePositionCenter.y - radius));
             Int2 iterUpperBound(std::min(inSize.x - 1, visiblePositionCenter.x + radius), std::min(inSize.y - 1, visiblePositionCenter.y + radius));
 
             for (int oz = 0; oz < outSize.z; oz++) {
