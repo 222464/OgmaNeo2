@@ -269,8 +269,6 @@ void ogmaneo::initSMLocalRF(
 
     mat._columnIndices.reserve(weightsSize);
 
-    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
-
     // Initialize weight matrix
     for (int ox = 0; ox < outSize.x; ox++)
         for (int oy = 0; oy < outSize.y; oy++) {

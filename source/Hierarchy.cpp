@@ -38,7 +38,7 @@ void Hierarchy::forward(
                     else
                         sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-                    sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+                    sum /= std::max(1, _rLayers[l]._weights[vli].count(visibleIndex) / _scLayers[l].getHiddenSize().z);
                     
                     if (sum > maxValue) {
                         maxValue = sum;
@@ -57,7 +57,7 @@ void Hierarchy::forward(
                 else
                     sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-                sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+                sum /= std::max(1, _rLayers[l]._weights[vli].count(visibleIndex) / _scLayers[l].getHiddenSize().z);
                 
                 maxValue = sum;
             }
@@ -79,7 +79,7 @@ void Hierarchy::forward(
         else
             sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-        sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+        sum /= std::max(1, _rLayers[l]._weights[vli].count(visibleIndex) / _scLayers[l].getHiddenSize().z);
     
         _rLayers[l]._activations[vli][visibleColumnIndex] = sum;
     }
@@ -98,21 +98,23 @@ void Hierarchy::backward(
 
     if (l == 0) {
         float error = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
-            if (!_rLayers[l]._weights[vli]._nonZeroValues.empty())
+            if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
                 error += _rLayers[l]._weights[vli].multiplyOHVsT(*inputCs[vli], _rLayers[l]._errors[vli], hiddenIndex, _inputSizes[vli].z);
+                count += _rLayers[l]._weights[vli].countT(hiddenIndex) / _inputSizes[vli].z;
+            }
         }
 
-        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+        error /= std::max(1, count);
 
         _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
     }
     else {
-        float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l].getHiddenSize().z);
-
-        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+        float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l].getHiddenSize().z) /
+            std::max(1, _rLayers[l]._weights[0].countT(hiddenIndex) / _scLayers[l - 1].getHiddenSize().z);
 
         _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
     }
@@ -202,12 +204,9 @@ void Hierarchy::initRandom(
             _actions.resize(_inputSizes.size());
 
             _rLayers[l]._weights.resize(_inputSizes.size());
-            _rLayers[l]._visibleCounts.resize(_inputSizes.size());
 
             _rLayers[l]._activations.resize(_inputSizes.size());
             _rLayers[l]._errors.resize(_inputSizes.size());
-
-            _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
 
             for (int i = 0; i < inputSizes.size(); i++) {
                 for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
@@ -229,24 +228,6 @@ void Hierarchy::initRandom(
                     // Init weights
                     for (int j = 0; j < _rLayers[l]._weights[i]._nonZeroValues.size(); j++)
                         _rLayers[l]._weights[i]._nonZeroValues[j] = weightDist(cs._rng);
-
-                    for (int x = 0; x < layerDescs[l]._hiddenSize.x; x++)
-                        for (int y = 0; y < layerDescs[l]._hiddenSize.y; y++) {
-                            int hiddenColumnIndex = address2(Int2(x, y), Int2(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y));
-                            int hiddenIndex = address3(Int3(x, y, 0), layerDescs[l]._hiddenSize);
-
-                            _rLayers[l]._hiddenCounts[hiddenColumnIndex] += _rLayers[l]._weights[i].countsT(hiddenIndex) / inputSizes[i].z;
-                        }
-
-                    _rLayers[l]._visibleCounts[i] = IntBuffer(_actions[i].size());
-
-                    for (int x = 0; x < inputSizes[i].x; x++)
-                        for (int y = 0; y < inputSizes[i].y; y++) {
-                            int visibleColumnIndex = address2(Int2(x, y), Int2(inputSizes[i].x, inputSizes[i].y));
-                            int visibleIndex = address3(Int3(x, y, 0), inputSizes[i]);
-
-                            _rLayers[l]._visibleCounts[i][visibleColumnIndex] = _rLayers[l]._weights[i].counts(visibleIndex) / layerDescs[l]._hiddenSize.z;
-                        }    
                 }
             }
             
@@ -265,12 +246,9 @@ void Hierarchy::initRandom(
             scVisibleLayerDescs.resize(layerDescs[l]._temporalHorizon);
 
             _rLayers[l]._weights.resize(1);
-            _rLayers[l]._visibleCounts.resize(1);
 
             _rLayers[l]._activations.resize(1);
             _rLayers[l]._errors.resize(1);
-
-            _rLayers[l]._hiddenCounts = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
 
             for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                 scVisibleLayerDescs[t]._size = layerDescs[l - 1]._hiddenSize;
@@ -287,24 +265,6 @@ void Hierarchy::initRandom(
             // Init weights
             for (int j = 0; j < _rLayers[l]._weights[0]._nonZeroValues.size(); j++)
                 _rLayers[l]._weights[0]._nonZeroValues[j] = weightDist(cs._rng);
-
-            for (int x = 0; x < layerDescs[l]._hiddenSize.x; x++)
-                for (int y = 0; y < layerDescs[l]._hiddenSize.y; y++) {
-                    int hiddenColumnIndex = address2(Int2(x, y), Int2(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y));
-                    int hiddenIndex = address3(Int3(x, y, 0), layerDescs[l]._hiddenSize);
-
-                    _rLayers[l]._hiddenCounts[hiddenColumnIndex] += _rLayers[l]._weights[0].countsT(hiddenIndex) / layerDescs[l - 1]._hiddenSize.z;
-                }
-
-            _rLayers[l]._visibleCounts[0] = IntBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y);
-
-            for (int x = 0; x < layerDescs[l - 1]._hiddenSize.x; x++)
-                for (int y = 0; y < layerDescs[l - 1]._hiddenSize.y; y++) {
-                    int visibleColumnIndex = address2(Int2(x, y), Int2(layerDescs[l - 1]._hiddenSize.x, layerDescs[l - 1]._hiddenSize.y));
-                    int visibleIndex = address3(Int3(x, y, 0), layerDescs[l - 1]._hiddenSize);
-
-                    _rLayers[l]._visibleCounts[0][visibleColumnIndex] = _rLayers[l]._weights[0].counts(visibleIndex) / layerDescs[l]._hiddenSize.z;
-                }
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
@@ -621,8 +581,6 @@ void Hierarchy::writeToStream(
 
         _scLayers[l].writeToStream(os);
 
-        writeBufferToStream(os, &_rLayers[l]._hiddenCounts);
-
         for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
             char exists = !_rLayers[l]._weights[v]._nonZeroValues.empty();
 
@@ -630,7 +588,6 @@ void Hierarchy::writeToStream(
 
             if (exists) {
                 writeSMToStream(os, _rLayers[l]._weights[v]);
-                writeBufferToStream(os, &_rLayers[l]._visibleCounts[v]);
                         
                 writeBufferToStream(os, &_rLayers[l]._activations[v]);
                 writeBufferToStream(os, &_rLayers[l]._errors[v]);
@@ -715,20 +672,16 @@ void Hierarchy::readFromStream(
 
         if (l == 0) {
             _rLayers[l]._weights.resize(_inputSizes.size());
-            _rLayers[l]._visibleCounts.resize(_inputSizes.size());
 
             _rLayers[l]._activations.resize(_inputSizes.size());
             _rLayers[l]._errors.resize(_inputSizes.size());
         }
         else {
             _rLayers[l]._weights.resize(1);
-            _rLayers[l]._visibleCounts.resize(1);
 
             _rLayers[l]._activations.resize(1);
             _rLayers[l]._errors.resize(1);
         }
-
-        readBufferFromStream(is, &_rLayers[l]._hiddenCounts);
 
         for (int v = 0; v < _rLayers[l]._weights.size(); v++) {
             char exists;
@@ -737,7 +690,6 @@ void Hierarchy::readFromStream(
 
             if (exists) {
                 readSMFromStream(is, _rLayers[l]._weights[v]);
-                readBufferFromStream(is, &_rLayers[l]._visibleCounts[v]);
 
                 readBufferFromStream(is, &_rLayers[l]._activations[v]);
                 readBufferFromStream(is, &_rLayers[l]._errors[v]);

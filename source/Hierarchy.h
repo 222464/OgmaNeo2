@@ -45,13 +45,9 @@ public:
 
     struct RouteLayer {
         std::vector<SparseMatrix> _weights;
-        
-        std::vector<IntBuffer> _visibleCounts;
 
         std::vector<FloatBuffer> _errors;
         std::vector<FloatBuffer> _activations;
-
-        IntBuffer _hiddenCounts;
     };
 
     struct HistorySample {

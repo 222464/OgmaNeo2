@@ -83,7 +83,7 @@ void ImageEncoder::forward(
                 VisibleLayer &vl = _visibleLayers[vli];
                 const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                sum2 += vl._weights.counts(*inputActs[vli], hiddenIndexMax);
+                sum2 += vl._weights.count(*inputActs[vli], hiddenIndexMax);
             }
 
             // Check vigilance
@@ -163,8 +163,8 @@ void ImageEncoder::forward(
 
             if (found)
                 vl._weights.hebbDecreasing(*inputActs[vli], hiddenIndexMax, commit ? 1.0f : _beta);
-            else
-                vl._weights.hebb(*inputActs[vli], hiddenIndexMax, _beta);
+            //else
+            //    vl._weights.hebb(*inputActs[vli], hiddenIndexMax, _beta);
         }
     }
 }
