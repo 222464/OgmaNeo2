@@ -282,14 +282,22 @@ void ogmaneo::initSMLocalRF(
             Int2 iterLowerBound(std::max(0, visiblePositionCenter.x - radius), std::max(0, visiblePositionCenter.y - radius));
             Int2 iterUpperBound(std::min(inSize.x - 1, visiblePositionCenter.x + radius), std::min(inSize.y - 1, visiblePositionCenter.y + radius));
 
+            // Generate drops
+            std::vector<bool> drop((iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1));
+
+            for (int i = 0; i < drop.size(); i++)
+                drop[i] = dist01(rng) < columnDropRatio;
+
             for (int oz = 0; oz < outSize.z; oz++) {
                 Int3 outPos(ox, oy, oz);
 
                 int nonZeroInRow = 0;
 
+                int dropIndex = 0;
+
                 for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
                     for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
-                        if (dist01(rng) >= columnDropRatio) {
+                        if (!drop[dropIndex++]) {
                             for (int iz = 0; iz < inSize.z; iz++) {
                                 Int3 inPos(ix, iy, iz);
 

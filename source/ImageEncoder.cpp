@@ -67,12 +67,8 @@ void ImageEncoder::forward(
         
         bool reset;
 
-        int iters = 0;
-
         while (true) {
             reset = false;
-
-            iters++;
 
             int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
 
