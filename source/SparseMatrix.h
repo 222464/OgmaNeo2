@@ -81,12 +81,11 @@ struct SparseMatrix {
 		int row
 	);
 
-	// Count number of elements in each row
-	int counts(
+	int count(
 		int row
 	);
 
-	float counts(
+	float count(
 		const std::vector<float> &in,
 		int row
 	);
@@ -112,12 +111,11 @@ struct SparseMatrix {
 		int column
 	);
 
-	// Count number of elements in each column
-	int countsT(
+	int countT(
 		int column
 	);
 
-	float countsT(
+	float countT(
 		const std::vector<float> &in,
 		int column
 	);

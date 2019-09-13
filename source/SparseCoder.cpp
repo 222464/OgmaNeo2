@@ -196,7 +196,7 @@ void SparseCoder::initRandom(
                 int hiddenColumnIndex = address2(Int2(x, y), Int2(_hiddenSize.x, _hiddenSize.y));
                 int hiddenIndex = address3(Int3(x, y, 0), _hiddenSize);
 
-                _hiddenCounts[hiddenColumnIndex] += vl._weights.counts(hiddenIndex) / vld._size.z;
+                _hiddenCounts[hiddenColumnIndex] += vl._weights.count(hiddenIndex) / vld._size.z;
             }
     }
 
