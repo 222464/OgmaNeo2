@@ -151,10 +151,10 @@ void SparseCoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            if (found)
-                vl._weights.hebbDecreasingOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, commit ? 1.0f : _beta);
-            //else
-            //    vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, _beta);
+            // if (found)
+            //     vl._weights.hebbDecreasingOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, commit ? 1.0f : _beta);
+            // else
+            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, commit ? 1.0f : _beta);
         }
     }
 }
