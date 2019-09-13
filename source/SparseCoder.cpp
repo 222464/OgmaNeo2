@@ -138,8 +138,8 @@ void SparseCoder::forward(
 
             if (found)
                 vl._weights.hebbDecreasingOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, commit ? 1.0f : _beta);
-            // else
-            //     vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, _beta);
+            else
+                vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, _beta);
 
             // vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, commit ? 1.0f : _beta);
         }
