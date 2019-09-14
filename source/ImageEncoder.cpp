@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "ImageEncoder.h"
-
+#include <iostream>
 using namespace ogmaneo;
 
 void ImageEncoder::forward(
@@ -65,15 +65,7 @@ void ImageEncoder::forward(
     if (search) {
         int originalMaxIndex = maxIndex;
         
-        bool reset;
-
-        int iters = 0;
-
         while (true) {
-            reset = false;
-
-            iters++;
-
             int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
 
             // For each visible layer
@@ -88,18 +80,13 @@ void ImageEncoder::forward(
 
             // Check vigilance
             float match = sum0s[maxIndex] / std::max(0.0001f, sum2);
-            
-            if (match < _minVigilance) {
-                // Reset
-                reset = true;
 
+            if (match < _minVigilance) {
                 // Deactivate unit
                 activations[maxIndex] = -1.0f;
 
-                maxIndex = 0;
+                maxIndex = -1;
                 maxActivation = -999999.0f;
-
-                int numAvailable = 0;
 
                 for (int hc = 0; hc < _hiddenSize.z; hc++) {
                     int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -107,23 +94,21 @@ void ImageEncoder::forward(
                     if (_hiddenStatuses[hiddenIndex] == 0 || activations[hc] < 0.0f)
                         continue;
 
-                    numAvailable++;
-
                     if (activations[hc] > maxActivation) {
                         maxActivation = activations[hc];
                         maxIndex = hc;
                     }
                 }
                 
-                if (numAvailable == 0)
+                if (maxIndex == -1)
                     break;
             }
-            else
+            else 
                 break;
         }
 
         // If ended in reset
-        if (reset) {
+        if (maxIndex == -1) {
             // If uncommitted nodes present
             int uncommittedIndex = -1;
 
@@ -163,8 +148,10 @@ void ImageEncoder::forward(
 
             if (found)
                 vl._weights.hebbDecreasing(*inputActs[vli], hiddenIndexMax, commit ? 1.0f : _beta);
-            //else
-            //    vl._weights.hebb(*inputActs[vli], hiddenIndexMax, _beta);
+            else
+                vl._weights.hebb(*inputActs[vli], hiddenIndexMax, _beta);
+
+            // vl._weights.hebb(*inputActs[vli], hiddenIndexMax, commit ? 1.0f : _beta);
         }
     }
 }
