@@ -495,7 +495,7 @@ void Hierarchy::step(
             // Errors
             for (int vli = 0; vli < _rLayers.front()._errors.size(); vli++)
                 for (int i = 0; i < _rLayers.front()._errors[vli].size(); i++) {
-                    float targetQ = (1.0f - _gamma) * baseQ + g * _qs[vli][i];
+                    float targetQ = baseQ + g * _qs[vli][i];
 
                     _rLayers.front()._errors[vli][i] = targetQ - _rLayers.front()._activations[vli][i];
                 }
