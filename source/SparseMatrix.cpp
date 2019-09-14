@@ -128,7 +128,7 @@ float SparseMatrix::distance(
 	return sum;
 }
 
-int SparseMatrix::counts(
+int SparseMatrix::count(
 	int row
 ) {
 	int nextIndex = row + 1;
@@ -136,7 +136,7 @@ int SparseMatrix::counts(
 	return _rowRanges[nextIndex] - _rowRanges[row];
 }
 
-float SparseMatrix::counts(
+float SparseMatrix::count(
 	const std::vector<float> &in,
 	int row
 ) {
@@ -206,7 +206,7 @@ float SparseMatrix::distanceT(
 	return sum;
 }
 
-int SparseMatrix::countsT(
+int SparseMatrix::countT(
 	int column
 ) {
 	int nextIndex = column + 1;
@@ -214,7 +214,7 @@ int SparseMatrix::countsT(
 	return _columnRanges[nextIndex] - _columnRanges[column];
 }
 
-float SparseMatrix::countsT(
+float SparseMatrix::countT(
 	const std::vector<float> &in,
 	int column
 ) {

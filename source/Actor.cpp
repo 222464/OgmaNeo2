@@ -28,7 +28,7 @@ void Actor::forward(
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
         value += vl._valueWeights.multiplyOHVs(*inputCs[vli], hiddenColumnIndex, vld._size.z);
-        valueCount += vl._valueWeights.counts(hiddenColumnIndex) / vld._size.z;
+        valueCount += vl._valueWeights.count(hiddenColumnIndex) / vld._size.z;
     }
 
     _hiddenValues[hiddenColumnIndex] = value / std::max(1, valueCount);
@@ -50,7 +50,7 @@ void Actor::forward(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-            count += vl._actionWeights.counts(hiddenIndex) / vld._size.z;
+            count += vl._actionWeights.count(hiddenIndex) / vld._size.z;
         }
 
         sum /= std::max(1, count);
@@ -112,7 +112,7 @@ void Actor::learn(
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
         value += vl._valueWeights.multiplyOHVs(*inputCsPrev[vli], hiddenColumnIndex, vld._size.z);
-        valueCount += vl._valueWeights.counts(hiddenColumnIndex) / vld._size.z;
+        valueCount += vl._valueWeights.count(hiddenColumnIndex) / vld._size.z;
     }
 
     value /= std::max(1, valueCount);
@@ -149,7 +149,7 @@ void Actor::learn(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
-            count += vl._actionWeights.counts(hiddenIndex) / vld._size.z;
+            count += vl._actionWeights.count(hiddenIndex) / vld._size.z;
         }
 
         sum /= std::max(1, count);
