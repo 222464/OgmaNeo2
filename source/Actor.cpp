@@ -99,7 +99,7 @@ void Actor::learn(
 
     // --- Value Prev ---
 
-    float newValue = (1.0f - _gamma) * q + g * _hiddenValues[hiddenColumnIndex];
+    float newValue = q + g * _hiddenValues[hiddenColumnIndex];
 
     float value = 0.0f;
     int count = 0;
