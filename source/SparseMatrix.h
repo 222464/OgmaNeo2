@@ -94,6 +94,11 @@ struct SparseMatrix {
         int row,
         float value
     );
+	
+	void scale(
+        int row,
+        float value
+    );
 
     float total(
         int row
@@ -121,6 +126,11 @@ struct SparseMatrix {
 	);
 
     void fillT(
+        int column,
+        float value
+    );
+
+	void scaleT(
         int column,
         float value
     );

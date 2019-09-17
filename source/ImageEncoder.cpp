@@ -58,7 +58,7 @@ void ImageEncoder::backward(
 
         float recon = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
         
-        vl._visibleActivations[visibleIndex] = (recon > 0.0f ? 1.0f : std::exp(recon));
+        vl._visibleActivations[visibleIndex] = std::exp(recon);
     }
 }
 
@@ -78,7 +78,7 @@ void ImageEncoder::learn(
 
         float recon = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
 
-        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - (recon > 0.0f ? 1.0f : std::exp(recon))), visibleIndex, _hiddenSize.z);
+        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - std::exp(recon)), visibleIndex, _hiddenSize.z);
     }
 }
 
