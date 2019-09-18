@@ -248,7 +248,7 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && _historySize > 2) {
+    if (learnEnabled && _historySize > 1) {
         const HistorySample &sPrev = *_historySamples[0];
 
         // Compute (partial) Q value, rest is completed in the kernel
