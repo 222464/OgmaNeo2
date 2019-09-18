@@ -42,7 +42,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    IntBuffer _hiddenUsages; // Hidden state usage
 
     SparseMatrix _laterals;
 

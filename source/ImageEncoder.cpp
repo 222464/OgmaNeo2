@@ -87,12 +87,10 @@ void ImageEncoder::learn(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, _hiddenUsages[hiddenIndexMax] == 1 ? _alpha : 1.0f);
+        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, _alpha);
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _hiddenUsages[hiddenIndexMax] == 1 ? _beta : 0.0f);    
-    
-    _hiddenUsages[hiddenIndexMax] = 1;
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _beta);    
 }
 
 void ImageEncoder::initRandom(
@@ -135,7 +133,6 @@ void ImageEncoder::initRandom(
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
     _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
-    _hiddenUsages = IntBuffer(numHidden, 0);
 
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
@@ -204,7 +201,6 @@ void ImageEncoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
-    writeBufferToStream(os, &_hiddenUsages);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -231,7 +227,6 @@ void ImageEncoder::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
-    readBufferFromStream(is, &_hiddenUsages);
 
     _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
