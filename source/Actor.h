@@ -11,7 +11,7 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// A reinforcement learning layer
+// A reinforcement learning layer (Q learning)
 class Actor {
 public:
     // Visible layer descriptor
@@ -30,13 +30,14 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Q weights
+        SparseMatrix _weights;
     };
 
     // History sample for delayed updates
     struct HistorySample {
         std::vector<IntBuffer> _inputCs;
-        IntBuffer _hiddenCs;
+        IntBuffer _hiddenCsPrev;
+        FloatBuffer _hiddenQs;
         
         float _reward;
     };
@@ -48,8 +49,9 @@ private:
     int _historySize;
 
     IntBuffer _hiddenCs; // Hidden states
+    FloatBuffer _hiddenQs;
 
-    FloatBuffer _hiddenActivations; // Activations of actions
+    IntBuffer _hiddenCounts; // Number of units touching hidden columns
 
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
 
@@ -65,13 +67,21 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
+    void qUpdate(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const FloatBuffer* hiddenQs,
+        FloatBuffer* hiddenQsPrev,
+        const IntBuffer* hiddenCsPrev,
+        float reward,
+        float gamma
+    );
+
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCsPrev,
-        const IntBuffer* hiddenCsPrev,
-        float q,
-        float g
+        const FloatBuffer* hiddenQsPrev,
+        const std::vector<const IntBuffer*> &inputCsPrev
     );
 
     static void forwardKernel(
@@ -83,29 +93,42 @@ private:
         a->forward(pos, rng, inputCs);
     }
 
+    static void qUpdateKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Actor* a,
+        const FloatBuffer* hiddenQs,
+        FloatBuffer* hiddenQsPrev,
+        const IntBuffer* hiddenCsPrev,
+        float reward,
+        float gamma
+    ) {
+        a->qUpdate(pos, rng, hiddenQs, hiddenQsPrev, hiddenCsPrev, reward, gamma);
+    }
+
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
-        const std::vector<const IntBuffer*> &inputCsPrev,
-        const IntBuffer* hiddenCsPrev,
-        float q,
-        float g
+        const FloatBuffer* hiddenQsPrev,
+        const std::vector<const IntBuffer*> &inputCsPrev
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
+        a->learn(pos, rng, hiddenQsPrev, inputCsPrev);
     }
 
 public:
-    float _alpha; // Value learning rate
+    float _alpha; // Learning rate
     float _gamma; // Discount factor
-    float _epsilon; // Exploration rate
+    int _steps; // N step Q
+    int _historyIters; // Number of update iterations on history
 
     // Defaults
     Actor()
     :
     _alpha(0.01f),
     _gamma(0.98f),
-    _epsilon(0.02f)
+    _steps(3),
+    _historyIters(4)
     {}
 
     Actor(
@@ -130,6 +153,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenCsPrev,
         float reward,
         bool learnEnabled
     );
