@@ -391,11 +391,12 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// --- ART-specific ---
-
-	float addMins(
-		const std::vector<float> &in,
-		int row
+	void cmOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha,
+		float activeRatio
 	);
 };
 } // namespace ogmaneo

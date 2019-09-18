@@ -41,7 +41,6 @@ private:
     FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
-    IntBuffer _hiddenCsPrev; // Previous hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
     IntBuffer _hiddenUsages; // Hidden state usage
 
@@ -156,11 +155,6 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
-    }
-
-    // Get the previous hidden states
-    const IntBuffer &getHiddenCsPrev() const {
-        return _hiddenCsPrev;
     }
 
     // Get the hidden size
