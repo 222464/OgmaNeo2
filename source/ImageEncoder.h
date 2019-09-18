@@ -35,58 +35,94 @@ public:
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
+    int _lateralRadius;
+
+    FloatBuffer _hiddenStimuli;
+    FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsPrev; // Hidden states from previous tick
+    IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
+    IntBuffer _hiddenUsages; // Hidden state usage
 
-    IntBuffer _hiddenStatuses; // Status indices
+    SparseMatrix _laterals;
+
+    IntBuffer _hiddenCounts; // Number of units touching
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-
+    
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActivations
+    );
+
+    void inhibit(
+        const Int2 &pos,
+        std::mt19937 &rng
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const FloatBuffer*> &inputActivations
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActivations
     ) {
-        sc->forward(pos, rng, inputActs, learnEnabled);
+        sc->forward(pos, rng, inputActivations);
+    }
+
+    static void inhibitKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc
+    ) {
+        sc->inhibit(pos, rng);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const std::vector<const FloatBuffer*> &inputActivations
+    ) {
+        sc->learn(pos, rng, inputActivations);
     }
 
 public:
-    float _alpha; // Activation parameter
-    float _beta; // Weight learning rate
-    float _minVigilance; // Minimum vigilance threshold
+    float _alpha; // Forward learning rate
+    float _beta; // Lateral learning rate
+    int _explainIters; // Explaining-away iterations
 
     // Defaults
     ImageEncoder()
     :
-    _alpha(0.01f),
-    _beta(0.01f),
-    _minVigilance(0.995f)
+    _alpha(0.001f),
+    _beta(0.001f),
+    _explainIters(3)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
+        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
     // Activate the sparse coder (perform sparse coding)
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &inputActs, // Input states
+        const std::vector<const FloatBuffer*> &inputActivations, // Input activations
         bool learnEnabled // Whether to learn
     );
 
