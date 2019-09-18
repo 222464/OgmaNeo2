@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -30,15 +30,13 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _valueWeights; // Value function weights
-        SparseMatrix _actionWeights; // Action function weights
+        SparseMatrix _weights; // Q weights
     };
 
     // History sample for delayed updates
     struct HistorySample {
         std::vector<IntBuffer> _inputCs;
         IntBuffer _hiddenCs;
-        FloatBuffer _hiddenValues;
         
         float _reward;
     };
@@ -51,7 +49,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenValues; // Hidden value function output buffer
+    FloatBuffer _hiddenActivations; // Activations of actions
 
     std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
 
@@ -72,7 +70,6 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
     );
@@ -92,24 +89,23 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
     }
 
 public:
     float _alpha; // Value learning rate
-    float _beta; // Action learning rate
     float _gamma; // Discount factor
+    float _epsilon; // Exploration rate
 
     // Defaults
     Actor()
     :
-    _alpha(0.01f),
-    _beta(0.5f),
-    _gamma(0.98f)
+    _alpha(0.1f),
+    _gamma(0.99f),
+    _epsilon(0.02f)
     {}
 
     Actor(
@@ -133,7 +129,7 @@ public:
     // Step (get actions and update)
     void step(
         ComputeSystem &cs,
-        const std::vector<const IntBuffer*> &visibleCs,
+        const std::vector<const IntBuffer*> &inputCs,
         float reward,
         bool learnEnabled
     );
@@ -177,18 +173,11 @@ public:
         return _hiddenSize;
     }
 
-    // Get the value weights for a visible layer
-    const SparseMatrix &getValueWeights(
+    // Get the weights for a visible layer
+    const SparseMatrix &getWeights(
         int i // Index of layer
     ) {
-        return _visibleLayers[i]._valueWeights;
-    }
-
-    // Get the action weights for a visible layer
-    const SparseMatrix &getActionWeights(
-        int i // Index of layer
-    ) {
-        return _visibleLayers[i]._actionWeights;
+        return _visibleLayers[i]._weights;
     }
 };
 } // namespace ogmaneo
