@@ -41,12 +41,10 @@ private:
     FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsPrev; // Previous hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    IntBuffer _hiddenCsPrev; // Previous tick hidden states
 
     SparseMatrix _laterals;
-
-    IntBuffer _hiddenCounts; // Number of units touching
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -159,7 +157,7 @@ public:
         return _hiddenCs;
     }
 
-    // Get the hidden states
+    // Get the hidden states from the previous tick
     const IntBuffer &getHiddenCsPrev() const {
         return _hiddenCsPrev;
     }
