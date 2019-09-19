@@ -31,6 +31,8 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
+
+        FloatBuffer _reconActivations;
     };
 
 private:
@@ -42,10 +44,9 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-
+    IntBuffer _hiddenUsages; // Number of times used
+    
     SparseMatrix _laterals;
-
-    IntBuffer _hiddenCounts; // Number of units touching
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -68,6 +69,13 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const FloatBuffer*> &inputActivations
+    );
+
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int vli
     );
 
     static void forwardKernel(
@@ -96,16 +104,22 @@ private:
         sc->learn(pos, rng, inputActivations);
     }
 
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const IntBuffer* hiddenCs,
+        int vli
+    ) {
+        sc->backward(pos, rng, hiddenCs, vli);
+    }
+
 public:
-    float _alpha; // Forward learning rate
-    float _beta; // Lateral learning rate
     int _explainIters; // Explaining-away iterations
 
     // Defaults
     ImageEncoder()
     :
-    _alpha(0.001f),
-    _beta(0.001f),
     _explainIters(3)
     {}
 
@@ -122,6 +136,11 @@ public:
         ComputeSystem &cs, // Compute system
         const std::vector<const FloatBuffer*> &inputActivations, // Input activations
         bool learnEnabled // Whether to learn
+    );
+
+    void reconstruct(
+        ComputeSystem &cs, // Compute system
+        const IntBuffer* hiddenCs // Hidden state to reconstruct
     );
 
     // Write to stream
