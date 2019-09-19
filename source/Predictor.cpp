@@ -72,7 +72,7 @@ void Predictor::forward(
 
 //             sum += vl._weights.multiplyOHVs(*inputCsPlus[vli], hiddenIndex, vld._size.z);
 //             sum -= vl._weights.multiplyOHVs(*inputCsMinus[vli], hiddenIndex, vld._size.z);
-//             count += vl._weights.counts(hiddenIndex) / vld._size.z;
+//             count += vl._weights.count(hiddenIndex) / vld._size.z;
 //         }
 
 //         float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum / std::max(1, count * 2)));
