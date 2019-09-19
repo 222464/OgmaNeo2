@@ -34,7 +34,6 @@ void Hierarchy::initRandom(
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
     _combinedStatesInfer.resize(layerDescs.size());
-    _combinedStatesLearn.resize(layerDescs.size());
 
     _ticks.assign(layerDescs.size(), 0);
 
@@ -141,8 +140,9 @@ void Hierarchy::initRandom(
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._lRadius, scVisibleLayerDescs);
 
         _combinedStatesInfer[l] = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
-        _combinedStatesLearn[l] = _combinedStatesInfer[l];
     }
+
+    _hiddenCsPrev = _combinedStatesLearn = _combinedStatesInfer;
 }
 
 const Hierarchy &Hierarchy::operator=(
@@ -152,6 +152,7 @@ const Hierarchy &Hierarchy::operator=(
     _scLayers = other._scLayers;
     _combinedStatesInfer = other._combinedStatesInfer;
     _combinedStatesLearn = other._combinedStatesLearn;
+    _hiddenCsPrev = other._hiddenCsPrev;
 
     _historySizes = other._historySizes;
     _updates = other._updates;
@@ -242,6 +243,14 @@ void Hierarchy::step(
 
             // Updated
             _updates[l] = true;
+
+            // Copy
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < _scLayers[l].getHiddenCs().size(); x++)
+                copyInt(x, cs._rng, &_scLayers[l].getHiddenCs(), &_hiddenCsPrev[l]);
+#else
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), &_hiddenCsPrev[l]), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+#endif
  
             // Activate sparse coder
             _scLayers[l].step(cs, constGet(_histories[l]), learnEnabled);
@@ -294,9 +303,9 @@ void Hierarchy::step(
 
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _scLayers[l].getHiddenCs().size(); x++)
-                combine(x, cs._rng, &_scLayers[l].getHiddenCsPrev(), &_scLayers[l].getHiddenCs(), &_combinedStatesLearn[l], _scLayers[l].getHiddenSize());
+                combine(x, cs._rng, &_hiddenCsPrev[l], &_scLayers[l].getHiddenCs(), &_combinedStatesLearn[l], _scLayers[l].getHiddenSize());
 #else
-            runKernel1(cs, std::bind(Hierarchy::combineKernel, std::placeholders::_1, std::placeholders::_2, this, &_scLayers[l].getHiddenCsPrev(), &_scLayers[l].getHiddenCs(), &_combinedStatesLearn[l], _scLayers[l].getHiddenSize()), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+            runKernel1(cs, std::bind(Hierarchy::combineKernel, std::placeholders::_1, std::placeholders::_2, this, &_hiddenCsPrev[l], &_scLayers[l].getHiddenCs(), &_combinedStatesLearn[l], _scLayers[l].getHiddenSize()), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
 #endif
 
             // Step actor layers
@@ -352,6 +361,7 @@ void Hierarchy::writeToStream(
 
         writeBufferToStream(os, &_combinedStatesInfer[l]);
         writeBufferToStream(os, &_combinedStatesLearn[l]);
+        writeBufferToStream(os, &_hiddenCsPrev[l]);
     }
 }
 
@@ -373,6 +383,7 @@ void Hierarchy::readFromStream(
     _pLayers.resize(numLayers);
     _combinedStatesInfer.resize(numLayers);
     _combinedStatesLearn.resize(numLayers);
+    _hiddenCsPrev.resize(numLayers);
 
     _ticks.resize(numLayers);
 
@@ -421,5 +432,6 @@ void Hierarchy::readFromStream(
 
         readBufferFromStream(is, &_combinedStatesInfer[l]);
         readBufferFromStream(is, &_combinedStatesLearn[l]);
+        readBufferFromStream(is, &_hiddenCsPrev[l]);
     }
 }

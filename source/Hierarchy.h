@@ -51,6 +51,7 @@ private:
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
     std::vector<IntBuffer> _combinedStatesInfer;
     std::vector<IntBuffer> _combinedStatesLearn;
+    std::vector<IntBuffer> _hiddenCsPrev;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
