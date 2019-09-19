@@ -13,6 +13,17 @@
 
 using namespace ogmaneo;
 
+void Hierarchy::combine(
+    int pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    const IntBuffer* feedBackCs,
+    IntBuffer* combinedCs,
+    const Int3 &hiddenSize
+) {
+    (*combinedCs)[pos] = (*hiddenCs)[pos] + (*feedBackCs)[pos] * hiddenSize.z;
+}
+
 void Hierarchy::initRandom(
     ComputeSystem &cs,
     const std::vector<Int3> &inputSizes,
@@ -22,6 +33,7 @@ void Hierarchy::initRandom(
     // Create layers
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
+    _hiddenCsPrev.resize(layerDescs.size());
 
     _ticks.assign(layerDescs.size(), 0);
 
@@ -69,14 +81,7 @@ void Hierarchy::initRandom(
 
                 int inSize = inputSizes[i].x * inputSizes[i].y;
 				
-				_histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
-#endif
+				_histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 _historySizes[l][v] = inSize;
 			}
@@ -87,7 +92,7 @@ void Hierarchy::initRandom(
             // Predictor visible layer descriptors
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._size = Int3(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y, layerDescs[l]._hiddenSize.z * layerDescs[l]._hiddenSize.z);
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
             // Create actors
@@ -110,14 +115,7 @@ void Hierarchy::initRandom(
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
 			for (int v = 0; v < _histories[l].size(); v++) {
-                _histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
-#endif
+                _histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 _historySizes[l][v] = inSize;
             }
@@ -127,7 +125,7 @@ void Hierarchy::initRandom(
             // Predictor visible layer descriptors
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._size = Int3(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y, layerDescs[l]._hiddenSize.z * layerDescs[l]._hiddenSize.z);
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
             // Create actors
@@ -140,6 +138,8 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._lRadius, scVisibleLayerDescs);
+
+        _hiddenCsPrev[l] = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
     }
 }
 
@@ -148,6 +148,7 @@ const Hierarchy &Hierarchy::operator=(
 ) {
     // Layers
     _scLayers = other._scLayers;
+    _hiddenCsPrev = other._hiddenCsPrev;
 
     _historySizes = other._historySizes;
     _updates = other._updates;
@@ -239,14 +240,16 @@ void Hierarchy::step(
             // Updated
             _updates[l] = true;
 
-            std::vector<const IntBuffer*> fullInputs = constGet(_histories[l]);
-
-            // If recurrent
-            if (fullInputs.size() < _scLayers[l].getNumVisibleLayers())
-                fullInputs.push_back(&_scLayers[l].getHiddenCsPrev());
-            
+            // Copy
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < _scLayers[l].getHiddenCs().size(); x++)
+                copyInt(x, cs._rng, &_scLayers[l].getHiddenCs(), &_hiddenCsPrev[l]);
+#else
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), &_hiddenCsPrev[l]), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+#endif
+ 
             // Activate sparse coder
-            _scLayers[l].step(cs, fullInputs, learnEnabled);
+            _scLayers[l].step(cs, constGet(_histories[l]), learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
@@ -284,7 +287,7 @@ void Hierarchy::step(
             std::vector<const IntBuffer*> feedBackCsLearnMinus(1);
 
             feedBackCsInferMinus[0] = &_scLayers[l].getHiddenCs();
-            feedBackCsLearnMinus[0] = &_scLayers[l].getHiddenCsPrev();
+            feedBackCsLearnMinus[0] = &_hiddenCsPrev[l];
             feedBackCsLearnPlus[0] = &_scLayers[l].getHiddenCs();
 
             if (l < _scLayers.size() - 1) {
@@ -345,6 +348,8 @@ void Hierarchy::writeToStream(
             if (exists)
                 _pLayers[l][v]->writeToStream(os);
         }
+
+        writeBufferToStream(os, &_hiddenCsPrev[l]);
     }
 }
 
@@ -364,6 +369,7 @@ void Hierarchy::readFromStream(
 
     _scLayers.resize(numLayers);
     _pLayers.resize(numLayers);
+    _hiddenCsPrev.resize(numLayers);
 
     _ticks.resize(numLayers);
 
@@ -409,5 +415,7 @@ void Hierarchy::readFromStream(
             else
                 _pLayers[l][v] = nullptr;
         }
+
+        readBufferFromStream(is, &_hiddenCsPrev[l]);
     }
 }

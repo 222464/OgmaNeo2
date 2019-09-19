@@ -42,7 +42,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    IntBuffer _hiddenCsPrev; // Previous tick hidden states
+    IntBuffer _hiddenUsages; // Number of times used
 
     SparseMatrix _laterals;
 
@@ -96,15 +96,11 @@ private:
     }
 
 public:
-    float _alpha; // Forward learning rate
-    float _beta; // Lateral learning rate
     int _explainIters; // Explaining-away iterations
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.001f),
-    _beta(0.001f),
     _explainIters(3)
     {}
 
@@ -155,11 +151,6 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
-    }
-
-    // Get the hidden states
-    const IntBuffer &getHiddenCsPrev() const {
-        return _hiddenCsPrev;
     }
 
     // Get the hidden size
