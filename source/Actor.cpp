@@ -210,8 +210,6 @@ void Actor::step(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_int_distribution<int> doubleDist(0, 1);
-
     // Forward kernel
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
