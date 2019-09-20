@@ -235,7 +235,7 @@ void Hierarchy::initRandom(
                             int hiddenColumnIndex = address2(Int2(x, y), Int2(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y));
                             int hiddenIndex = address3(Int3(x, y, 0), layerDescs[l]._hiddenSize);
 
-                            _rLayers[l]._hiddenCounts[hiddenColumnIndex] += _rLayers[l]._weights[i].countsT(hiddenIndex) / inputSizes[i].z;
+                            _rLayers[l]._hiddenCounts[hiddenColumnIndex] += _rLayers[l]._weights[i].countT(hiddenIndex) / inputSizes[i].z;
                         }
 
                     _rLayers[l]._visibleCounts[i] = IntBuffer(_actions[i].size());
@@ -245,7 +245,7 @@ void Hierarchy::initRandom(
                             int visibleColumnIndex = address2(Int2(x, y), Int2(inputSizes[i].x, inputSizes[i].y));
                             int visibleIndex = address3(Int3(x, y, 0), inputSizes[i]);
 
-                            _rLayers[l]._visibleCounts[i][visibleColumnIndex] = _rLayers[l]._weights[i].counts(visibleIndex) / layerDescs[l]._hiddenSize.z;
+                            _rLayers[l]._visibleCounts[i][visibleColumnIndex] = _rLayers[l]._weights[i].count(visibleIndex) / layerDescs[l]._hiddenSize.z;
                         }    
                 }
             }
@@ -293,7 +293,7 @@ void Hierarchy::initRandom(
                     int hiddenColumnIndex = address2(Int2(x, y), Int2(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y));
                     int hiddenIndex = address3(Int3(x, y, 0), layerDescs[l]._hiddenSize);
 
-                    _rLayers[l]._hiddenCounts[hiddenColumnIndex] += _rLayers[l]._weights[0].countsT(hiddenIndex) / layerDescs[l - 1]._hiddenSize.z;
+                    _rLayers[l]._hiddenCounts[hiddenColumnIndex] += _rLayers[l]._weights[0].countT(hiddenIndex) / layerDescs[l - 1]._hiddenSize.z;
                 }
 
             _rLayers[l]._visibleCounts[0] = IntBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y);
@@ -303,7 +303,7 @@ void Hierarchy::initRandom(
                     int visibleColumnIndex = address2(Int2(x, y), Int2(layerDescs[l - 1]._hiddenSize.x, layerDescs[l - 1]._hiddenSize.y));
                     int visibleIndex = address3(Int3(x, y, 0), layerDescs[l - 1]._hiddenSize);
 
-                    _rLayers[l]._visibleCounts[0][visibleColumnIndex] = _rLayers[l]._weights[0].counts(visibleIndex) / layerDescs[l]._hiddenSize.z;
+                    _rLayers[l]._visibleCounts[0][visibleColumnIndex] = _rLayers[l]._weights[0].count(visibleIndex) / layerDescs[l]._hiddenSize.z;
                 }
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
