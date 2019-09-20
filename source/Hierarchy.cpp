@@ -136,7 +136,7 @@ void Hierarchy::learn(
         if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
             int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
-            float delta = _alpha * _rLayers[l]._errors[vli][visibleColumnIndex];
+            float delta = _alpha * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
 
             if (l == _scLayers.size() - 1)
                 _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -151,7 +151,7 @@ void Hierarchy::learn(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        float delta = _beta * _rLayers[l]._errors[vli][visibleColumnIndex];
+        float delta = _beta * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
 
         if (l == _scLayers.size() - 1)
             _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -189,6 +189,7 @@ void Hierarchy::initRandom(
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
+        std::uniform_real_distribution<float> weightDist0(-0.01f, 0.01f);
         std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
         // Histories for all input layers or just the one sparse coder (if not the first layer)
@@ -232,7 +233,7 @@ void Hierarchy::initRandom(
 
                     // Init weights
                     for (int j = 0; j < _rLayers[l]._weights[i]._nonZeroValues.size(); j++)
-                        _rLayers[l]._weights[i]._nonZeroValues[j] = weightDist(cs._rng);
+                        _rLayers[l]._weights[i]._nonZeroValues[j] = weightDist0(cs._rng);
 
                     for (int x = 0; x < layerDescs[l]._hiddenSize.x; x++)
                         for (int y = 0; y < layerDescs[l]._hiddenSize.y; y++) {
