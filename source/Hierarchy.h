@@ -153,6 +153,7 @@ private:
 
 public:
     float _alpha; // Output learning rate
+    float _beta; // Hidden learning rate
     float _gamma; // Discount factor
 
     int _maxHistorySamples; // Maximum number of history samples
@@ -161,7 +162,8 @@ public:
     // Default
     Hierarchy()
     :
-    _alpha(0.01f),
+    _alpha(0.001f),
+    _beta(0.01f),
     _gamma(0.99f),
     _maxHistorySamples(32),
     _historyIters(4)
