@@ -131,9 +131,9 @@ void Hierarchy::learn(
     const IntBuffer* inputCs
 ) {
     if (l == 0) {
-        int visibleColumnIndex = address2(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
+        if (!_actions[vli].empty()) {
+            int visibleColumnIndex = address2(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
 
-        if (!_rLayers[l]._weights[vli]._nonZeroValues.empty()) {
             int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
             float delta = _alpha * _rLayers[l]._errors[vli][visibleColumnIndex];
@@ -508,6 +508,9 @@ void Hierarchy::step(
             for (int l = _scLayers.size() - 1; l >= 0; l--) {
                 if (l == 0) {
                     for (int i = 0; i < _inputSizes.size(); i++) {
+                        if (_actions[i].empty())
+                            continue;
+
 #ifdef KERNEL_NOTHREAD
                         for (int x = 0; x < _inputSizes[i].x; x++)
                             for (int y = 0; y < _inputSizes[i].y; y++)
@@ -572,6 +575,9 @@ void Hierarchy::step(
             for (int l = _scLayers.size() - 1; l >= 0; l--) {
                 if (l == 0) {
                     for (int i = 0; i < _inputSizes.size(); i++) {
+                        if (_actions[i].empty())
+                            continue;
+
 #ifdef KERNEL_NOTHREAD
                         for (int x = 0; x < _inputSizes[i].x; x++)
                             for (int y = 0; y < _inputSizes[i].y; y++)
