@@ -45,9 +45,13 @@ public:
 
     struct RouteLayer {
         std::vector<SparseMatrix> _weights;
+        
+        std::vector<IntBuffer> _visibleCounts;
 
         std::vector<FloatBuffer> _errors;
         std::vector<FloatBuffer> _activations;
+
+        IntBuffer _hiddenCounts;
     };
 
     struct HistorySample {
@@ -146,8 +150,8 @@ private:
     }
 
 public:
-    float _alpha; // Learning rate
-    float _beta; // Learning rate
+    float _alpha; // Output learning rate
+    float _beta; // Hidden learning rate
     float _gamma; // Discount factor
 
     int _maxHistorySamples; // Maximum number of history samples
@@ -157,10 +161,10 @@ public:
     Hierarchy()
     :
     _alpha(0.01f),
-    _beta(0.1f),
+    _beta(0.01f),
     _gamma(0.99f),
-    _maxHistorySamples(64),
-    _historyIters(4)
+    _maxHistorySamples(32),
+    _historyIters(8)
     {}
 
     // Copy
