@@ -36,7 +36,7 @@ public:
     // History sample for delayed updates
     struct HistorySample {
         std::vector<IntBuffer> _inputCs;
-        IntBuffer _hiddenCs;
+        IntBuffer _hiddenCsPrev;
         
         float _reward;
     };
@@ -130,6 +130,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenCsPrev,
         float reward,
         bool learnEnabled
     );
