@@ -81,7 +81,7 @@ void Hierarchy::forward(
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
     
-        _rLayers[l]._activations[vli][visibleColumnIndex] = std::min(1.0f, std::max(0.0f, sum));
+        _rLayers[l]._activations[vli][visibleColumnIndex] = sum;//std::min(1.0f, std::max(0.0f, sum));
     }
 }
 
@@ -107,18 +107,18 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+        //float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 1.0f ? error : 0.0f);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;//(act > 0.0f && act < 1.0f ? error : 0.0f);
     }
     else {
         float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l].getHiddenSize().z);
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+        //float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 1.0f ? error : 0.0f);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;//(act > 0.0f && act < 1.0f ? error : 0.0f);
     }
 }
 
@@ -136,7 +136,7 @@ void Hierarchy::learn(
 
             int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
-            float delta = _alpha * _rLayers[l]._errors[vli][visibleColumnIndex];
+            float delta = _alpha * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
 
             if (l == _scLayers.size() - 1)
                 _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -151,7 +151,7 @@ void Hierarchy::learn(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        float delta = _beta * _rLayers[l]._errors[vli][visibleColumnIndex];
+        float delta = _beta * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
 
         if (l == _scLayers.size() - 1)
             _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -189,7 +189,7 @@ void Hierarchy::initRandom(
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
-        std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
+        std::uniform_real_distribution<float> weightDist(0.99f, 1.01f);
 
         // Histories for all input layers or just the one sparse coder (if not the first layer)
         _histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l]._temporalHorizon : layerDescs[l]._temporalHorizon);
@@ -468,35 +468,42 @@ void Hierarchy::step(
     if (_historySamples.size() > _maxHistorySamples)
         _historySamples.resize(_maxHistorySamples);
 
-    for (int l = _scLayers.size() - 1; l >= 0; l--) {
-        if (l == 0) {
-            for (int i = 0; i < _inputSizes.size(); i++) {
+    // Learn
+    if (learnEnabled && _historySamples.size() > 2) {
+        // Find latest Q on-policy
+        const HistorySample &s = _historySamples[1];
+        const HistorySample &sNext = _historySamples[0];
+            
+        for (int l = _scLayers.size() - 1; l >= 0; l--) {
+            if (l == 0) {
+                for (int i = 0; i < _inputSizes.size(); i++) {
+                    if (_actions[i].empty())
+                        continue;
+
 #ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < _inputSizes[i].x; x++)
-                    for (int y = 0; y < _inputSizes[i].y; y++)
-                        forward(Int2(x, y), cs._rng, &ns._states[l], l, i, nullptr);
+                    for (int x = 0; x < _inputSizes[i].x; x++)
+                        for (int y = 0; y < _inputSizes[i].y; y++)
+                            forward(Int2(x, y), cs._rng, &s._states[l], l, i, &sNext._actionsPrev[i]);
 #else
-                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns._states[l], l, i, nullptr), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
+                    runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, i, &sNext._actionsPrev[i]), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
+#endif
+                }
+            }
+            else {
+#ifdef KERNEL_NOTHREAD
+                for (int x = 0; x < _scLayers[l - 1].getHiddenSize().x; x++)
+                    for (int y = 0; y < _scLayers[l - 1].getHiddenSize().y; y++)
+                        forward(Int2(x, y), cs._rng, &s._states[l], l, 0, &s._states[l - 1]);
+#else
+                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &s._states[l], l, 0, &s._states[l - 1]), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
             }
         }
-        else {
-#ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < _scLayers[l - 1].getHiddenSize().x; x++)
-                for (int y = 0; y < _scLayers[l - 1].getHiddenSize().y; y++)
-                    forward(Int2(x, y), cs._rng, &ns._states[l], l, 0, &ns._states[l - 1]);
-#else
-            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns._states[l], l, 0, &ns._states[l - 1]), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
-#endif
-        }
-    }
 
-    // Keep predicted Q values
-    _qs = _rLayers.front()._activations;
+        // Keep predicted Q values
+        _qs = _rLayers.front()._activations;
 
-    // Learn
-    if (learnEnabled && _historySamples.size() > 1) {
-        std::uniform_int_distribution<int> sampleDist(1, _historySamples.size() - 1);
+        std::uniform_int_distribution<int> sampleDist(2, _historySamples.size() - 1);
 
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
@@ -596,6 +603,32 @@ void Hierarchy::step(
 #endif
                 }
             }
+        }
+    }
+
+    for (int l = _scLayers.size() - 1; l >= 0; l--) {
+        if (l == 0) {
+            for (int i = 0; i < _inputSizes.size(); i++) {
+                if (_actions[i].empty())
+                    continue;
+                    
+#ifdef KERNEL_NOTHREAD
+                for (int x = 0; x < _inputSizes[i].x; x++)
+                    for (int y = 0; y < _inputSizes[i].y; y++)
+                        forward(Int2(x, y), cs._rng, &ns._states[l], l, i, nullptr);
+#else
+                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns._states[l], l, i, nullptr), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
+#endif
+            }
+        }
+        else {
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < _scLayers[l - 1].getHiddenSize().x; x++)
+                for (int y = 0; y < _scLayers[l - 1].getHiddenSize().y; y++)
+                    forward(Int2(x, y), cs._rng, &ns._states[l], l, 0, &ns._states[l - 1]);
+#else
+            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns._states[l], l, 0, &ns._states[l - 1]), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
+#endif
         }
     }
 }
