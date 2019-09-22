@@ -31,116 +31,63 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-
-        FloatBuffer _reconActivations;
     };
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
-    int _lateralRadius;
-
-    FloatBuffer _hiddenStimuli;
-    FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
-    IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    IntBuffer _hiddenUsages; // Number of times used
-    
-    SparseMatrix _laterals;
+
+    IntBuffer _hiddenStatuses; // Status indices
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-    
+
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActivations
-    );
-
-    void inhibit(
-        const Int2 &pos,
-        std::mt19937 &rng
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActivations
-    );
-
-    void backward(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const IntBuffer* hiddenCs,
-        int vli
+        const std::vector<const FloatBuffer*> &inputActs,
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActivations
+        const std::vector<const FloatBuffer*> &inputActs,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputActivations);
-    }
-
-    static void inhibitKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        ImageEncoder* sc
-    ) {
-        sc->inhibit(pos, rng);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActivations
-    ) {
-        sc->learn(pos, rng, inputActivations);
-    }
-
-    static void backwardKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        ImageEncoder* sc,
-        const IntBuffer* hiddenCs,
-        int vli
-    ) {
-        sc->backward(pos, rng, hiddenCs, vli);
+        sc->forward(pos, rng, inputActs, learnEnabled);
     }
 
 public:
-    int _explainIters; // Explaining-away iterations
+    float _alpha; // Activation parameter
+    float _beta; // Weight learning rate
+    float _minVigilance; // Minimum vigilance threshold
 
     // Defaults
     ImageEncoder()
     :
-    _explainIters(3)
+    _alpha(0.01f),
+    _beta(0.01f),
+    _minVigilance(0.995f)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
-        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
     // Activate the sparse coder (perform sparse coding)
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &inputActivations, // Input activations
+        const std::vector<const FloatBuffer*> &inputActs, // Input states
         bool learnEnabled // Whether to learn
-    );
-
-    void reconstruct(
-        ComputeSystem &cs, // Compute system
-        const IntBuffer* hiddenCs // Hidden state to reconstruct
     );
 
     // Write to stream

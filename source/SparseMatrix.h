@@ -390,5 +390,10 @@ struct SparseMatrix {
 		int row,
 		int oneHotSize
 	);
+
+	float addMins(
+		const std::vector<float> &in,
+		int row
+	);
 };
 } // namespace ogmaneo

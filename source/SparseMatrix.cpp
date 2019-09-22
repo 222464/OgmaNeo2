@@ -891,3 +891,17 @@ float SparseMatrix::multiplyNoDiagonalOHVs(
 
 	return sum;
 }
+
+float SparseMatrix::addMins(
+	const std::vector<float> &in,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += std::min(_nonZeroValues[j], in[_columnIndices[j]]);
+
+	return sum;
+}
