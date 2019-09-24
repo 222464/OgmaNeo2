@@ -94,11 +94,6 @@ struct SparseMatrix {
         int row,
         float value
     );
-	
-	void scale(
-        int row,
-        float value
-    );
 
     float total(
         int row
@@ -126,11 +121,6 @@ struct SparseMatrix {
 	);
 
     void fillT(
-        int column,
-        float value
-    );
-
-	void scaleT(
         int column,
         float value
     );
@@ -393,7 +383,13 @@ struct SparseMatrix {
 		float alpha
 	);
 
-	// --- ART-specific ---
+	// --- Special ---
+	
+	float multiplyNoDiagonalOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
 
 	float addMins(
 		const std::vector<float> &in,
