@@ -537,7 +537,7 @@ void Hierarchy::step(
             float baseQ = 0.0f;
             float g = 1.0f;
             
-            for (int t2 = t - 1; t2 >= 0; t2--) {
+            for (int t2 = t - 1; t2 >= 1; t2--) {
                 baseQ += g * _historySamples[t2]._reward;
 
                 g *= _gamma;
