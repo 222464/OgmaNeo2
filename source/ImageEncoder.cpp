@@ -23,6 +23,20 @@ void ImageEncoder::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
+        float center = 0.0f;
+        int count = 0;
+
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            center += vl._weights.total(*inputActivations[vli], hiddenIndex);
+            count += vl._weights.count(hiddenIndex);
+        }
+
+        center /= std::max(1, count);
+
         float sum = 0.0f;
 
         // For each visible layer
