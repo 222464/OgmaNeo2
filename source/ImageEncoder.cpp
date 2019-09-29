@@ -44,7 +44,7 @@ void ImageEncoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiply(*inputActivations[vli], hiddenIndex);
+            sum += vl._weights.multiplyBiased(*inputActivations[vli], hiddenIndex, -center);
         }
 
         if (sum > maxActivation) {
@@ -72,7 +72,7 @@ void ImageEncoder::backward(
 
         float recon = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / vld._size.z);
 
-        vl._visibleActs[visibleIndex] = std::exp(recon);
+        vl._visibleActs[visibleIndex] = recon;
     }
 }
 
@@ -92,7 +92,7 @@ void ImageEncoder::learn(
 
         float recon = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / vld._size.z);
 
-        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - std::exp(recon)), visibleIndex, _hiddenSize.z);
+        vl._weights.deltaOHVsT(_hiddenCs, _alpha * ((*inputActivations[vli])[visibleIndex] - recon), visibleIndex, _hiddenSize.z);
     }
 }
 
@@ -111,7 +111,7 @@ void ImageEncoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
+    std::normal_distribution<float> weightDist(0.0f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {

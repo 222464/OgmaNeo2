@@ -391,9 +391,10 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	float addMins(
+	float multiplyBiased(
 		const std::vector<float> &in,
-		int row
+		int row,
+		float bias
 	);
 };
 } // namespace ogmaneo
