@@ -50,8 +50,7 @@ void SparseCoder::forward(
 
 void SparseCoder::inhibit(
     const Int2 &pos,
-    std::mt19937 &rng,
-    int it
+    std::mt19937 &rng
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -63,7 +62,7 @@ void SparseCoder::inhibit(
 
         float sum = _laterals.multiplyNoDiagonalOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.count(hiddenIndex) / _hiddenSize.z - 1); // -1 for missing diagonal
         
-        _hiddenActivations[hiddenIndex] += (_hiddenStimuli[hiddenIndex] - sum) / (1 + it);
+        _hiddenActivations[hiddenIndex] += _hiddenStimuli[hiddenIndex] - sum;
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -176,9 +175,9 @@ void SparseCoder::step(
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < _hiddenSize.x; x++)
             for (int y = 0; y < _hiddenSize.y; y++)
-                inhibit(Int2(x, y), cs._rng, it);
+                inhibit(Int2(x, y), cs._rng);
 #else
-        runKernel2(cs, std::bind(SparseCoder::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this, it), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(SparseCoder::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
     }
 

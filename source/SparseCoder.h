@@ -60,8 +60,7 @@ private:
 
     void inhibit(
         const Int2 &pos,
-        std::mt19937 &rng,
-        int it
+        std::mt19937 &rng
     );
 
     void learn(
@@ -82,10 +81,9 @@ private:
     static void inhibitKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
-        int it
+        SparseCoder* sc
     ) {
-        sc->inhibit(pos, rng, it);
+        sc->inhibit(pos, rng);
     }
 
     static void learnKernel(
@@ -103,7 +101,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _explainIters(8)
+    _explainIters(3)
     {}
 
     // Create a sparse coding layer with random initialization
