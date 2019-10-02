@@ -31,8 +31,6 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-
-        FloatBuffer _visibleActs; // For reconstruction
     };
 
 private:
@@ -95,14 +93,6 @@ private:
     }
 
 public:
-    float _alpha; // Learning rate
-
-    // Initialize defaults
-    ImageEncoder()
-    :
-    _alpha(0.01f)
-    {}
-
     // Create a randomly initialized image encoder
     void initRandom(
         ComputeSystem &cs, // Compute system
@@ -113,14 +103,7 @@ public:
     // Step the image encoder
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &inputActivations, // Input state (activations)
-        bool learnEnabled = true // Whether to learn
-    );
-
-    // Reconstruct (reverse) mapping
-    void reconstruct(
-        ComputeSystem &cs, // Compute system
-        const IntBuffer* hiddenCs // Hidden states to reconstruct
+        const std::vector<const FloatBuffer*> &inputActivations // Input state (activations)
     );
 
     // Write to stream
@@ -160,13 +143,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
-    }
-
-    // Get a visible layer's feed weights
-    const SparseMatrix &getWeights(
-        int i // Index of the visible layer
-    ) const {
-        return _visibleLayers[i]._weights;
     }
 };
 } // namespace ogmaneo
