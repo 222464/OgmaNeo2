@@ -79,7 +79,7 @@ void Hierarchy::forward(
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
     
-        _rLayers[l]._activations[vli][visibleColumnIndex] = std::max(0.0f, sum);
+        _rLayers[l]._activations[vli][visibleColumnIndex] = sigmoid(sum);
     }
 }
 
@@ -97,34 +97,26 @@ void Hierarchy::backward(
     if (l == 0) {
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        if (act > 0.0f) {
-            float error = 0.0f;
+        float error = 0.0f;
 
-            // For each visible layer
-            for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
-                if (!_actions[vli].empty())
-                    error += _rLayers[l]._weights[vli].multiplyOHVsT(*inputCs[vli], _rLayers[l]._errors[vli], hiddenIndex, _inputSizes[vli].z);
-            }
-
-            error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
-
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
+        // For each visible layer
+        for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
+            if (!_actions[vli].empty())
+                error += _rLayers[l]._weights[vli].multiplyOHVsT(*inputCs[vli], _rLayers[l]._errors[vli], hiddenIndex, _inputSizes[vli].z);
         }
-        else
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = 0.0f;
+
+        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
     }
     else {
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
 
-        if (act > 0.0f) {
-            float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
+        float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 
-            error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
-            
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
-        }
-        else
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = 0.0f;
+        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+        
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
     }
 }
 
