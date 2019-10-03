@@ -905,3 +905,45 @@ float SparseMatrix::addMins(
 
 	return sum;
 }
+
+void SparseMatrix::deltaRMSOHVs(
+	SparseMatrix &rms,
+	const std::vector<int> &nonZeroIndices,
+	float delta,
+	int row,
+	int oneHotSize,
+	float alpha,
+	float decay
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		rms._nonZeroValues[j] = (1.0f - decay) * rms._nonZeroValues[j] + decay * delta * delta;
+		_nonZeroValues[j] += alpha * delta / std::sqrt(rms._nonZeroValues[j] + 0.0001f);
+	}
+}
+
+void SparseMatrix::deltaRMSOHVs(
+	SparseMatrix &rms,
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<float> &nonZeroScalars,
+	float delta,
+	int row,
+	int oneHotSize,
+	float alpha,
+	float decay
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = _columnIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[i];
+
+		float grad = delta * nonZeroScalars[i];
+
+		rms._nonZeroValues[j] = (1.0f - decay) * rms._nonZeroValues[j] + decay * grad * grad;
+		_nonZeroValues[j] += alpha * grad / std::sqrt(rms._nonZeroValues[j] + 0.0001f);
+	}
+}

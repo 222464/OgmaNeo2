@@ -395,5 +395,26 @@ struct SparseMatrix {
 		const std::vector<float> &in,
 		int row
 	);
+
+	void deltaRMSOHVs(
+		SparseMatrix &rms,
+		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int row,
+		int oneHotSize,
+		float alpha,
+		float decay
+	);
+
+	void deltaRMSOHVs(
+		SparseMatrix &rms,
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize,
+		float alpha,
+		float decay
+	);
 };
 } // namespace ogmaneo
