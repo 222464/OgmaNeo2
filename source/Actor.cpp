@@ -78,7 +78,7 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float delta = _alpha * std::min(1.0f, std::max(-1.0f, newValue - sum));
+    float delta = _alpha * (newValue - sum);
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
