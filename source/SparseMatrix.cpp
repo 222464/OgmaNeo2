@@ -136,20 +136,6 @@ int SparseMatrix::count(
 	return _rowRanges[nextIndex] - _rowRanges[row];
 }
 
-float SparseMatrix::count(
-	const std::vector<float> &in,
-	int row
-) {
-	float sum = 0.0f;
-
-	int nextIndex = row + 1;
-	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		sum += in[_columnIndices[j]];
-
-	return sum;
-}
-
 void SparseMatrix::fill(
 	int row,
     float value
@@ -171,6 +157,20 @@ float SparseMatrix::total(
 	
 	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
 		sum += _nonZeroValues[j];
+
+	return sum;
+}
+
+float SparseMatrix::total(
+	const std::vector<float> &in,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += in[_columnIndices[j]];
 
 	return sum;
 }
@@ -214,20 +214,6 @@ int SparseMatrix::countT(
 	return _columnRanges[nextIndex] - _columnRanges[column];
 }
 
-float SparseMatrix::countT(
-	const std::vector<float> &in,
-	int column
-) {
-	float sum = 0.0f;
-
-	int nextIndex = column + 1;
-	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		sum += in[_rowIndices[j]];
-
-	return sum;
-}
-
 void SparseMatrix::fillT(
 	int column,
     float value
@@ -249,6 +235,20 @@ float SparseMatrix::totalT(
 	
 	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
 		sum += _nonZeroValues[_nonZeroValueIndices[j]];
+
+	return sum;
+}
+
+float SparseMatrix::totalT(
+	const std::vector<float> &in,
+	int column
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		sum += in[_rowIndices[j]];
 
 	return sum;
 }
@@ -888,6 +888,21 @@ float SparseMatrix::multiplyNoDiagonalOHVs(
 
 		sum += _nonZeroValues[j];
 	}
+
+	return sum;
+}
+
+float SparseMatrix::multiplyBiased(
+	const std::vector<float> &in,
+	int row,
+	float bias
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += _nonZeroValues[j] * (in[_columnIndices[j]] + bias);
 
 	return sum;
 }

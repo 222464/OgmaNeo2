@@ -85,11 +85,6 @@ struct SparseMatrix {
 		int row
 	);
 
-	float count(
-		const std::vector<float> &in,
-		int row
-	);
-
     void fill(
         int row,
         float value
@@ -98,6 +93,11 @@ struct SparseMatrix {
     float total(
         int row
     );
+
+	float total(
+		const std::vector<float> &in,
+		int row
+	);
 
 	// --- Transpose ---
 
@@ -115,11 +115,6 @@ struct SparseMatrix {
 		int column
 	);
 
-	float countT(
-		const std::vector<float> &in,
-		int column
-	);
-
     void fillT(
         int column,
         float value
@@ -128,6 +123,11 @@ struct SparseMatrix {
     float totalT(
         int column
     );
+
+	float totalT(
+		const std::vector<float> &in,
+		int column
+	);
 
 	// --- One-Hot Vectors Operations ---
 
@@ -389,6 +389,12 @@ struct SparseMatrix {
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize
+	);
+
+	float multiplyBiased(
+		const std::vector<float> &in,
+		int row,
+		float bias
 	);
 };
 } // namespace ogmaneo
