@@ -24,31 +24,11 @@ void Hierarchy::forward(
     if (l == 0) {
         int visibleColumnIndex = address2(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
 
-        if (!_actions[vli].empty()) {
-            float maxValue = -999999.0f;
+        float maxValue = -999999.0f;
 
-            if (inputCs == nullptr) {
-                for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
-                    int visibleIndex = address3(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
-
-                    float sum;
-
-                    if (l == _scLayers.size() - 1)
-                        sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, visibleIndex, _scLayers[l].getHiddenSize().z);
-                    else
-                        sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
-
-                    sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-                    
-                    if (sum > maxValue) {
-                        maxValue = sum;
-
-                        _actions[vli][visibleColumnIndex] = vc;
-                    }
-                }
-            }
-            else {
-                int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
+        if (inputCs == nullptr) {
+            for (int vc = 0; vc < _inputSizes[vli].z; vc++) {
+                int visibleIndex = address3(Int3(pos.x, pos.y, vc), _inputSizes[vli]);
 
                 float sum;
 
@@ -59,11 +39,29 @@ void Hierarchy::forward(
 
                 sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
                 
-                maxValue = sum;
-            }
+                if (sum > maxValue) {
+                    maxValue = sum;
 
-            _rLayers[l]._activations[vli][visibleColumnIndex] = maxValue;
+                    _actions[vli][visibleColumnIndex] = vc;
+                }
+            }
         }
+        else {
+            int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
+
+            float sum;
+
+            if (l == _scLayers.size() - 1)
+                sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, visibleIndex, _scLayers[l].getHiddenSize().z);
+            else
+                sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
+
+            sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+            
+            maxValue = sum;
+        }
+
+        _rLayers[l]._activations[vli][visibleColumnIndex] = maxValue;
     }
     else {
         int visibleColumnIndex = address2(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
@@ -81,7 +79,7 @@ void Hierarchy::forward(
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
     
-        _rLayers[l]._activations[vli][visibleColumnIndex] = std::min(2.0f, std::max(0.0f, sum));
+        _rLayers[l]._activations[vli][visibleColumnIndex] = sum;
     }
 }
 
@@ -97,6 +95,8 @@ void Hierarchy::backward(
     int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
     if (l == 0) {
+        //float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+
         float error = 0.0f;
 
         // For each visible layer
@@ -107,18 +107,16 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
-
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : 0.0f);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
     }
     else {
-        float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l].getHiddenSize().z);
+        //float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+
+        float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
-
-        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
-
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 2.0f ? error : 0.0f);
+        
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
     }
 }
 
@@ -131,13 +129,13 @@ void Hierarchy::learn(
     const IntBuffer* inputCs
 ) {
     if (l == 0) {
-        if (!_actions[vli].empty()) {
-            int visibleColumnIndex = address2(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
+        int visibleColumnIndex = address2(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
 
+        if (_rLayers[l]._errors[vli][visibleColumnIndex] != 0.0f) {
             int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
             float delta = _alpha * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
-
+            
             if (l == _scLayers.size() - 1)
                 _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
             else
@@ -147,16 +145,18 @@ void Hierarchy::learn(
     else {
         int visibleColumnIndex = address2(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
 
-        int inputC = (*inputCs)[visibleColumnIndex];
+        if (_rLayers[l]._errors[vli][visibleColumnIndex] != 0.0f) {
+            int inputC = (*inputCs)[visibleColumnIndex];
 
-        int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
+            int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        float delta = _beta * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
-
-        if (l == _scLayers.size() - 1)
-            _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
-        else
-            _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], delta, visibleIndex, _scLayers[l].getHiddenSize().z);
+            float delta = _beta * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
+            
+            if (l == _scLayers.size() - 1)
+                _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
+            else
+                _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], delta, visibleIndex, _scLayers[l].getHiddenSize().z);
+        }
     }
 }
 
