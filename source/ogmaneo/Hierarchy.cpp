@@ -131,32 +131,28 @@ void Hierarchy::learn(
     if (l == 0) {
         int visibleColumnIndex = address2(pos, Int2(_inputSizes[vli].x, _inputSizes[vli].y));
 
-        if (_rLayers[l]._errors[vli][visibleColumnIndex] != 0.0f) {
-            int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
+        int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
-            float delta = _alpha * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
-            
-            if (l == _scLayers.size() - 1)
-                _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
-            else
-                _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], delta, visibleIndex, _scLayers[l].getHiddenSize().z);
-        }
+        float delta = _alpha * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
+        
+        if (l == _scLayers.size() - 1)
+            _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
+        else
+            _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], delta, visibleIndex, _scLayers[l].getHiddenSize().z);
     }
     else {
         int visibleColumnIndex = address2(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
 
-        if (_rLayers[l]._errors[vli][visibleColumnIndex] != 0.0f) {
-            int inputC = (*inputCs)[visibleColumnIndex];
+        int inputC = (*inputCs)[visibleColumnIndex];
 
-            int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
+        int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-            float delta = _beta * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
-            
-            if (l == _scLayers.size() - 1)
-                _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
-            else
-                _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], delta, visibleIndex, _scLayers[l].getHiddenSize().z);
-        }
+        float delta = _beta * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
+        
+        if (l == _scLayers.size() - 1)
+            _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
+        else
+            _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], delta, visibleIndex, _scLayers[l].getHiddenSize().z);
     }
 }
 
