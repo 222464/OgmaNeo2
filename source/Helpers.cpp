@@ -157,6 +157,17 @@ void ogmaneo::copyFloat(
     (*dst)[pos] = (*src)[pos];
 }
 
+void ogmaneo::randomize(
+    int pos,
+    std::mt19937 &rng,
+    IntBuffer* dst,
+    int columnSize
+) {
+    std::uniform_int_distribution<int> columnDist(0, columnSize - 1);
+
+    (*dst)[pos] = columnDist(rng);
+}
+
 std::vector<IntBuffer*> ogmaneo::get(
     std::vector<std::shared_ptr<IntBuffer>> &v
 ) {

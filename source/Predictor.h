@@ -37,11 +37,12 @@ private:
     Int3 _hiddenSize; // Size of the output/hidden/prediction
 
     IntBuffer _hiddenCs; // Hidden state
-    IntBuffer _hiddenTargetCsPrev; // Target hidden state
 
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
+
+    std::vector<IntBuffer> _randomInputs;
 
     // --- Kernels ---
 
@@ -57,9 +58,9 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
-        const IntBuffer* hiddenTargetCsPrev,
         const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const std::vector<const IntBuffer*> &inputCsMinus,
+        bool isRandom
     );
 
     static void forwardKernel(
@@ -78,19 +79,21 @@ private:
         std::mt19937 &rng,
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
-        const IntBuffer* hiddenTargetCsPrev,
         const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const std::vector<const IntBuffer*> &inputCsMinus,
+        bool isRandom
     ) {
-        p->learn(pos, rng, hiddenTargetCs, hiddenTargetCsPrev, inputCsPlus, inputCsMinus);
+        p->learn(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus, isRandom);
     }
 
 public:
+    int _numRandomSamples;
     float _alpha; // Learning rate
 
     // Defaults
     Predictor()
     :
+    _numRandomSamples(8),
     _alpha(1.0f)
     {}
 

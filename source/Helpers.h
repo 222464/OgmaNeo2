@@ -145,6 +145,14 @@ void copyFloat(
     FloatBuffer* dst // Destination buffer
 );
 
+// Randomize Cs kernel
+void randomize(
+    int pos, // Position
+    std::mt19937 &rng, // Generator
+    IntBuffer* dst,
+    int columnSize
+);
+
 // --- Bounds ---
 
 // Bounds check from (0, 0) to upperBound
