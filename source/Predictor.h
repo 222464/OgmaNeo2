@@ -59,8 +59,7 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
         const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus,
-        bool isRandom
+        const std::vector<const IntBuffer*> &inputCsMinus
     );
 
     static void forwardKernel(
@@ -80,20 +79,17 @@ private:
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
         const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus,
-        bool isRandom
+        const std::vector<const IntBuffer*> &inputCsMinus
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus, isRandom);
+        p->learn(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
     }
 
 public:
-    int _numRandomSamples;
     float _alpha; // Learning rate
 
     // Defaults
     Predictor()
     :
-    _numRandomSamples(8),
     _alpha(1.0f)
     {}
 
