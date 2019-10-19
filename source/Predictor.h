@@ -42,8 +42,6 @@ private:
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
-    std::vector<IntBuffer> _randomInputs;
-
     // --- Kernels ---
 
     void forward(

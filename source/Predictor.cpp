@@ -96,7 +96,6 @@ void Predictor::initRandom(
     _hiddenSize = hiddenSize;
 
     _visibleLayers.resize(_visibleLayerDescs.size());
-    _randomInputs.resize(_visibleLayerDescs.size());
 
     // Pre-compute dimensions
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
@@ -116,8 +115,6 @@ void Predictor::initRandom(
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
-
-        _randomInputs[vli] = IntBuffer(numVisibleColumns, 0);
     }
 
     // Hidden Cs
@@ -206,7 +203,6 @@ void Predictor::readFromStream(
 
     _visibleLayers.resize(numVisibleLayers);
     _visibleLayerDescs.resize(numVisibleLayers);
-    _randomInputs.resize(numVisibleLayers);
     
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -215,7 +211,5 @@ void Predictor::readFromStream(
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
         readSMFromStream(is, vl._weights);
-
-        _randomInputs[vli] = IntBuffer(vld._size.x * vld._size.y, 0);
     }
 }
