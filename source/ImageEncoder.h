@@ -181,12 +181,5 @@ public:
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
     }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayers[i]._weights;
-    }
 };
 } // namespace ogmaneo
