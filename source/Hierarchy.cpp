@@ -13,17 +13,6 @@
 
 using namespace ogmaneo;
 
-void Hierarchy::combine(
-    int pos,
-    std::mt19937 &rng,
-    const IntBuffer* hiddenCs,
-    const IntBuffer* feedBackCs,
-    IntBuffer* combinedCs,
-    const Int3 &hiddenSize
-) {
-    (*combinedCs)[pos] = (*hiddenCs)[pos] + (*feedBackCs)[pos] * hiddenSize.z;
-}
-
 void Hierarchy::initRandom(
     ComputeSystem &cs,
     const std::vector<Int3> &inputSizes,
@@ -92,7 +81,7 @@ void Hierarchy::initRandom(
             // Predictor visible layer descriptors
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
 
-            pVisibleLayerDescs[0]._size = Int3(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y, layerDescs[l]._hiddenSize.z * layerDescs[l]._hiddenSize.z);
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
             // Create actors
@@ -125,7 +114,7 @@ void Hierarchy::initRandom(
             // Predictor visible layer descriptors
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
 
-            pVisibleLayerDescs[0]._size = Int3(layerDescs[l]._hiddenSize.x, layerDescs[l]._hiddenSize.y, layerDescs[l]._hiddenSize.z * layerDescs[l]._hiddenSize.z);
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
             // Create actors

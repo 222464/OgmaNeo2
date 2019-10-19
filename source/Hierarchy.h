@@ -64,27 +64,6 @@ private:
     // Input dimensions
     std::vector<Int3> _inputSizes;
 
-    void combine(
-        int pos,
-        std::mt19937 &rng,
-        const IntBuffer* hiddenCs,
-        const IntBuffer* feedBackCs,
-        IntBuffer* combinedCs,
-        const Int3 &hiddenSize
-    );
-
-    static void combineKernel(
-        int pos,
-        std::mt19937 &rng,
-        Hierarchy* h,
-        const IntBuffer* hiddenCs,
-        const IntBuffer* feedBackCs,
-        IntBuffer* combinedCs,
-        const Int3 &hiddenSize
-    ) {
-        h->combine(pos, rng, hiddenCs, feedBackCs, combinedCs, hiddenSize);
-    }
-
 public:
     // Default
     Hierarchy() {}
