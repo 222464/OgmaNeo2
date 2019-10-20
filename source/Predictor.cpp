@@ -15,8 +15,8 @@ void Predictor::forward(
     const Int2 &pos,
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCsPlus,
-    const std::vector<const IntBuffer*> &inputCsMinus
+    const IntBuffer* feedBackCs,
+    const IntBuffer* inputCs
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -28,14 +28,8 @@ void Predictor::forward(
 
         float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 0.0001f : 0.0f);
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            sum += vl._weights.multiplyOHVs(*inputCsPlus[vli], hiddenIndex, vld._size.z);
-            sum -= vl._weights.multiplyOHVs(*inputCsMinus[vli], hiddenIndex, vld._size.z);
-        }
+        sum += _visibleLayer._weights.multiplyOHVs(*feedBackCs, hiddenIndex, _visibleLayerDesc._size.z);
+        sum -= _visibleLayer._weights.multiplyOHVs(*inputCs, hiddenIndex, _visibleLayerDesc._size.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -50,13 +44,14 @@ void Predictor::forward(
 void Predictor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCsPlus,
-    const std::vector<const IntBuffer*> &inputCsMinus
+    const IntBuffer* feedBackCs,
+    int index
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
+    const HistorySample* s = _historySamples[index].get();
+
+    int targetC = s->_hiddenTargetCs[hiddenColumnIndex];
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -64,38 +59,24 @@ void Predictor::learn(
         float sum = 0.0f;
         int count = 0;
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            sum += vl._weights.multiplyOHVs(*inputCsPlus[vli], hiddenIndex, vld._size.z);
-            sum -= vl._weights.multiplyOHVs(*inputCsMinus[vli], hiddenIndex, vld._size.z);
-            count += vl._weights.count(hiddenIndex) / vld._size.z;
-        }
+        sum += _visibleLayer._weights.multiplyOHVs(*feedBackCs, hiddenIndex, _visibleLayerDesc._size.z);
+        sum -= _visibleLayer._weights.multiplyOHVs(s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
 
         float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum / std::max(1, count * 2)));
 
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            vl._weights.deltaOHVs(*inputCsPlus[vli], delta, hiddenIndex, vld._size.z);
-            vl._weights.deltaOHVs(*inputCsMinus[vli], -delta, hiddenIndex, vld._size.z);
-        }
+        _visibleLayer._weights.deltaOHVs(*feedBackCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
+        _visibleLayer._weights.deltaOHVs(s->_inputCs, -delta, hiddenIndex, _visibleLayerDesc._size.z);
     }
 }
 
 void Predictor::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
-    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+    const VisibleLayerDesc &visibleLayerDesc
 ) {
-    _visibleLayerDescs = visibleLayerDescs;
+    _visibleLayerDesc = visibleLayerDesc;
 
     _hiddenSize = hiddenSize;
-
-    _visibleLayers.resize(_visibleLayerDescs.size());
 
     // Pre-compute dimensions
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
@@ -103,19 +84,14 @@ void Predictor::initRandom(
 
     std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
-    // Create layers
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    // Create layer
+    int numVisibleColumns = _visibleLayerDesc._size.x * _visibleLayerDesc._size.y;
 
-        int numVisibleColumns = vld._size.x * vld._size.y;
+    // Create weight matrix for this visible layer and initialize randomly
+    initSMLocalRF(_visibleLayerDesc._size, _hiddenSize, _visibleLayerDesc._radius, _visibleLayer._weights);
 
-        // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
-
-        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
-            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
-    }
+    for (int i = 0; i < _visibleLayer._weights._nonZeroValues.size(); i++)
+        _visibleLayer._weights._nonZeroValues[i] = weightDist(cs._rng);
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
@@ -124,8 +100,8 @@ void Predictor::initRandom(
 void Predictor::activate(
     ComputeSystem &cs,
     const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCsPlus,
-    const std::vector<const IntBuffer*> &inputCsMinus
+    const IntBuffer* feedBackCs,
+    const IntBuffer* inputCs
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -134,29 +110,56 @@ void Predictor::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
+            forward(Int2(x, y), cs._rng, hiddenTargetCs, feedBackCs, inputCs);
 #else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, feedBackCs, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
 void Predictor::learn(
     ComputeSystem &cs,
     const IntBuffer* hiddenTargetCs,
-    const std::vector<const IntBuffer*> &inputCsPlus,
-    const std::vector<const IntBuffer*> &inputCsMinus
+    const IntBuffer* inputCs
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    // Learn kernel
+    for (int t = 0; t < _historySamples.size(); t++) {
+        // Learn kernel
 #ifdef KERNEL_NOTHREAD
-    for (int x = 0; x < _hiddenSize.x; x++)
-        for (int y = 0; y < _hiddenSize.y; y++)
-            learn(Int2(x, y), cs._rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
+        for (int x = 0; x < _hiddenSize.x; x++)
+            for (int y = 0; y < _hiddenSize.y; y++)
+                learn(Int2(x, y), cs._rng, inputCs, t);
 #else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, inputCsPlus, inputCsMinus), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, t), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
+    }
+
+    // Add sample
+    if (_historySamples.size() > _maxHistorySize)
+        _historySamples.resize(_maxHistorySize);
+
+    if (_historySamples.size() == _maxHistorySize) {
+        // Shift
+        std::unique_ptr<HistorySample> first = std::move(_historySamples[0]);
+
+        for (int t = 0; t < _maxHistorySize - 1; t++) {
+            _historySamples[t] = std::move(_historySamples[t + 1]);
+        }
+
+        first->_inputCs = *inputCs;
+        first->_hiddenTargetCs = *hiddenTargetCs;
+
+        _historySamples.back() = std::move(first);
+    }
+    else {
+        std::unique_ptr<HistorySample> sample = std::make_unique<HistorySample>();
+
+        sample->_inputCs = *inputCs;
+        sample->_hiddenTargetCs = *hiddenTargetCs;
+        
+        _historySamples.push_back(std::move(sample));
+    }
 }
 
 void Predictor::writeToStream(
@@ -171,18 +174,9 @@ void Predictor::writeToStream(
 
     writeBufferToStream(os, &_hiddenCs);
 
-    int numVisibleLayers = _visibleLayers.size();
+    os.write(reinterpret_cast<const char*>(&_visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
-    
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        const VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
-
-        writeSMToStream(os, vl._weights);
-    }
+    writeSMToStream(os, _visibleLayer._weights);
 }
 
 void Predictor::readFromStream(
@@ -197,19 +191,7 @@ void Predictor::readFromStream(
 
     readBufferFromStream(is, &_hiddenCs);
 
-    int numVisibleLayers;
-    
-    is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    _visibleLayers.resize(numVisibleLayers);
-    _visibleLayerDescs.resize(numVisibleLayers);
-    
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
-
-        readSMFromStream(is, vl._weights);
-    }
+    readSMFromStream(is, _visibleLayer._weights);
 }

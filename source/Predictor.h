@@ -33,14 +33,22 @@ public:
         SparseMatrix _weights; // Weight matrix
     };
 
+    struct HistorySample {
+        IntBuffer _inputCs;
+
+        IntBuffer _hiddenTargetCs;
+    };
+
 private:
     Int3 _hiddenSize; // Size of the output/hidden/prediction
 
     IntBuffer _hiddenCs; // Hidden state
 
+    std::vector<std::unique_ptr<HistorySample>> _historySamples;
+
     // Visible layers and descs
-    std::vector<VisibleLayer> _visibleLayers;
-    std::vector<VisibleLayerDesc> _visibleLayerDescs;
+    VisibleLayer _visibleLayer;
+    VisibleLayerDesc _visibleLayerDesc;
 
     // --- Kernels ---
 
@@ -48,16 +56,15 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const IntBuffer* feedBackCs,
+        const IntBuffer* inputCs
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const IntBuffer* feedBackCs,
+        int index
     );
 
     static void forwardKernel(
@@ -65,53 +72,53 @@ private:
         std::mt19937 &rng,
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const IntBuffer* feedBackCs,
+        const IntBuffer* inputCs
     ) {
-        p->forward(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
+        p->forward(pos, rng, hiddenTargetCs, feedBackCs, inputCs);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const IntBuffer* feedBackCs,
+        int index
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCsPlus, inputCsMinus);
+        p->learn(pos, rng, feedBackCs, index);
     }
 
 public:
     float _alpha; // Learning rate
+    int _maxHistorySize;
 
     // Defaults
     Predictor()
     :
-    _alpha(1.0f)
+    _alpha(1.0f),
+    _maxHistorySize(4)
     {}
 
     // Create with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output/prediction size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+        const VisibleLayerDesc &visibleLayerDesc
     ); 
 
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const IntBuffer* feedBackCs,
+        const IntBuffer* inputCs
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCsPlus,
-        const std::vector<const IntBuffer*> &inputCsMinus
+        const IntBuffer* inputCs
     );
 
     // Write to stream
