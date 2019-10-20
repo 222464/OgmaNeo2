@@ -925,7 +925,7 @@ void SparseMatrix::deltaCombinedOHVs(
 
 	int nextIndex = row + 1;
 
-	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize2) {
 		int i = _columnIndices[jj] / oneHotSize2;
 		int j = jj + nonZeroIndices0[i] + nonZeroIndices1[i] * oneHotSize;
 
