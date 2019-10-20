@@ -26,9 +26,7 @@ void Predictor::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 0.0001f : 0.0f);
-
-        sum += _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, *inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+        float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, *inputCs, hiddenIndex, _visibleLayerDesc._size.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
