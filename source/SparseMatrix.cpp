@@ -891,3 +891,44 @@ float SparseMatrix::multiplyNoDiagonalOHVs(
 
 	return sum;
 }
+
+float SparseMatrix::multiplyCombinedOHVs(
+	const std::vector<int> &nonZeroIndices0,
+	const std::vector<int> &nonZeroIndices1,
+	int row,
+	int oneHotSize
+) {
+	int oneHotSize2 = oneHotSize * oneHotSize;
+
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize2) {
+		int i = _columnIndices[jj] / oneHotSize2;
+		int j = jj + nonZeroIndices0[i] + nonZeroIndices1[i] * oneHotSize;
+
+		sum += _nonZeroValues[j];
+	}
+
+	return sum;
+}
+
+void SparseMatrix::deltaCombinedOHVs(
+	const std::vector<int> &nonZeroIndices0,
+	const std::vector<int> &nonZeroIndices1,
+	float delta,
+	int row,
+	int oneHotSize
+) {
+	int oneHotSize2 = oneHotSize * oneHotSize;
+
+	int nextIndex = row + 1;
+
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = _columnIndices[jj] / oneHotSize2;
+		int j = jj + nonZeroIndices0[i] + nonZeroIndices1[i] * oneHotSize;
+
+		_nonZeroValues[j] += delta;
+	}
+}

@@ -28,8 +28,7 @@ void Predictor::forward(
 
         float sum = ((*hiddenTargetCs)[hiddenColumnIndex] == hc ? 0.0001f : 0.0f);
 
-        sum += _visibleLayer._weights.multiplyOHVs(*feedBackCs, hiddenIndex, _visibleLayerDesc._size.z);
-        sum -= _visibleLayer._weights.multiplyOHVs(*inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+        sum += _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, *inputCs, hiddenIndex, _visibleLayerDesc._size.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -56,18 +55,14 @@ void Predictor::learn(
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
 
-    float sum = 0.0f;
-
-    sum += _visibleLayer._weights.multiplyOHVs(*feedBackCs, hiddenIndex, _visibleLayerDesc._size.z);
-    sum -= _visibleLayer._weights.multiplyOHVs(s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
-    int count = _visibleLayer._weights.count(hiddenIndex) / _visibleLayerDesc._size.z;
+    float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+    int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
     float closeness = 1.0f - (_historySamples.size() - 1 - index) / static_cast<float>(_maxHistorySize - 1);
 
-    float delta = _alpha * (closeness - sum / std::max(1, count * 2));
+    float delta = _alpha * (closeness - sum / std::max(1, count));
 
-    _visibleLayer._weights.deltaOHVs(*feedBackCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
-    _visibleLayer._weights.deltaOHVs(s->_inputCs, -delta, hiddenIndex, _visibleLayerDesc._size.z);
+    _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
 }
 
 void Predictor::initRandom(
@@ -89,7 +84,7 @@ void Predictor::initRandom(
     int numVisibleColumns = _visibleLayerDesc._size.x * _visibleLayerDesc._size.y;
 
     // Create weight matrix for this visible layer and initialize randomly
-    initSMLocalRF(_visibleLayerDesc._size, _hiddenSize, _visibleLayerDesc._radius, _visibleLayer._weights);
+    initSMLocalRF(Int3(_visibleLayerDesc._size.x, _visibleLayerDesc._size.y, _visibleLayerDesc._size.z * _visibleLayerDesc._size.z), _hiddenSize, _visibleLayerDesc._radius, _visibleLayer._weights);
 
     for (int i = 0; i < _visibleLayer._weights._nonZeroValues.size(); i++)
         _visibleLayer._weights._nonZeroValues[i] = weightDist(cs._rng);

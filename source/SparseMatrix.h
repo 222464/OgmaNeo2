@@ -390,5 +390,20 @@ struct SparseMatrix {
 		int row,
 		int oneHotSize
 	);
+
+	float multiplyCombinedOHVs(
+		const std::vector<int> &nonZeroIndices0,
+		const std::vector<int> &nonZeroIndices1,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaCombinedOHVs(
+		const std::vector<int> &nonZeroIndices0,
+		const std::vector<int> &nonZeroIndices1,
+		float delta,
+		int row,
+		int oneHotSize
+	);
 };
 } // namespace ogmaneo
