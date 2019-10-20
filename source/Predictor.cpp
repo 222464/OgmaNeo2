@@ -62,7 +62,7 @@ void Predictor::learn(
     sum -= _visibleLayer._weights.multiplyOHVs(s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
     int count = _visibleLayer._weights.count(hiddenIndex) / _visibleLayerDesc._size.z;
 
-    float closeness = index / static_cast<float>(_historySamples.size() - 1);
+    float closeness = 1.0f - (_historySamples.size() - 1 - index) / static_cast<float>(_maxHistorySize - 1);
 
     float delta = _alpha * (closeness - sum / std::max(1, count * 2));
 
