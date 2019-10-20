@@ -57,7 +57,7 @@ void Predictor::learn(
     int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
     float closeness = 1.0f - (_historySamples.size() - 1 - index) / static_cast<float>(_maxHistorySize - 1);
-
+    
     float delta = _alpha * (closeness - sum / std::max(1, count));
 
     _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
