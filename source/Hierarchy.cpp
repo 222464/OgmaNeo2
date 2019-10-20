@@ -118,11 +118,9 @@ void Hierarchy::initRandom(
             pVisibleLayerDesc._radius = layerDescs[l]._pRadius;
 
             // Create actors
-            for (int p = 0; p < _pLayers[l].size(); p++) {
-                _pLayers[l][p] = std::make_unique<Predictor>();
+            _pLayers[l][0] = std::make_unique<Predictor>();
 
-                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
-            }
+            _pLayers[l][0]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
         }
 		
         // Create the sparse coding layer

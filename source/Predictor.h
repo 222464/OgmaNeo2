@@ -95,8 +95,8 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.1f),
-    _maxHistorySize(8)
+    _alpha(0.01f),
+    _maxHistorySize(4)
     {}
 
     // Create with random initialization
