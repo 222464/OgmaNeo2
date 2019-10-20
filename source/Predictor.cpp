@@ -56,9 +56,9 @@ void Predictor::learn(
     float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
     int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-    float closeness = 1.0f - (_historySamples.size() - 1 - index) / static_cast<float>(_maxHistorySize - 1);
-    
-    float delta = _alpha * (closeness - sum / std::max(1, count));
+    int n = _historySamples.size() - 2 - index;
+
+    float delta = _alpha * (std::pow(_gamma, n) - sum / std::max(1, count * 2));
 
     _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
 }
@@ -167,12 +167,23 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_maxHistorySize), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
 
     os.write(reinterpret_cast<const char*>(&_visibleLayerDesc), sizeof(VisibleLayerDesc));
 
     writeSMToStream(os, _visibleLayer._weights);
+
+    int historySize = _historySamples.size();
+
+    os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
+
+    for (int t = 0; t < _historySamples.size(); t++) {
+        writeBufferToStream(os, &_historySamples[t]->_inputCs);
+        writeBufferToStream(os, &_historySamples[t]->_hiddenTargetCs);
+    }
 }
 
 void Predictor::readFromStream(
@@ -184,10 +195,25 @@ void Predictor::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_maxHistorySize), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
 
     is.read(reinterpret_cast<char*>(&_visibleLayerDesc), sizeof(VisibleLayerDesc));
 
     readSMFromStream(is, _visibleLayer._weights);
+
+    int historySize;
+
+    is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
+
+    _historySamples.resize(historySize);
+
+    for (int t = 0; t < _historySamples.size(); t++) {
+        _historySamples[t] = std::make_shared<HistorySample>();
+
+        readBufferFromStream(is, &_historySamples[t]->_inputCs);
+        readBufferFromStream(is, &_historySamples[t]->_hiddenTargetCs);
+    }
 }
