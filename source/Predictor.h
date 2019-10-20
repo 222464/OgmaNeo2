@@ -44,7 +44,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden state
 
-    std::vector<std::unique_ptr<HistorySample>> _historySamples;
+    std::vector<std::shared_ptr<HistorySample>> _historySamples;
 
     // Visible layers and descs
     VisibleLayer _visibleLayer;
@@ -95,8 +95,8 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(1.0f),
-    _maxHistorySize(4)
+    _alpha(0.1f),
+    _maxHistorySize(8)
     {}
 
     // Create with random initialization
@@ -131,23 +131,14 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get number of visible layers
-    int getNumVisibleLayers() const {
-        return _visibleLayers.size();
-    }
-
     // Get a visible layer
-    const VisibleLayer &getVisibleLayer(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayers[i];
+    const VisibleLayer &getVisibleLayer() const {
+        return _visibleLayer;
     }
 
     // Get a visible layer descriptor
-    const VisibleLayerDesc &getVisibleLayerDesc(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayerDescs[i];
+    const VisibleLayerDesc &getVisibleLayerDesc() const {
+        return _visibleLayerDesc;
     }
 
     // Get the hidden activations (predictions)
@@ -158,13 +149,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return _visibleLayers[i]._weights;
     }
 };
 } // Namespace ogmaneo

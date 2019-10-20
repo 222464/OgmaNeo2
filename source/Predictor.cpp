@@ -50,23 +50,24 @@ void Predictor::learn(
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     const HistorySample* s = _historySamples[index].get();
+    const HistorySample* sNext = _historySamples[index + 1].get();
 
-    int targetC = s->_hiddenTargetCs[hiddenColumnIndex];
+    int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
+    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
 
-        float sum = 0.0f;
-        int count = 0;
+    float sum = 0.0f;
 
-        sum += _visibleLayer._weights.multiplyOHVs(*feedBackCs, hiddenIndex, _visibleLayerDesc._size.z);
-        sum -= _visibleLayer._weights.multiplyOHVs(s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+    sum += _visibleLayer._weights.multiplyOHVs(*feedBackCs, hiddenIndex, _visibleLayerDesc._size.z);
+    sum -= _visibleLayer._weights.multiplyOHVs(s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+    int count = _visibleLayer._weights.count(hiddenIndex) / _visibleLayerDesc._size.z;
 
-        float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum / std::max(1, count * 2)));
+    float closeness = (_historySamples.size() - 1 - index) / static_cast<float>(_historySamples.size());
 
-        _visibleLayer._weights.deltaOHVs(*feedBackCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
-        _visibleLayer._weights.deltaOHVs(s->_inputCs, -delta, hiddenIndex, _visibleLayerDesc._size.z);
-    }
+    float delta = _alpha * (closeness - sum / std::max(1, count * 2));
+
+    _visibleLayer._weights.deltaOHVs(*feedBackCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
+    _visibleLayer._weights.deltaOHVs(s->_inputCs, -delta, hiddenIndex, _visibleLayerDesc._size.z);
 }
 
 void Predictor::initRandom(
@@ -124,41 +125,43 @@ void Predictor::learn(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    for (int t = 0; t < _historySamples.size(); t++) {
-        // Learn kernel
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < _hiddenSize.x; x++)
-            for (int y = 0; y < _hiddenSize.y; y++)
-                learn(Int2(x, y), cs._rng, inputCs, t);
-#else
-        runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, t), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-#endif
-    }
-
     // Add sample
     if (_historySamples.size() > _maxHistorySize)
         _historySamples.resize(_maxHistorySize);
 
     if (_historySamples.size() == _maxHistorySize) {
         // Shift
-        std::unique_ptr<HistorySample> first = std::move(_historySamples[0]);
+        std::shared_ptr<HistorySample> first = _historySamples.front();
 
         for (int t = 0; t < _maxHistorySize - 1; t++) {
-            _historySamples[t] = std::move(_historySamples[t + 1]);
+            _historySamples[t] = _historySamples[t + 1];
         }
 
         first->_inputCs = *inputCs;
         first->_hiddenTargetCs = *hiddenTargetCs;
 
-        _historySamples.back() = std::move(first);
+        _historySamples.back() = first;
     }
     else {
-        std::unique_ptr<HistorySample> sample = std::make_unique<HistorySample>();
+        std::shared_ptr<HistorySample> sample = std::make_shared<HistorySample>();
 
         sample->_inputCs = *inputCs;
         sample->_hiddenTargetCs = *hiddenTargetCs;
         
-        _historySamples.push_back(std::move(sample));
+        _historySamples.push_back(sample);
+    }
+
+    if (_historySamples.size() > 1) {
+        for (int t = 0; t < _historySamples.size() - 1; t++) {
+            // Learn kernel
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < _hiddenSize.x; x++)
+                for (int y = 0; y < _hiddenSize.y; y++)
+                    learn(Int2(x, y), cs._rng, inputCs, t);
+#else
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, t), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+        }
     }
 }
 

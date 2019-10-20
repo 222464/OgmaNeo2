@@ -272,9 +272,9 @@ void Hierarchy::step(
             const IntBuffer* feedBackCs;
 
             if (l < _scLayers.size() - 1) {
-                assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
+                //assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBackCs = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBackCs = &_pLayers[l + 1][0]->getHiddenCs();//_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
             else
                 feedBackCs = topFeedBackCs;
