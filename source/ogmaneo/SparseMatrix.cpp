@@ -933,6 +933,32 @@ void SparseMatrix::deltaCombinedOHVs(
 	}
 }
 
+void SparseMatrix::hebbCombinedOHVs(
+	const std::vector<int> &nonZeroIndices0,
+	const std::vector<int> &nonZeroIndices1,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int oneHotSize2 = oneHotSize * oneHotSize;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize2) {
+		int i = _columnIndices[jj] / oneHotSize2;
+
+		int targetDJ = nonZeroIndices0[i] + nonZeroIndices1[i] * oneHotSize;
+
+		for (int dj = 0; dj < oneHotSize2; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[j] += alpha * (target - _nonZeroValues[j]);
+		}
+	}
+}
+
 float SparseMatrix::multiplyBiased(
 	const std::vector<float> &in,
 	int row,

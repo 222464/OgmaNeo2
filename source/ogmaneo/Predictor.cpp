@@ -50,16 +50,13 @@ void Predictor::learn(
 
     int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
-    int dist = _historySamples.size() - 2 - index;
-    float target = 1.0f - dist / static_cast<float>(_maxHistorySize);
-
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
         int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-        float delta = _alpha * ((hc == targetC ? target : 0.0f) - sigmoid(sum / std::max(1, count)));
+        float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - std::tanh(sum / std::max(1, count)));
 
         _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
     }
@@ -75,7 +72,7 @@ void Predictor::initRandom(
     _hiddenSize = hiddenSize;
 
     // Pre-compute dimensions
-    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
+    std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
     // Create layer
     int numVisibleColumns = _visibleLayerDesc._size.x * _visibleLayerDesc._size.y;

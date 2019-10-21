@@ -406,6 +406,14 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	void hebbCombinedOHVs(
+		const std::vector<int> &nonZeroIndices0,
+		const std::vector<int> &nonZeroIndices1,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
 	float multiplyBiased(
 		const std::vector<float> &in,
 		int row,
