@@ -57,7 +57,12 @@ void Predictor::learn(
         float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
         int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-        float delta = _alpha * ((hc == targetC ? std::pow(_gamma, _historySamples.size() - 2 - index) : 0.0f) - sum / std::max(1, count * 2));
+        float delta;
+        
+        if (hc == targetC)
+            delta = _alpha * (std::pow(_gamma, _historySamples.size() - 2 - index) - sum / std::max(1, count * 2));
+        else
+            delta = _beta * (0.0f - sum / std::max(1, count * 2));
 
         _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
     }
@@ -89,6 +94,23 @@ void Predictor::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
+}
+
+const Predictor &Predictor::operator=(
+    const Predictor &other
+) {
+    _visibleLayerDesc = other._visibleLayerDesc;
+    _hiddenSize = other._hiddenSize;
+    _visibleLayer = other._visibleLayer;
+
+    _hiddenCs = other._hiddenCs;
+
+    _historySamples.resize(other._historySamples.size());
+
+    for (int t = 0; t < _historySamples.size(); t++)
+        _historySamples[t] = std::make_shared<HistorySample>(*other._historySamples[t]);
+
+    return *this;
 }
 
 void Predictor::activate(
@@ -167,6 +189,7 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySize), sizeof(int));
 
@@ -195,6 +218,7 @@ void Predictor::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySize), sizeof(int));
 

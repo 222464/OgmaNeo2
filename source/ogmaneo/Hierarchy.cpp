@@ -150,22 +150,16 @@ const Hierarchy &Hierarchy::operator=(
         _pLayers[l].resize(other._pLayers[l].size());
 
         for (int v = 0; v < _pLayers[l].size(); v++) {
-            if (other._pLayers[l][v] != nullptr) {
-                _pLayers[l][v] = std::make_unique<Predictor>();
-
-                (*_pLayers[l][v]) = (*other._pLayers[l][v]);
-            }
+            if (other._pLayers[l][v] != nullptr)
+                _pLayers[l][v] = std::make_unique<Predictor>(*other._pLayers[l][v]);
             else
                 _pLayers[l][v] = nullptr;
         }
 
         _histories[l].resize(other._histories[l].size());
 
-        for (int v = 0; v < _histories[l].size(); v++) {
-            _histories[l][v] = std::make_shared<IntBuffer>();
-            
-            (*_histories[l][v]) = (*other._histories[l][v]);
-        }
+        for (int v = 0; v < _histories[l].size(); v++)
+            _histories[l][v] = std::make_shared<IntBuffer>(*other._histories[l][v]);
     }
 
     return *this;
