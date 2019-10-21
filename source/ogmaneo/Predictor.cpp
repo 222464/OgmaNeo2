@@ -56,12 +56,7 @@ void Predictor::learn(
         float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
         int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-        float delta;
-        
-        if (hc == targetC)
-            delta = _alpha * (std::pow(_gamma, _historySamples.size() - 2 - index) - sum / std::max(1, count));
-        else
-            delta = _beta * (0.0f - sum / std::max(1, count));
+        float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum / std::max(1, count)));
 
         _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
     }
@@ -181,8 +176,6 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySize), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
@@ -207,8 +200,6 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
-    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySize), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
