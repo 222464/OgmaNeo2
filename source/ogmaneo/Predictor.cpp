@@ -14,7 +14,6 @@ using namespace ogmaneo;
 void Predictor::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const IntBuffer* hiddenTargetCs,
     const IntBuffer* feedBackCs,
     const IntBuffer* inputCs
 ) {
@@ -112,7 +111,6 @@ const Predictor &Predictor::operator=(
 
 void Predictor::activate(
     ComputeSystem &cs,
-    const IntBuffer* hiddenTargetCs,
     const IntBuffer* feedBackCs,
     const IntBuffer* inputCs
 ) {
@@ -123,9 +121,9 @@ void Predictor::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, hiddenTargetCs, feedBackCs, inputCs);
+            forward(Int2(x, y), cs._rng, feedBackCs, inputCs);
 #else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs, feedBackCs, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackCs, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 

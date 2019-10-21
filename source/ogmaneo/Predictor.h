@@ -55,7 +55,6 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenTargetCs,
         const IntBuffer* feedBackCs,
         const IntBuffer* inputCs
     );
@@ -71,11 +70,10 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const IntBuffer* hiddenTargetCs,
         const IntBuffer* feedBackCs,
         const IntBuffer* inputCs
     ) {
-        p->forward(pos, rng, hiddenTargetCs, feedBackCs, inputCs);
+        p->forward(pos, rng, feedBackCs, inputCs);
     }
 
     static void learnKernel(
@@ -98,7 +96,7 @@ public:
     Predictor()
     :
     _alpha(0.1f),
-    _beta(0.01f),
+    _beta(0.05f),
     _gamma(0.7f),
     _maxHistorySize(3)
     {}
@@ -125,7 +123,6 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const IntBuffer* hiddenTargetCs,
         const IntBuffer* feedBackCs,
         const IntBuffer* inputCs
     );

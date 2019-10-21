@@ -277,7 +277,7 @@ void Hierarchy::step(
                     if (learnEnabled) 
                         _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), &_scLayers[l].getHiddenCs());
 
-                    _pLayers[l][p]->activate(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), feedBackCs, &_scLayers[l].getHiddenCs());
+                    _pLayers[l][p]->activate(cs, feedBackCs, &_scLayers[l].getHiddenCs());
                 }
             }
         }
