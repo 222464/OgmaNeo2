@@ -98,7 +98,7 @@ public:
     :
     _alpha(0.1f),
     _gamma(0.7f),
-    _maxHistorySize(4)
+    _maxHistorySize(3)
     {}
 
     // Create with random initialization
