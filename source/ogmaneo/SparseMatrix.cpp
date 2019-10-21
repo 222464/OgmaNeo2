@@ -932,3 +932,18 @@ void SparseMatrix::deltaCombinedOHVs(
 		_nonZeroValues[j] += delta;
 	}
 }
+
+float SparseMatrix::multiplyBiased(
+	const std::vector<float> &in,
+	int row,
+	float bias
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		sum += _nonZeroValues[j] * (in[_columnIndices[j]] + bias);
+
+	return sum;
+}

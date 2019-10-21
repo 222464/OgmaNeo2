@@ -30,7 +30,7 @@ void ImageEncoder::forward(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        center += vl._weights.total(*inputActivations[vli], hiddenIndex0);
+        center += vl._weights.count(*inputActivations[vli], hiddenIndex0);
         count += vl._weights.count(hiddenIndex0);
     }
 
