@@ -78,9 +78,6 @@ void Predictor::initRandom(
     _hiddenSize = hiddenSize;
 
     // Pre-compute dimensions
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
     std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create layer
@@ -93,7 +90,7 @@ void Predictor::initRandom(
         _visibleLayer._weights._nonZeroValues[i] = weightDist(cs._rng);
 
     // Hidden Cs
-    _hiddenCs = IntBuffer(numHiddenColumns, 0);
+    _hiddenCs = IntBuffer(_hiddenSize.x * _hiddenSize.y, 0);
 }
 
 const Predictor &Predictor::operator=(
@@ -183,9 +180,6 @@ void Predictor::learn(
 void Predictor::writeToStream(
     std::ostream &os
 ) const {
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
@@ -213,9 +207,6 @@ void Predictor::readFromStream(
     std::istream &is
 ) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
-
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(float));

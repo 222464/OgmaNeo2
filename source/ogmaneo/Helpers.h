@@ -149,8 +149,10 @@ void copyFloat(
 void randomize(
     int pos, // Position
     std::mt19937 &rng, // Generator
+    const IntBuffer* src,
     IntBuffer* dst,
-    int columnSize
+    int columnSize,
+    float epsilon
 );
 
 // --- Bounds ---

@@ -160,12 +160,20 @@ void ogmaneo::copyFloat(
 void ogmaneo::randomize(
     int pos,
     std::mt19937 &rng,
+    const IntBuffer* src,
     IntBuffer* dst,
-    int columnSize
+    int columnSize,
+    float epsilon
 ) {
-    std::uniform_int_distribution<int> columnDist(0, columnSize - 1);
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
-    (*dst)[pos] = columnDist(rng);
+    if (dist01(rng) < epsilon) {
+        std::uniform_int_distribution<int> columnDist(0, columnSize - 1);
+
+        (*dst)[pos] = columnDist(rng);
+    }
+    else
+        (*dst)[pos] = (*src)[pos];
 }
 
 std::vector<IntBuffer*> ogmaneo::get(
