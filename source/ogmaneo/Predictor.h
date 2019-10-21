@@ -93,7 +93,7 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.01f),
+    _alpha(1.0f),
     _maxHistorySize(3)
     {}
 
