@@ -90,6 +90,7 @@ private:
 
 public:
     float _alpha; // Learning rate
+    float _beta; // De-learning rate
     float _gamma; // Discount factor
     int _maxHistorySize;
 
@@ -97,6 +98,7 @@ public:
     Predictor()
     :
     _alpha(0.1f),
+    _beta(0.01f),
     _gamma(0.7f),
     _maxHistorySize(3)
     {}
