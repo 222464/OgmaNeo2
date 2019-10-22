@@ -54,14 +54,16 @@ void Predictor::learn(
 
     int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-    float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
-    int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
+        float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+        int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-    float delta = _alpha * (closeness - sum / std::max(1, count));
+        float delta = _alpha * ((hc == targetC ? closeness : 0.0f) - sum / std::max(1, count));
 
-    _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
+        _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
+    }
 }
 
 void Predictor::initRandom(

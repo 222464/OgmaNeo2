@@ -93,8 +93,8 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.5f),
-    _maxHistorySize(16)
+    _alpha(0.01f),
+    _maxHistorySize(3)
     {}
 
     // Copy
