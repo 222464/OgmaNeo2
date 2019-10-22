@@ -48,18 +48,20 @@ void Predictor::learn(
     const HistorySample* s = _historySamples[index].get();
     const HistorySample* sNext = _historySamples[index + 1].get();
 
+    int dist = _historySamples.size() - 2 - index;
+
+    float closeness = 1.0f - dist / static_cast<float>(_maxHistorySize);
+
     int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
+    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
 
-        float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
-        int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
+    float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+    int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-        float delta = _alpha * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum / std::max(1, count)));
+    float delta = _alpha * (closeness - sum / std::max(1, count));
 
-        _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
-    }
+    _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
 }
 
 void Predictor::initRandom(
