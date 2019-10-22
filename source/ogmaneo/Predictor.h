@@ -88,12 +88,14 @@ private:
 
 public:
     float _alpha; // Learning rate
+    float _gamma; // Discount
     int _maxHistorySize;
 
     // Defaults
     Predictor()
     :
     _alpha(0.01f),
+    _gamma(0.6f),
     _maxHistorySize(3)
     {}
 

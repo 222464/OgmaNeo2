@@ -48,22 +48,29 @@ void Predictor::learn(
     const HistorySample* s = _historySamples[index].get();
     const HistorySample* sNext = _historySamples[index + 1].get();
 
-    int dist = _historySamples.size() - 2 - index;
-
-    float closeness = 1.0f - dist / static_cast<float>(_maxHistorySize - 1);
-
-    int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
-
+    float nextQ = -999999.0f;
+    
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+        float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, sNext->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
         int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-        float delta = _alpha * ((hc == targetC ? closeness : 0.0f) - sum / std::max(1, count));
-
-        _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
+        nextQ = std::max(nextQ, sum / std::max(1, count));
     }
+
+    float targetQ = (index == _historySamples.size() - 2 ? 1.0f : _gamma * nextQ);
+
+    int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
+
+    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
+
+    float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+    int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
+
+    float delta = _alpha * (targetQ - sum / std::max(1, count));
+
+    _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
 }
 
 void Predictor::initRandom(
@@ -142,9 +149,8 @@ void Predictor::learn(
         // Shift
         std::shared_ptr<HistorySample> first = _historySamples.front();
 
-        for (int t = 0; t < _maxHistorySize - 1; t++) {
+        for (int t = 0; t < _maxHistorySize - 1; t++)
             _historySamples[t] = _historySamples[t + 1];
-        }
 
         first->_inputCs = *inputCs;
         first->_hiddenTargetCs = *hiddenTargetCs;
@@ -161,7 +167,7 @@ void Predictor::learn(
     }
 
     if (_historySamples.size() > 1) {
-        for (int t = 0; t < _historySamples.size() - 1; t++) {
+        for (int t = static_cast<int>(_historySamples.size()) - 2; t >= 0; t--) {
             // Learn kernel
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _hiddenSize.x; x++)
@@ -180,6 +186,7 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySize), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
@@ -204,6 +211,7 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySize), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
