@@ -84,7 +84,7 @@ void Hierarchy::initRandom(
             pVisibleLayerDesc._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDesc._radius = layerDescs[l]._pRadius;
 
-            // Create actors
+            // Create predictors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
@@ -117,10 +117,12 @@ void Hierarchy::initRandom(
             pVisibleLayerDesc._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDesc._radius = layerDescs[l]._pRadius;
 
-            // Create actors
-            _pLayers[l][0] = std::make_unique<Predictor>();
+            // Create predictors
+            for (int p = 0; p < _pLayers[l].size(); p++) {
+                _pLayers[l][p] = std::make_unique<Predictor>();
 
-            _pLayers[l][0]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
+                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
+            }
         }
 		
         // Create the sparse coding layer
@@ -264,9 +266,9 @@ void Hierarchy::step(
             const IntBuffer* feedBackCs;
 
             if (l < _scLayers.size() - 1) {
-                //assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
+                assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBackCs = &_pLayers[l + 1][0]->getHiddenCs();//_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBackCs = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
             else
                 feedBackCs = topFeedBackCs;
@@ -276,7 +278,7 @@ void Hierarchy::step(
                 if (_pLayers[l][p] != nullptr) {
                     if (learnEnabled) 
                         _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : _histories[l][p].get(), &_scLayers[l].getHiddenCs());
-
+                        
                     _pLayers[l][p]->activate(cs, feedBackCs, &_scLayers[l].getHiddenCs());
                 }
             }

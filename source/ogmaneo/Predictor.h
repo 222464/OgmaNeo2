@@ -94,9 +94,9 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.05f),
-    _gamma(0.7f),
-    _maxHistorySize(3)
+    _alpha(0.01f),
+    _gamma(0.8f),
+    _maxHistorySize(7)
     {}
 
     // Copy

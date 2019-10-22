@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "Predictor.h"
-
+#include <iostream>
 using namespace ogmaneo;
 
 // Kernels
@@ -59,7 +59,7 @@ void Predictor::learn(
         nextQ = std::max(nextQ, sum / std::max(1, count));
     }
 
-    float targetQ = (index == _historySamples.size() - 2 ? 1.0f : _gamma * nextQ);
+    float targetQ = (index == static_cast<int>(_historySamples.size()) - 2 ? 1.0f : _gamma * nextQ);
 
     int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
