@@ -48,7 +48,7 @@ void Predictor::learn(
     const HistorySample* s = _historySamples[index].get();
     const HistorySample* sNext = _historySamples[index + 1].get();
 
-    float nextQ = -999999.0f;
+    float nextQ = 0.0f;
     
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -59,7 +59,9 @@ void Predictor::learn(
         nextQ = std::max(nextQ, sum / std::max(1, count));
     }
 
-    float targetQ = (index == static_cast<int>(_historySamples.size()) - 2 ? 1.0f : _gamma * nextQ);
+    int dist = _historySamples.size() - 2 - index;
+
+    float targetQ = std::max(static_cast<float>(std::pow(_gamma, dist)), _gamma * nextQ);
 
     int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
@@ -83,7 +85,7 @@ void Predictor::initRandom(
     _hiddenSize = hiddenSize;
 
     // Pre-compute dimensions
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 0.001f);
 
     // Create layer
     int numVisibleColumns = _visibleLayerDesc._size.x * _visibleLayerDesc._size.y;

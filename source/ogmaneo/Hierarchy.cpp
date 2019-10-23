@@ -109,7 +109,7 @@ void Hierarchy::initRandom(
                 _historySizes[l][v] = inSize;
             }
 
-            _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
+            _pLayers[l].resize(1);//layerDescs[l]._ticksPerUpdate);
 
             // Predictor visible layer descriptors
             Predictor::VisibleLayerDesc pVisibleLayerDesc;
@@ -118,11 +118,9 @@ void Hierarchy::initRandom(
             pVisibleLayerDesc._radius = layerDescs[l]._pRadius;
 
             // Create predictors
-            for (int p = 0; p < _pLayers[l].size(); p++) {
-                _pLayers[l][p] = std::make_unique<Predictor>();
+            _pLayers[l][0] = std::make_unique<Predictor>();
 
-                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
-            }
+            _pLayers[l][0]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
         }
 		
         // Create the sparse coding layer
@@ -266,9 +264,9 @@ void Hierarchy::step(
             const IntBuffer* feedBackCs;
 
             if (l < _scLayers.size() - 1) {
-                assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
+                //assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBackCs = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBackCs = &_pLayers[l + 1][0]->getHiddenCs();//_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]
             }
             else
                 feedBackCs = topFeedBackCs;
