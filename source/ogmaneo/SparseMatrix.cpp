@@ -959,6 +959,28 @@ void SparseMatrix::hebbCombinedOHVs(
 	}
 }
 
+int SparseMatrix::matchCombinedOHVs(
+	const std::vector<int> &nonZeroIndices0,
+	const std::vector<int> &nonZeroIndices1,
+	int row,
+	int oneHotSize
+) {
+	int oneHotSize2 = oneHotSize * oneHotSize;
+
+	int sum = 0;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize2) {
+		int i = _columnIndices[jj] / oneHotSize2;
+
+		if (nonZeroIndices0[i] == nonZeroIndices1[i])
+			sum++;
+	}
+
+	return sum;
+}
+
 float SparseMatrix::multiplyBiased(
 	const std::vector<float> &in,
 	int row,

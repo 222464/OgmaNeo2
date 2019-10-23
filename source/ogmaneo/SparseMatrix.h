@@ -414,6 +414,13 @@ struct SparseMatrix {
 		float alpha
 	);
 
+	int matchCombinedOHVs(
+		const std::vector<int> &nonZeroIndices0,
+		const std::vector<int> &nonZeroIndices1,
+		int row,
+		int oneHotSize
+	);
+
 	float multiplyBiased(
 		const std::vector<float> &in,
 		int row,
