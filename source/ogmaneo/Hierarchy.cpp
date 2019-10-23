@@ -109,7 +109,7 @@ void Hierarchy::initRandom(
                 _historySizes[l][v] = inSize;
             }
 
-            _pLayers[l].resize(1);//layerDescs[l]._ticksPerUpdate);
+            _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
             // Predictor visible layer descriptors
             Predictor::VisibleLayerDesc pVisibleLayerDesc;
@@ -118,9 +118,20 @@ void Hierarchy::initRandom(
             pVisibleLayerDesc._radius = layerDescs[l]._pRadius;
 
             // Create predictors
-            _pLayers[l][0] = std::make_unique<Predictor>();
+            for (int p = 0; p < _pLayers[l].size(); p++) {
+                _pLayers[l][p] = std::make_unique<Predictor>();
 
-            _pLayers[l][0]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
+                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
+            }
+        }
+
+        if (layerDescs[l]._rRadius >= 0) {
+            SparseCoder::VisibleLayerDesc vld;
+
+            vld._size = layerDescs[l]._hiddenSize;
+            vld._radius = layerDescs[l]._rRadius;
+
+            scVisibleLayerDescs.push_back(vld);
         }
 		
         // Create the sparse coding layer
@@ -228,9 +239,14 @@ void Hierarchy::step(
 #else
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), &_hiddenCsPrev[l]), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
 #endif
+
+            std::vector<const IntBuffer*> fullInputCs = constGet(_histories[l]);
+
+            if (fullInputCs.size() < _scLayers[l].getNumVisibleLayers())
+                fullInputCs.push_back(&_hiddenCsPrev[l]);
  
             // Activate sparse coder
-            _scLayers[l].step(cs, constGet(_histories[l]), learnEnabled);
+            _scLayers[l].step(cs, fullInputCs, learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
@@ -264,9 +280,9 @@ void Hierarchy::step(
             const IntBuffer* feedBackCs;
 
             if (l < _scLayers.size() - 1) {
-                //assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
+                assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBackCs = &_pLayers[l + 1][0]->getHiddenCs();//_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]
+                feedBackCs = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
             else
                 feedBackCs = topFeedBackCs;
