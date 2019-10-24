@@ -83,7 +83,6 @@ void Actor::init(
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "aForward");
-    _activateKernel = cl::Kernel(prog.getProgram(), "aActivate");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 }
@@ -112,6 +111,7 @@ void Actor::step(
         _forwardKernel.setArg(argIndex++, visibleCs[vli]);
         _forwardKernel.setArg(argIndex++, _hiddenValues[_front]);
         _forwardKernel.setArg(argIndex++, _hiddenActivations);
+        _forwardKernel.setArg(argIndex++, _hiddenCounts);
         _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
         _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
         _forwardKernel.setArg(argIndex++, vl._weights._columnIndices);
@@ -119,17 +119,6 @@ void Actor::step(
         _forwardKernel.setArg(argIndex++, _hiddenSize);
 
         cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
-    }
-
-    // Activate
-    {
-        int argIndex = 0;
-
-        _activateKernel.setArg(argIndex++, _hiddenActivations);
-        _activateKernel.setArg(argIndex++, _hiddenCounts);
-        _activateKernel.setArg(argIndex++, _hiddenSize);
-
-        cs.getQueue().enqueueNDRangeKernel(_activateKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 
     // Inhibit
@@ -204,6 +193,7 @@ void Actor::step(
             _forwardKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
             _forwardKernel.setArg(argIndex++, _hiddenValues[_back]);
             _forwardKernel.setArg(argIndex++, _hiddenActivations);
+            _forwardKernel.setArg(argIndex++, _hiddenCounts);
             _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
             _forwardKernel.setArg(argIndex++, vl._weights._columnIndices);
@@ -211,17 +201,6 @@ void Actor::step(
             _forwardKernel.setArg(argIndex++, _hiddenSize);
 
             cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
-        }
-
-        // Activate
-        {
-            int argIndex = 0;
-
-            _activateKernel.setArg(argIndex++, _hiddenActivations);
-            _activateKernel.setArg(argIndex++, _hiddenCounts);
-            _activateKernel.setArg(argIndex++, _hiddenSize);
-
-            cs.getQueue().enqueueNDRangeKernel(_activateKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
 
         cl_float g = std::pow(_gamma, _historySize - 1);
@@ -238,7 +217,6 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, sPrev._hiddenValues);
             _learnKernel.setArg(argIndex++, _hiddenActivations);
             _learnKernel.setArg(argIndex++, sPrev._hiddenCs);
-            _learnKernel.setArg(argIndex++, _hiddenCounts);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
             _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
@@ -366,7 +344,6 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "aForward");
-    _activateKernel = cl::Kernel(prog.getProgram(), "aActivate");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 

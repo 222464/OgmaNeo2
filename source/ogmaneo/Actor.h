@@ -56,7 +56,6 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
-    cl::Kernel _activateKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
 
