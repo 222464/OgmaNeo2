@@ -432,8 +432,15 @@ void kernel aLearn(
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
         float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex];
+
+        float average = 0.0f;
+
+        for (int c = 0; c < hiddenSize.z; c++)
+            average += hiddenActivationsPrev[address3((int3)(hiddenPosition.xy, c), hiddenSize)];
+
+        average /= hiddenSize.z;
         
-        float update = errorAction * (hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f / hiddenSize.z);
+        float update = beta * ((hiddenPosition.z == hiddenCPrev ? errorAction : 0.0f) - average);
         
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
