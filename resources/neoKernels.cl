@@ -440,7 +440,7 @@ void kernel aLearn(
 
         float actionError = (c == hiddenCPrev ? tdError : tdError * -1.0f / hiddenSize.z);
 
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * actionError, hiddenIndexAction1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * actionError, hiddenIndexAction1, visibleSize.z);
     }
 }
 
