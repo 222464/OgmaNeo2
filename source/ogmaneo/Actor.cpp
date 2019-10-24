@@ -77,8 +77,6 @@ void Actor::init(
         }
 
         _historySamples[i]._hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-
-        _historySamples[i]._hiddenValues = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_float));
     }
 
     // Create kernels
@@ -165,8 +163,6 @@ void Actor::step(
 
         cs.getQueue().enqueueCopyBuffer(_hiddenCs, s._hiddenCs, 0, 0, numHiddenColumns * sizeof(cl_int));
 
-        cs.getQueue().enqueueCopyBuffer(_hiddenValues[_front], s._hiddenValues, 0, 0, numHiddenColumns * sizeof(cl_float));
-
         s._reward = reward;
     }
 
@@ -214,7 +210,6 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
             _learnKernel.setArg(argIndex++, _hiddenValues[_front]);
             _learnKernel.setArg(argIndex++, _hiddenValues[_back]);
-            _learnKernel.setArg(argIndex++, sPrev._hiddenValues);
             _learnKernel.setArg(argIndex++, _hiddenActivations);
             _learnKernel.setArg(argIndex++, sPrev._hiddenCs);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
@@ -223,11 +218,10 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, vld._size);
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
-            _learnKernel.setArg(argIndex++, _beta);
             _learnKernel.setArg(argIndex++, g);
             _learnKernel.setArg(argIndex++, q);
 
-            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
     }
 }
@@ -239,7 +233,6 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
-    os.write(reinterpret_cast<const char*>(&_beta), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
 
     writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
@@ -277,7 +270,6 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
         }
 
         writeBufferToStream(cs, os, s._hiddenCs, numHiddenColumns * sizeof(cl_int));
-        writeBufferToStream(cs, os, s._hiddenValues, numHiddenColumns * sizeof(cl_float));
 
         os.write(reinterpret_cast<const char*>(&s._reward), sizeof(cl_float));
     }
@@ -290,7 +282,6 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
-    is.read(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
 
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
@@ -337,7 +328,6 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         }
 
         readBufferFromStream(cs, is, s._hiddenCs, numHiddenColumns * sizeof(cl_int));
-        readBufferFromStream(cs, is, s._hiddenValues, numHiddenColumns * sizeof(cl_float));
 
         is.read(reinterpret_cast<char*>(&_historySamples[i]._reward), sizeof(cl_float));
     }

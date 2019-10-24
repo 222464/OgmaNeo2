@@ -400,7 +400,6 @@ void kernel aLearn(
     global const int* visibleCsPrev,
     global const float* hiddenValues,
     global const float* hiddenValuesPrev,
-    global const float* hiddenValuesPrevPrev,
     global const float* hiddenActivationsPrev,
     global const int* hiddenCsPrev,
     global float* nonZeroValues,
@@ -409,40 +408,39 @@ void kernel aLearn(
     int3 visibleSize,
     int3 hiddenSize,
     float alpha,
-    float beta,
     float g,
     float q
 ) {
-    int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 	
-    int hiddenColumnIndex = address2(hiddenPosition.xy, hiddenSize.xy);
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
     int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
+    int hiddenIndexValue1 = address3((int3)(hiddenColumnPosition, hiddenSize.z), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+    int hiddenIndexAction = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
+
+    float average = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++)
+        average += hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+
+    average /= hiddenSize.z;
+
     float qUpdate = q + g * hiddenValues[hiddenColumnIndex];
 
-    int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
+    float qPred = hiddenValuesPrev[hiddenColumnIndex] + hiddenActivationsPrev[hiddenIndexAction] - average;
 
-    if (hiddenPosition.z == hiddenSize.z) {
-        float errorValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex];
-    
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, hiddenIndex1, visibleSize.z);
-    }
-    else {
-        int hiddenIndex = address3(hiddenPosition, hiddenSize);
+    float tdError = qUpdate - qPred;
 
-        float average = 0.0f;
+    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndexValue1, visibleSize.z);
 
-        for (int c = 0; c < hiddenSize.z; c++)
-            average += hiddenActivationsPrev[address3((int3)(hiddenPosition.xy, c), hiddenSize)];
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, c), (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-        average /= hiddenSize.z;
+        float actionError = (c == hiddenCPrev ? tdError : tdError * -1.0f / hiddenSize.z);
 
-        float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex];
-
-        float update = beta * ((hiddenPosition.z == hiddenCPrev ? errorAction : 0.0f) - average);
-        
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * actionError, hiddenIndexAction1, visibleSize.z);
     }
 }
 

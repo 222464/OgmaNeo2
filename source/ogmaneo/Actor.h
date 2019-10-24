@@ -32,7 +32,6 @@ public:
     struct HistorySample {
         std::vector<cl::Buffer> _visibleCs;
         cl::Buffer _hiddenCs;
-        cl::Buffer _hiddenValues;
     
         float _reward;
     };
@@ -61,15 +60,11 @@ private:
 
 public:
     cl_float _alpha;
-
-    cl_float _beta;
-
     cl_float _gamma;
 
     Actor()
     :
-    _alpha(0.1f),
-    _beta(0.5f),
+    _alpha(0.01f),
     _gamma(0.97f)
     {}
 
