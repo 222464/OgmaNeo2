@@ -406,13 +406,10 @@ void kernel aLearn(
 
     float value = hiddenValues[hiddenColumnIndex];
 
-    float maxQ = -999999.0f;
+    float maxQ =  hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
 
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
-
-        maxQ = fmax(maxQ, value + hiddenActivations[hiddenIndex]);
-    }
+    for (int c = 1; c < hiddenSize.z; c++)
+        maxQ = fmax(maxQ, value + hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
 
     float qUpdate = q + g * maxQ;
 
