@@ -59,7 +59,7 @@ void Actor::init(
     // Stimulus
     _hiddenValues = createDoubleBuffer(cs, numHiddenColumns * sizeof(cl_float));
 
-    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
 
     // History samples
     _historySize = 0;
@@ -100,7 +100,7 @@ void Actor::step(
 
     // Initialize stimulus to 0
     cs.getQueue().enqueueFillBuffer(_hiddenValues[_front], static_cast<cl_float>(0.0f), 0, numHiddenColumns * sizeof(cl_float));
-    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
     // Compute feed stimulus
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -111,7 +111,7 @@ void Actor::step(
 
         _forwardKernel.setArg(argIndex++, visibleCs[vli]);
         _forwardKernel.setArg(argIndex++, _hiddenValues[_front]);
-        _forwardKernel.setArg(argIndex++, _hiddenActivations);
+        _forwardKernel.setArg(argIndex++, _hiddenActivations[_front]);
         _forwardKernel.setArg(argIndex++, _hiddenCounts);
         _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
         _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
@@ -126,7 +126,7 @@ void Actor::step(
     {
         int argIndex = 0;
 
-        _inhibitKernel.setArg(argIndex++, _hiddenActivations);
+        _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
 
@@ -180,7 +180,7 @@ void Actor::step(
 
         // Initialize stimulus to 0
         cs.getQueue().enqueueFillBuffer(_hiddenValues[_back], static_cast<cl_float>(0.0f), 0, numHiddenColumns * sizeof(cl_float));
-        cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+        cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
         // Compute feed stimulus
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -191,7 +191,7 @@ void Actor::step(
 
             _forwardKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
             _forwardKernel.setArg(argIndex++, _hiddenValues[_back]);
-            _forwardKernel.setArg(argIndex++, _hiddenActivations);
+            _forwardKernel.setArg(argIndex++, _hiddenActivations[_back]);
             _forwardKernel.setArg(argIndex++, _hiddenCounts);
             _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
@@ -214,7 +214,8 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, _hiddenValues[_front]);
             _learnKernel.setArg(argIndex++, _hiddenValues[_back]);
             _learnKernel.setArg(argIndex++, sPrev._hiddenValues);
-            _learnKernel.setArg(argIndex++, _hiddenActivations);
+            _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
+            _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
             _learnKernel.setArg(argIndex++, s._hiddenCsPrev);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
@@ -293,7 +294,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
     _hiddenValues = createDoubleBuffer(cs, numHiddenColumns * sizeof(cl_float));
-    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
 
     int numVisibleLayers;
     

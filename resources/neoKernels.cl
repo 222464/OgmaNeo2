@@ -384,6 +384,7 @@ void kernel aLearn(
     global const float* hiddenValues,
     global const float* hiddenValuesPrev,
     global const float* hiddenValuesPrevPrev,
+    global const float* hiddenActivations,
     global const float* hiddenActivationsPrev,
     global const int* hiddenCsPrev,
     global float* nonZeroValues,
@@ -404,7 +405,17 @@ void kernel aLearn(
     int hiddenIndexValue1 = address3((int3)(hiddenColumnPosition, hiddenSize.z), (int3)(hiddenSize.xy, hiddenSize.z + 1));
     int hiddenIndexAction = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
 
-    float qUpdate = q + g * hiddenValues[hiddenColumnIndex];
+    float value = hiddenValues[hiddenColumnIndex];
+
+    float maxQ = -999999.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        maxQ = fmax(maxQ, value + hiddenActivations[hiddenIndex]);
+    }
+
+    float qUpdate = q + g * maxQ;
 
     float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex];
 

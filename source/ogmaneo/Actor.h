@@ -46,7 +46,7 @@ private:
 
     cl::Buffer _hiddenCs;
 
-    cl::Buffer _hiddenActivations;
+    DoubleBuffer _hiddenActivations;
 
     DoubleBuffer _hiddenValues;
 
@@ -65,7 +65,7 @@ public:
 
     Actor()
     :
-    _alpha(0.1f),
+    _alpha(0.01f),
     _gamma(0.97f)
     {}
 
