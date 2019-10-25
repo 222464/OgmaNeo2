@@ -414,7 +414,7 @@ void kernel aLearn(
     float qUpdate = q + g * maxQ;
 
     float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex];
-    
+
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndexValue1, visibleSize.z);
 
     int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, hiddenCPrev), (int3)(hiddenSize.xy, hiddenSize.z + 1));
