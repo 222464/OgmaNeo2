@@ -406,25 +406,38 @@ void kernel aLearn(
 
     float value = hiddenValues[hiddenColumnIndex];
 
+    float average = 0.0f;
+    float averagePrev = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        average += hiddenActivations[hiddenIndex];
+        averagePrev += hiddenActivationsPrev[hiddenIndex];
+    }
+
+    average /= hiddenSize.z;
+    averagePrev /= hiddenSize.z;
+
     float maxQ = -999999.0f;
 
     for (int c = 0; c < hiddenSize.z; c++) {
         int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-        maxQ = fmax(maxQ, value + hiddenActivations[hiddenIndex]);
+        maxQ = fmax(maxQ, value + hiddenActivations[hiddenIndex] - average);
     }
 
     float qUpdate = q + g * maxQ;
 
-    float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex];
-
+    float tdError = qUpdate - (hiddenValuesPrev[hiddenColumnIndex] + hiddenActivationsPrev[hiddenIndexAction] - averagePrev);
+    
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndexValue1, visibleSize.z);
 
-    int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, hiddenCPrev), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, c), (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-    float errorAction = qUpdate - hiddenValuesPrev[hiddenColumnIndex] - hiddenActivationsPrev[hiddenIndexAction];
-
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorAction, hiddenIndexAction1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * (c == hiddenCPrev ? tdError * (1.0f - 1.0f / hiddenSize.z) : -tdError / hiddenSize.z), hiddenIndexAction1, visibleSize.z);
+    }
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
