@@ -420,28 +420,18 @@ void kernel aLearn(
     int hiddenIndexValue1 = address3((int3)(hiddenColumnPosition, hiddenSize.z), (int3)(hiddenSize.xy, hiddenSize.z + 1));
     int hiddenIndexAction = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
 
-    float average = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++)
-        average += hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
-
-    average /= hiddenSize.z;
-
     float qUpdate = q + g * hiddenValues[hiddenColumnIndex];
+    float valuePrev = hiddenValuesPrev[hiddenColumnIndex];
 
-    float qPred = hiddenValuesPrev[hiddenColumnIndex] + hiddenActivationsPrev[hiddenIndexAction] - average;
-
-    float tdError = qUpdate - qPred;
+    float tdError = qUpdate - valuePrev;
 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndexValue1, visibleSize.z);
 
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, c), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+    int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, hiddenCPrev), (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-        float actionError = (c == hiddenCPrev ? tdError : tdError * -1.0f / hiddenSize.z);
+    float errorAction = tdError - hiddenActivationsPrev[hiddenIndexAction];
 
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * actionError, hiddenIndexAction1, visibleSize.z);
-    }
+    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorAction, hiddenIndexAction1, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
