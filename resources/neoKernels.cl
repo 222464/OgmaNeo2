@@ -372,8 +372,6 @@ void kernel aInhibit(
         if (value > maxValue) {
             maxValue = value;
             maxIndex = c;
-
-            break;
         }
     }
 
