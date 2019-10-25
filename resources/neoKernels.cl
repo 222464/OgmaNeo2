@@ -359,41 +359,26 @@ void kernel aForward(
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    int3 hiddenSize,
-    uint2 seed
+    int3 hiddenSize
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
+    int maxIndex = 0;
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
 
-    float maxValue = -999999.0f;
+    for (int c = 1; c < hiddenSize.z; c++) {
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
-    for (int c = 0; c < hiddenSize.z; c++)
-        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
-
-    float total = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++)
-        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] - maxValue);
-
-    int selectIndex = 0;
-
-    float cusp = randFloat(&stateValue) * total;
-
-    float sumSoFar = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++) {
-        sumSoFar += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] - maxValue);
-
-        if (sumSoFar >= cusp) {
-            selectIndex = c;
+        if (value > maxValue) {
+            maxValue = value;
+            maxIndex = c;
 
             break;
         }
     }
 
     // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = selectIndex;
+    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
 }
 
 void kernel aLearn(
