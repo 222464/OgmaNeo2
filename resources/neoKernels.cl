@@ -450,13 +450,10 @@ void kernel imInhibit(
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int maxIndex = 0;
-    float maxValue = -999999.0f;
-    
-    // Find max
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
 
-        float value = hiddenActivations[hiddenIndex];
+    for (int c = 1; c < hiddenSize.z; c++) {
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
         if (value > maxValue) {
             maxValue = value;
