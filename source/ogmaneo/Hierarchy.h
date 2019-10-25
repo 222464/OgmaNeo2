@@ -164,7 +164,7 @@ public:
     _beta(0.01f),
     _gamma(0.99f),
     _maxHistorySamples(32),
-    _historyIters(8)
+    _historyIters(4)
     {}
 
     // Copy
