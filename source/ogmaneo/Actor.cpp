@@ -161,7 +161,7 @@ void Actor::step(
                 0, 0, numVisibleColumns * sizeof(cl_int));
         }
 
-        cs.getQueue().enqueueCopyBuffer(_hiddenCs, s._hiddenCsPrev, 0, 0, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueCopyBuffer(hiddenCsPrev, s._hiddenCsPrev, 0, 0, numHiddenColumns * sizeof(cl_int));
 
         cs.getQueue().enqueueCopyBuffer(_hiddenValues[_front], s._hiddenValues, 0, 0, numHiddenColumns * sizeof(cl_float));
 
