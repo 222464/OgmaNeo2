@@ -383,7 +383,6 @@ void kernel aLearn(
     global const int* visibleCsPrev,
     global const float* hiddenValues,
     global const float* hiddenValuesPrev,
-    global const float* hiddenValuesPrevPrev,
     global const float* hiddenActivations,
     global const float* hiddenActivationsPrev,
     global const int* hiddenCsPrev,
@@ -423,7 +422,7 @@ void kernel aLearn(
 
     int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, hiddenCPrev), (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-    float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] - hiddenActivationsPrev[hiddenIndexAction];
+    float errorAction = qUpdate - hiddenValuesPrev[hiddenColumnIndex] - hiddenActivationsPrev[hiddenIndexAction];
 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorAction, hiddenIndexAction1, visibleSize.z);
 }

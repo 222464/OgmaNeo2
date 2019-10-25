@@ -32,7 +32,6 @@ public:
     struct HistorySample {
         std::vector<cl::Buffer> _visibleCs;
         cl::Buffer _hiddenCsPrev;
-        cl::Buffer _hiddenValues;
     
         float _reward;
     };
