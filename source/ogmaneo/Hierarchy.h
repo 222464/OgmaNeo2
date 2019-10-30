@@ -27,7 +27,7 @@ public:
     struct LayerDesc {
         Int3 _hiddenSize; // Size of hidden layer
 
-        int _scRadius; // Sparse coder radius
+        int _ffRadius; // Feed forward radius
         int _rRadius; // Recurrent radius, set to -1 to disable
         int _pRadius; // Prediction radius
 
@@ -38,7 +38,7 @@ public:
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _scRadius(2),
+        _ffRadius(2),
         _rRadius(2),
         _pRadius(2),
         _ticksPerUpdate(1),
