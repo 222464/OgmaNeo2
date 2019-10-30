@@ -96,7 +96,7 @@ public:
     :
     _alpha(0.01f),
     _gamma(0.96f),
-    _maxHistorySize(31)
+    _maxHistorySize(33)
     {}
 
     // Copy
