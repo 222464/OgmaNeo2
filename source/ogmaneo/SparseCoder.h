@@ -30,21 +30,20 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix _ffWeights; // Feed forward weight matrix
     };
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
-    int _lateralRadius;
+    int _lRadius;
 
     FloatBuffer _hiddenStimuli;
     FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    IntBuffer _hiddenUsages; // Number of times used
 
-    SparseMatrix _laterals;
+    SparseMatrix _lWeights; // Lateral weights
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -97,18 +96,22 @@ private:
 
 public:
     int _explainIters; // Explaining-away iterations
+    float _alpha; // Feed forward learnign rate
+    float _beta; // Lateral learning rate
 
     // Defaults
     SparseCoder()
     :
-    _explainIters(3)
+    _explainIters(3),
+    _alpha(0.01f),
+    _beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
-        int lateralRadius,
+        int lRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
@@ -156,13 +159,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayers[i]._weights;
     }
 };
 } // namespace ogmaneo
