@@ -35,59 +35,74 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix _predWeights;
+        SparseMatrix _valueWeights;
+
+        FloatBuffer _difference;
+    };
+
+    struct HistorySample {
+        std::vector<FloatBuffer> _inputStates;
+        FloatBuffer _hiddenTargetStates;
     };
 
 private:
     Int3 _hiddenSize; // Size of the output/hidden/prediction
 
     FloatBuffer _hiddenStates; // Hidden states
+    FloatBuffer _hiddenValues; // Hidden values
 
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
+    std::vector<std::shared_ptr<HistorySample>> _historySamples;
+
     // --- Kernels ---
 
     void forward(
         const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputStates
+        std::mt19937 &rng
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const FloatBuffer* hiddenTargetStates,
-        const std::vector<const FloatBuffer*> &inputStates
+        int index
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Predictor* p,
-        const std::vector<const FloatBuffer*> &inputStates
+        Predictor* p
     ) {
-        p->forward(pos, rng, inputStates);
+        p->forward(pos, rng);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const FloatBuffer* hiddenTargetStates,
-        const std::vector<const FloatBuffer*> &inputStates
+        int index
     ) {
-        p->learn(pos, rng, hiddenTargetStates, inputStates);
+        p->learn(pos, rng, index);
     }
 
 public:
-    float _alpha; // Learning rate
+    float _alpha; // Prediction learning rate
+    float _beta; // Value learning rate
+    float _gamma; // Discount factor
+
+    int _maxHistorySamples;
+    int _historyIters;
 
     // Defaults
     Predictor()
     :
-    _alpha(0.01f)
+    _alpha(0.01f),
+    _gamma(0.95f),
+    _maxHistorySamples(33),
+    _historyIters(5)
     {}
 
     // Create with random initialization
@@ -100,6 +115,7 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
+        const std::vector<const FloatBuffer*> &feedBackStates,
         const std::vector<const FloatBuffer*> &inputStates
     );
 
@@ -147,13 +163,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return _visibleLayers[i]._weights;
     }
 };
 } // Namespace ogmaneo

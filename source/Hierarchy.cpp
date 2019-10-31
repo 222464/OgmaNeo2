@@ -26,8 +26,6 @@ void Hierarchy::initRandom(
     // Cache input sizes
     _inputSizes = inputSizes;
 
-    _differencesInfer.resize(layerDescs.size());
-
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
         // Create sparse coder visible layer descriptors
@@ -104,11 +102,7 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         _rLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, rVisibleLayerDescs, layerDescs[l]._rbScale);
-
-        _differencesInfer[l] = FloatBuffer(_rLayers[l].getHiddenStates().size(), 0.0f);
     }
-
-    _differencesLearn = _differencesInfer;
 }
 
 const Hierarchy &Hierarchy::operator=(
@@ -135,9 +129,6 @@ const Hierarchy &Hierarchy::operator=(
         }
     }
 
-    _differencesInfer = other._differencesInfer;
-    _differencesLearn = other._differencesLearn;
-
     return *this;
 }
 
@@ -162,32 +153,15 @@ void Hierarchy::step(
 
     // Backward
     for (int l = _rLayers.size() - 1; l >= 0; l--) {
-        std::vector<const FloatBuffer*> statesInfer(2);
-        std::vector<const FloatBuffer*> statesLearn(2);
-        
         const FloatBuffer* feedBackStates = l < _rLayers.size() - 1 ? &_pLayers[l + 1][0]->getHiddenStates() : goalStates;
-
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < _differencesInfer[l].size(); x++)
-            diffFloat(x, cs._rng, feedBackStates, &_rLayers[l].getHiddenStates(), &_differencesInfer[l]);
-#else
-        runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, feedBackStates, &_rLayers[l].getHiddenStates(), &_differencesInfer[l]), _differencesInfer[l].size(), cs._rng, cs._batchSize1);
-#endif
-
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < _differencesLearn[l].size(); x++)
-            diffFloat(x, cs._rng, &_rLayers[l].getHiddenStates(), &_rLayers[l].getHiddenStatesPrev(), &_differencesLearn[l]);
-#else
-        runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, &_rLayers[l].getHiddenStates(), &_rLayers[l].getHiddenStatesPrev(), &_differencesLearn[l]), _differencesLearn[l].size(), cs._rng, cs._batchSize1);
-#endif
 
         // Step actor layers
         for (int p = 0; p < _pLayers[l].size(); p++) {
             if (_pLayers[l][p] != nullptr) {
                 if (learnEnabled) 
-                    _pLayers[l][p]->learn(cs, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), { &_differencesLearn[l] });
+                    _pLayers[l][p]->learn(cs, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), { &_rLayers[l].getHiddenStates() });
 
-                _pLayers[l][p]->activate(cs, { &_differencesInfer[l] });
+                _pLayers[l][p]->activate(cs, { feedBackStates }, { &_rLayers[l].getHiddenStates() });
             }
         }
     }
@@ -237,8 +211,6 @@ void Hierarchy::readFromStream(
     _rLayers.resize(numLayers);
     _pLayers.resize(numLayers);
 
-    _differencesInfer.resize(numLayers);
-
     for (int l = 0; l < numLayers; l++) {
         _rLayers[l].readFromStream(is);
 
@@ -256,9 +228,5 @@ void Hierarchy::readFromStream(
             else
                 _pLayers[l][v] = nullptr;
         }
-
-        _differencesInfer[l] = FloatBuffer(_rLayers[l].getHiddenStates().size(), 0.0f);
     }
-
-    _differencesLearn = _differencesInfer;
 }
