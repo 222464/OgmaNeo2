@@ -194,6 +194,7 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_maxHistorySize), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
     writeBufferToStream(os, &_hiddenCs);
 
@@ -219,6 +220,7 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_maxHistorySize), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
     readBufferFromStream(is, &_hiddenCs);
 
