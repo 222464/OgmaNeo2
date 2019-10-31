@@ -72,14 +72,14 @@ void SparseCoder::inhibit(
 
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        if (hc == maxIndex)
-            continue;
+    // for (int hc = 0; hc < _hiddenSize.z; hc++) {
+    //     if (hc == maxIndex)
+    //         continue;
 
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
+    //     int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        _hiddenActivations[hiddenIndex] = 0.0f;
-    }
+    //     _hiddenActivations[hiddenIndex] = 0.0f;
+    // }
 }
 
 void SparseCoder::learn(
