@@ -90,13 +90,15 @@ public:
     float _alpha; // Learning rate
     float _gamma; // Discount
     int _maxHistorySize;
+    int _historyIters;
 
     // Defaults
     Predictor()
     :
     _alpha(0.01f),
     _gamma(0.96f),
-    _maxHistorySize(33)
+    _maxHistorySize(64),
+    _historyIters(8)
     {}
 
     // Copy

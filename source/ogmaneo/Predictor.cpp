@@ -61,14 +61,14 @@ void Predictor::learn(
 
     int dist = _historySamples.size() - 2 - index;
 
-    float targetQ = std::max(static_cast<float>(std::pow(_gamma, dist)), _gamma * nextQ);
-
     int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
 
     float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
     int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
+
+    float targetQ = std::max(static_cast<float>(std::pow(_gamma, dist)), _gamma * nextQ);
 
     float delta = _alpha * (targetQ - sum / std::max(1, count));
 
@@ -169,7 +169,11 @@ void Predictor::learn(
     }
 
     if (_historySamples.size() > 1) {
-        for (int t = static_cast<int>(_historySamples.size()) - 2; t >= 0; t--) {
+        std::uniform_int_distribution<int> historyDist(0, _historySamples.size() - 2);
+
+        for (int it = 0; it < _historyIters; it++) {
+            int t = historyDist(cs._rng);
+    
             // Learn kernel
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _hiddenSize.x; x++)
