@@ -30,20 +30,13 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _ffWeights; // Feed forward weight matrix
+        SparseMatrix _weights; // Weight matrix
     };
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
-    int _lRadius;
-
-    FloatBuffer _hiddenStimuli;
-    FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
-    IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-
-    SparseMatrix _lWeights; // Lateral weights
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -57,15 +50,11 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void inhibit(
-        const Int2 &pos,
-        std::mt19937 &rng
-    );
-
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
     );
 
     static void forwardKernel(
@@ -77,41 +66,29 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
-    static void inhibitKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc
-    ) {
-        sc->inhibit(pos, rng);
-    }
-
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
     ) {
-        sc->learn(pos, rng, inputCs);
+        sc->learn(pos, rng, inputCs, vli);
     }
 
 public:
-    int _explainIters; // Explaining-away iterations
-    float _alpha; // Feed forward learnign rate
-    float _beta; // Lateral learning rate
+    float _alpha; // Weight learning rate
 
     // Defaults
     SparseCoder()
     :
-    _explainIters(3),
-    _alpha(0.01f),
-    _beta(0.01f)
+    _alpha(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
-        int lRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
