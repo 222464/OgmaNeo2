@@ -38,7 +38,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenUsages;
+    FloatBuffer _hiddenBiases;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;

@@ -23,7 +23,7 @@ void SparseCoder::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _hiddenUsages[hiddenIndex];
+        float sum = _hiddenBiases[hiddenIndex];
         int count = 0;
 
         // For each visible layer
@@ -42,7 +42,7 @@ void SparseCoder::forward(
             maxIndex = hc;
         }
 
-        _hiddenUsages[hiddenIndex] += _beta * -sum;
+        _hiddenBiases[hiddenIndex] += _beta * -sum;
     }
 
     _hiddenCs[hiddenColumnIndex] = maxIndex;
@@ -112,7 +112,7 @@ void SparseCoder::initRandom(
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
 
-    _hiddenUsages = FloatBuffer(numHidden, 1.0f / _hiddenSize.z);
+    _hiddenBiases = FloatBuffer(numHidden, 1.0f / _hiddenSize.z);
 }
 
 void SparseCoder::step(
