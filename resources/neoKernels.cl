@@ -245,6 +245,21 @@ float total(
 
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
+void kernel scCount(
+    global const int* rowRanges,
+    global int* hiddenCounts,
+    int3 visibleSize,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+	      
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, 0), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+
+    hiddenCounts[hiddenColumnIndex] += count(rowRanges, hiddenIndex) / visibleSize.z;
+}
+
 void kernel scForward(
     global const int* visibleCs,
     global float* hiddenActivations,
@@ -285,6 +300,33 @@ void kernel scInhibit(
     hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
 }
 
+void kernel scBoost(
+    global const int* visibleCs,
+    global const int* hiddenCs,
+    global const float* hiddenActivations,
+    global const int* hiddenCounts,
+    global float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    int3 visibleSize,
+    int3 hiddenSize,
+    float beta
+) {
+    int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int hiddenColumnIndex = address2(hiddenPosition.xy, hiddenSize.xy);
+
+    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
+
+    int hiddenC = hiddenCs[hiddenColumnIndex];
+
+    int hiddenIndex = address3(hiddenPosition, hiddenSize);
+
+    float delta = rescale * (sigmoid(hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenC), hiddenSize)]) - sigmoid(hiddenActivations[hiddenIndex]));
+
+    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, beta * delta, hiddenIndex, visibleSize.z);
+}
+
 void kernel scLearn(
     global const int* visibleCs,
     global const int* hiddenCs,
@@ -308,9 +350,9 @@ void kernel scLearn(
 
     sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum));
+    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum);
 
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
 
 // ------------------------------------------- Actor -------------------------------------------

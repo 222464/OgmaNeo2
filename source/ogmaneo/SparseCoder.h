@@ -36,19 +36,24 @@ private:
 
     cl::Buffer _hiddenActivations;
 
+    cl::Buffer _hiddenCounts;
+
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
     cl::Kernel _inhibitKernel;
+    cl::Kernel _boostKernel;
     cl::Kernel _learnKernel;
 
 public:
     cl_float _alpha;
+    cl_float _beta;
 
     SparseCoder()
     :
-    _alpha(0.5f)
+    _alpha(0.2f),
+    _beta(0.05f)
     {}
 
     void init(
