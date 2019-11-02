@@ -95,8 +95,8 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.02f),
-    _gamma(0.95f),
+    _alpha(0.01f),
+    _gamma(0.9f),
     _maxHistorySize(64),
     _historyIters(8)
     {}
