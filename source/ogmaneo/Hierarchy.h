@@ -161,7 +161,7 @@ public:
     Hierarchy()
     :
     _alpha(0.02f),
-    _beta(0.02f),
+    _beta(0.001f),
     _gamma(0.99f),
     _maxHistorySamples(64),
     _historyIters(8)
