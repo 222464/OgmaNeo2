@@ -68,7 +68,7 @@ void Predictor::learn(
     float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
     int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-    float targetQ = std::max(static_cast<float>(std::pow(_gamma, dist)), _gamma * nextQ);
+    float targetQ = (dist == 0 ? 1.0f : 0.0f) + _gamma * nextQ;
 
     float delta = _alpha * (targetQ - sum / std::max(1, count));
 
