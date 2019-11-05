@@ -128,7 +128,7 @@ void SparseCoder::step(
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
 
-            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y));
         }
 
         // Boost
