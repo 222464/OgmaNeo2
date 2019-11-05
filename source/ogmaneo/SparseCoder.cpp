@@ -74,18 +74,25 @@ void SparseCoder::learn(
 
     int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
 
-    int targetC = (*inputCs[vli])[visibleColumnIndex];
+    int maxIndex = 0;
+    float maxValue = -999999.0f;
 
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float target = (vc == targetC ? 1.0f : 0.0f);
-
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
 
-        float delta = _alpha * (target - sigmoid(sum));
+        if (sum > maxValue) {
+            maxValue = sum;
+            maxIndex = vc;
+        }
+    }
 
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+    int targetC = (*inputCs[vli])[visibleColumnIndex];
+
+    if (maxIndex != targetC) {
+        vl._weights.deltaOHVsT(_hiddenCs, _alpha, address3(Int3(pos.x, pos.y, targetC), vld._size), _hiddenSize.z);
+        vl._weights.deltaOHVsT(_hiddenCs, -_alpha, address3(Int3(pos.x, pos.y, maxIndex), vld._size), _hiddenSize.z);
     }
 }
 
