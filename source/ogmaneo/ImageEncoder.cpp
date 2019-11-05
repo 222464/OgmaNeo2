@@ -13,8 +13,7 @@ using namespace ogmaneo;
 void ImageEncoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputActs,
-    bool learnEnabled
+    const std::vector<const FloatBuffer*> &inputActs
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -45,22 +44,6 @@ void ImageEncoder::forward(
     }
 
     _hiddenCs[hiddenColumnIndex] = maxIndex;
-
-    if (learnEnabled) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-            float delta = _beta * (1.0f / _hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
-
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-                vl._weights.deltas(*inputActs[vli], delta, hiddenIndex);
-            }
-        }
-    }
 }
 
 void ImageEncoder::learn(
@@ -157,9 +140,9 @@ void ImageEncoder::step(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputActs, learnEnabled);
+            forward(Int2(x, y), cs._rng, inputActs);
 #else
-    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     if (learnEnabled) {

@@ -49,8 +49,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActs
     );
 
     void learn(
@@ -71,10 +70,9 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActs
     ) {
-        sc->forward(pos, rng, inputActs, learnEnabled);
+        sc->forward(pos, rng, inputActs);
     }
 
     static void learnKernel(
@@ -99,13 +97,11 @@ private:
 
 public:
     float _alpha; // Weight learning rate
-    float _beta; // Usage update rate
 
     // Defaults
     ImageEncoder()
     :
-    _alpha(0.5f),
-    _beta(0.1f)
+    _alpha(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
