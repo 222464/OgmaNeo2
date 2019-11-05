@@ -41,7 +41,7 @@ void SparseCoder::init(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.1f, 0.1f, rng);
+        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.5f, 0.5f, rng);
 
         vl._weights.initT(cs);
 
@@ -111,27 +111,6 @@ void SparseCoder::step(
     }
 
     if (learnEnabled) {
-        // Boost
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            int argIndex = 0;
-
-            _boostKernel.setArg(argIndex++, visibleCs[vli]);
-            _boostKernel.setArg(argIndex++, _hiddenCs);
-            _boostKernel.setArg(argIndex++, _hiddenActivations);
-            _boostKernel.setArg(argIndex++, _hiddenCounts);
-            _boostKernel.setArg(argIndex++, vl._weights._nonZeroValues);
-            _boostKernel.setArg(argIndex++, vl._weights._rowRanges);
-            _boostKernel.setArg(argIndex++, vl._weights._columnIndices);
-            _boostKernel.setArg(argIndex++, vld._size);
-            _boostKernel.setArg(argIndex++, _hiddenSize);
-            _boostKernel.setArg(argIndex++, _beta);
-
-            cs.getQueue().enqueueNDRangeKernel(_boostKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
-        }
-
         // Learn
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
@@ -150,6 +129,26 @@ void SparseCoder::step(
             _learnKernel.setArg(argIndex++, _alpha);
 
             cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
+        }
+
+        // Boost
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            int argIndex = 0;
+
+            _boostKernel.setArg(argIndex++, visibleCs[vli]);
+            _boostKernel.setArg(argIndex++, _hiddenCs);
+            _boostKernel.setArg(argIndex++, _hiddenCounts);
+            _boostKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+            _boostKernel.setArg(argIndex++, vl._weights._rowRanges);
+            _boostKernel.setArg(argIndex++, vl._weights._columnIndices);
+            _boostKernel.setArg(argIndex++, vld._size);
+            _boostKernel.setArg(argIndex++, _hiddenSize);
+            _boostKernel.setArg(argIndex++, _beta);
+
+            cs.getQueue().enqueueNDRangeKernel(_boostKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
         }
     }
 }
