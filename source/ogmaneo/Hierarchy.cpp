@@ -193,6 +193,7 @@ void Hierarchy::initRandom(
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
+        const float lowMul = 0.01f;
         std::normal_distribution<float> weightDist(0.0f, 1.0f);
 
         // Histories for all input layers or just the one sparse coder (if not the first layer)
@@ -236,7 +237,7 @@ void Hierarchy::initRandom(
 
                     // Init weights
                     for (int j = 0; j < _rLayers[l]._weights[i]._nonZeroValues.size(); j++)
-                        _rLayers[l]._weights[i]._nonZeroValues[j] = weightDist(cs._rng);
+                        _rLayers[l]._weights[i]._nonZeroValues[j] = weightDist(cs._rng) * lowMul;
 
                     for (int x = 0; x < layerDescs[l]._hiddenSize.x; x++)
                         for (int y = 0; y < layerDescs[l]._hiddenSize.y; y++) {
