@@ -141,7 +141,7 @@ void Hierarchy::learn(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
-        float delta = _alpha * _rLayers[l]._errors[vli][visibleColumnIndex];
+        float delta = _alpha * std::tanh(_rLayers[l]._errors[vli][visibleColumnIndex]);
         
         if (l == _scLayers.size() - 1)
             _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -155,7 +155,7 @@ void Hierarchy::learn(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        float delta = _beta * _rLayers[l]._errors[vli][visibleColumnIndex];
+        float delta = _beta * std::tanh(_rLayers[l]._errors[vli][visibleColumnIndex]);
         
         if (l == _scLayers.size() - 1)
             _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
