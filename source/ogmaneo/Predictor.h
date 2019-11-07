@@ -96,7 +96,7 @@ public:
     Predictor()
     :
     _alpha(0.01f),
-    _gamma(0.95f),
+    _gamma(0.9f),
     _maxHistorySize(64),
     _historyIters(16)
     {}
