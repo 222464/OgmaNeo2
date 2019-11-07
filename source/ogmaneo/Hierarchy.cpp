@@ -37,7 +37,7 @@ void Hierarchy::forward(
                 else
                     sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-                sum *= std::sqrt(1.0f / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]));
+                sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
             
                 if (sum > maxValue) {
                     maxValue = sum;
@@ -56,7 +56,7 @@ void Hierarchy::forward(
             else
                 sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-            sum *= std::sqrt(1.0f / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]));
+            sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
             
             maxValue = sum;
         }
@@ -77,9 +77,9 @@ void Hierarchy::forward(
         else
             sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-        sum *= std::sqrt(1.0f / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]));
+        sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
 
-        _rLayers[l]._activations[vli][visibleColumnIndex] = std::min(1.0f, std::max(-1.0f, sum));
+        _rLayers[l]._activations[vli][visibleColumnIndex] = sum;
     }
 }
 
@@ -95,36 +95,24 @@ void Hierarchy::backward(
     int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
     if (l == 0) {
-        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+        float error = 0.0f;
 
-        if (act > -1.0f && act < 1.0f) {
-            float error = 0.0f;
-
-            // For each visible layer
-            for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
-                if (!_actions[vli].empty())
-                    error += _rLayers[l]._weights[vli].multiplyOHVsT(*inputCs[vli], _rLayers[l]._errors[vli], hiddenIndex, _inputSizes[vli].z);
-            }
-
-            error *= std::sqrt(1.0f / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]));
-
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
+        // For each visible layer
+        for (int vli = 0; vli < _rLayers[l]._weights.size(); vli++) {
+            if (!_actions[vli].empty())
+                error += _rLayers[l]._weights[vli].multiplyOHVsT(*inputCs[vli], _rLayers[l]._errors[vli], hiddenIndex, _inputSizes[vli].z);
         }
-        else
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = 0.0f;
+
+        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
     }
     else {
-        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+        float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 
-        if (act > -1.0f && act < 1.0f) {
-            float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
-
-            error *= std::sqrt(1.0f / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]));
-            
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
-        }
-        else
-            _rLayers[l + 1]._errors[0][hiddenColumnIndex] = 0.0f;
+        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+        
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
     }
 }
 
@@ -194,7 +182,7 @@ void Hierarchy::initRandom(
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
         const float lowMul = 0.01f;
-        std::normal_distribution<float> weightDist(0.0f, 1.0f);
+        std::uniform_real_distribution<float> weightDist(0.99f, 1.0f);
 
         // Histories for all input layers or just the one sparse coder (if not the first layer)
         _histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l]._temporalHorizon : layerDescs[l]._temporalHorizon);
