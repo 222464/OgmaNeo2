@@ -24,7 +24,7 @@ void ImageEncoder::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
-        int count = 0;
+        //int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -32,10 +32,10 @@ void ImageEncoder::forward(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiply(*inputActs[vli], hiddenIndex);
-            count += vl._weights.count(hiddenIndex);
+            //count += vl._weights.count(hiddenIndex);
         }
 
-        sum /= std::max(1, count);
+        //sum /= std::max(1, count);
 
         if (sum > maxActivation) {
             maxActivation = sum;

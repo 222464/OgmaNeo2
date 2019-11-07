@@ -24,7 +24,7 @@ void SparseCoder::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
-        int count = 0;
+        //int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -32,10 +32,10 @@ void SparseCoder::forward(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-            count += vl._weights.count(hiddenIndex) / vld._size.z;
+            //count += vl._weights.count(hiddenIndex) / vld._size.z;
         }
 
-        sum /= std::max(1, count);
+        //sum /= std::max(1, count);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -80,13 +80,12 @@ void SparseCoder::learn(
 
     if (maxIndex != targetC) {
         for (int vc = 0; vc < vld._size.z; vc++) {
+            if (vc == targetC)
+                continue;
+                
             int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-            float target = (vc == targetC ? 1.0f : 0.0f);
-
-            float delta = _alpha * (target - std::exp(activations[vc]));
-
-            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+            vl._weights.deltaOHVsT(_hiddenCs, -_alpha, visibleIndex, _hiddenSize.z);
         }
     }
 }
