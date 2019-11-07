@@ -37,6 +37,7 @@ private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenRandomCs; // Hidden states with randomness
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -80,13 +81,11 @@ private:
 
 public:
     float _alpha; // Weight learning rate
-    float _beta; // Usage update rate
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.5f),
-    _beta(0.1f)
+    _alpha(4.0f)
     {}
 
     // Create a sparse coding layer with random initialization
