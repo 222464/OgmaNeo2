@@ -48,31 +48,22 @@ void Predictor::learn(
     const HistorySample* s = _historySamples[index].get();
     const HistorySample* sNext = _historySamples[index + 1].get();
 
-    float nextQ = 0.0f;
-    
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, sNext->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
-        int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
-
-        nextQ = std::max(nextQ, sum / std::max(1, count));
-    }
-
     int dist = _historySamples.size() - 2 - index;
 
     int targetC = sNext->_hiddenTargetCs[hiddenColumnIndex];
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
+    float strength = std::pow(_gamma, dist);
 
-    float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
-    int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-    float targetQ = std::max<float>(std::pow(_gamma, dist), _gamma * nextQ);
+        float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
+        int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-    float delta = _alpha * (targetQ - sum / std::max(1, count));
+        float delta = _alpha * strength * ((hc == targetC ? 1.0f : 0.0f) - sigmoid(sum / std::max(1, count)));
 
-    _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
+        _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
+    }
 }
 
 void Predictor::initRandom(
