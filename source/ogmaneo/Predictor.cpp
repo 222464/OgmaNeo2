@@ -76,7 +76,7 @@ void Predictor::initRandom(
     _hiddenSize = hiddenSize;
 
     // Pre-compute dimensions
-    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
+    std::uniform_real_distribution<float> weightDist(-0.001f, 0.0f);
 
     // Create layer
     int numVisibleColumns = _visibleLayerDesc._size.x * _visibleLayerDesc._size.y;
