@@ -60,7 +60,7 @@ void Predictor::learn(
         float sum = _visibleLayer._weights.multiplyCombinedOHVs(*feedBackCs, s->_inputCs, hiddenIndex, _visibleLayerDesc._size.z);
         int count = _visibleLayer._weights.count(hiddenIndex) / (_visibleLayerDesc._size.z * _visibleLayerDesc._size.z);
 
-        float delta = strength * ((hc == targetC ? 1.0f : 0.0f) - std::tanh(sum / std::max(1, count)));
+        float delta = strength * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum / std::max(1, count)));
 
         _visibleLayer._weights.deltaCombinedOHVs(*feedBackCs, s->_inputCs, delta, hiddenIndex, _visibleLayerDesc._size.z);
     }
@@ -76,7 +76,7 @@ void Predictor::initRandom(
     _hiddenSize = hiddenSize;
 
     // Pre-compute dimensions
-    std::uniform_real_distribution<float> weightDist(-0.001f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create layer
     int numVisibleColumns = _visibleLayerDesc._size.x * _visibleLayerDesc._size.y;
