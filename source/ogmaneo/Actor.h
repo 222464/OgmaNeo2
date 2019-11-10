@@ -64,8 +64,8 @@ public:
 
     Actor()
     :
-    _alpha(0.02f),
-    _gamma(0.98f)
+    _alpha(0.03f),
+    _gamma(0.95f)
     {}
 
     void init(
