@@ -454,20 +454,35 @@ void kernel aLearn(
 
     float value = hiddenValues[hiddenColumnIndex];
 
-    float maxQ = value + hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    float averageAdv = 0.0f;
+    float averageAdvPrev = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        averageAdv += hiddenActivations[hiddenIndex];
+        averageAdvPrev += hiddenActivationsPrev[hiddenIndex];
+    }
+
+    averageAdv /= hiddenSize.z;
+    averageAdvPrev /= hiddenSize.z;
+
+    float maxQ = value + hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)] - averageAdv;
 
     for (int c = 1; c < hiddenSize.z; c++)
-        maxQ = fmax(maxQ, value + hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
+        maxQ = fmax(maxQ, value + hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] - averageAdv);
 
     float qUpdate = q + g * maxQ;
 
-    float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex];
+    float tdError = qUpdate - (hiddenValuesPrev[hiddenColumnIndex] + hiddenActivationsPrev[hiddenIndexAction] - averageAdvPrev);
 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndexValue1, visibleSize.z);
 
-    int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, hiddenCPrev), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndexAction1 = address3((int3)(hiddenColumnPosition, c), (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * (tdError - hiddenActivationsPrev[hiddenIndexAction]), hiddenIndexAction1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError * (c == hiddenCPrev ? 1.0f - 1.0f / hiddenSize.z : -1.0f / hiddenSize.z), hiddenIndexAction1, visibleSize.z);
+    }
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
