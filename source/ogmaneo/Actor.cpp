@@ -171,7 +171,7 @@ void Actor::step(
 
         cl_float q = 0.0f;
 
-        for (int t = _historySize - 1; t >= 1; t--)
+        for (int t = 1; t < _historySize; t++)
             q += _historySamples[t]._reward * std::pow(_gamma, t - 1);
 
         // Initialize stimulus to 0
