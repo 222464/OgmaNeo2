@@ -51,7 +51,7 @@ public:
 
     SparseCoder()
     :
-    _alpha(1.0f)
+    _alpha(0.5f)
     {}
 
     void init(
