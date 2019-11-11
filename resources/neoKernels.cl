@@ -428,7 +428,7 @@ void kernel aLearn(
 
     float qUpdate = q + g * maxQ;
 
-    float tdError = tanh(qUpdate - (hiddenValuesPrev[hiddenColumnIndex] + hiddenActivationsPrev[hiddenIndexAction] - averageAdvPrev));
+    float tdError = qUpdate - (hiddenValuesPrev[hiddenColumnIndex] + hiddenActivationsPrev[hiddenIndexAction] - averageAdvPrev);
 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndexValue1, visibleSize.z);
 
