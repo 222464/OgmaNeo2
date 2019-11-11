@@ -37,7 +37,6 @@ private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
-    IntBuffer _hiddenRandomCs; // Hidden states with randomness
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
