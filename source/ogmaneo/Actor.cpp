@@ -141,6 +141,7 @@ void Actor::step(
         _inhibitKernel.setArg(argIndex++, _hiddenActivations);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
+        _inhibitKernel.setArg(argIndex++, _epsilon);
         _inhibitKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
@@ -263,6 +264,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(cl_float));
 
     writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
@@ -314,6 +316,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
 
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 

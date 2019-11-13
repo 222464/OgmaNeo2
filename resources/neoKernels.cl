@@ -401,31 +401,34 @@ void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
     int3 hiddenSize,
+    float epsilon,
     uint2 seed
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
 
-    int selectIndex = 0;
+    if (randFloat(&state) < epsilon)
+        hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = rand(&stateValue) % hiddenSize.z;
+    else {
+        int maxIndex = 0;
+        float maxActivation = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
 
-    float cusp = randFloat(&stateValue);
+        for (int c = 1; c < hiddenSize.z; c++) {
+            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
-    float sumSoFar = 0.0f;
+            if (value > maxActivation) {
+                maxActivation = value;
 
-    for (int c = 0; c < hiddenSize.z; c++) {
-        sumSoFar += hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
-
-        if (sumSoFar >= cusp) {
-            selectIndex = c;
-
-            break;
+                maxIndex = c;
+            }
         }
-    }
 
-    // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = selectIndex;
+        // Set states
+        hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
+    }
 }
+
 
 void kernel aLearn(
     global const int* visibleCsPrev,
