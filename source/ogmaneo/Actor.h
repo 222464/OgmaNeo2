@@ -31,7 +31,7 @@ public:
 
     struct HistorySample {
         std::vector<cl::Buffer> _visibleCs;
-        cl::Buffer _hiddenCs;
+        cl::Buffer _hiddenCsPrev;
         cl::Buffer _hiddenValues;
     
         float _reward;
@@ -84,6 +84,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
+        const cl::Buffer &hiddenCsPrev,
         std::mt19937 &rng,
         float reward,
         bool learnEnabled

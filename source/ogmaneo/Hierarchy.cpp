@@ -241,9 +241,8 @@ void Hierarchy::step(
             _rewardCounts[l] = 0.0f;
 
             for (int p = 0; p < _aLayers[l].size(); p++) {
-                if (_aLayers[l][p] != nullptr) {
-                    _aLayers[l][p]->step(cs, feedBack, rng, r, learnEnabled);
-                }
+                if (_aLayers[l][p] != nullptr)
+                    _aLayers[l][p]->step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p], rng, r, learnEnabled);
             }
         }
     }
