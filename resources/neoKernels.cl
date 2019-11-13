@@ -408,7 +408,7 @@ void kernel aInhibit(
 
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
 
-    if (randFloat(&state) < epsilon)
+    if (randFloat(&stateValue) < epsilon)
         hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = rand(&stateValue) % hiddenSize.z;
     else {
         int maxIndex = 0;
