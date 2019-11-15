@@ -13,8 +13,7 @@ using namespace ogmaneo;
 void SparseCoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs,
-    bool learnEnabled
+    const std::vector<const IntBuffer*> &inputCs
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -78,7 +77,7 @@ void SparseCoder::learn(
         for (int vc = 0; vc < vld._size.z; vc++) {
             int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-            float delta = _alpha * ((vc == targetC ? 1.0f : 0.0f) - (activations[vc] > 0.0f ? 1.0f + activations[vc] : std::exp(activations[vc])));
+            float delta = _alpha * ((vc == targetC ? 1.0f : 0.0f) - std::exp(activations[vc]));
 
             vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
         }
@@ -135,9 +134,9 @@ void SparseCoder::step(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputCs, learnEnabled);
+            forward(Int2(x, y), cs._rng, inputCs);
 #else
-    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     if (learnEnabled) {
