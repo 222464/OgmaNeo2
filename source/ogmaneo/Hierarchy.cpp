@@ -95,6 +95,8 @@ void Hierarchy::backward(
     int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), _scLayers[l].getHiddenSize());
 
     if (l == 0) {
+        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+
         float error = 0.0f;
 
         // For each visible layer
@@ -105,14 +107,16 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * (1.0f - act * act);
     }
     else {
+        float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
+
         float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
         
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * (1.0f - act * act);
     }
 }
 
