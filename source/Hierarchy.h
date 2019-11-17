@@ -46,12 +46,12 @@ public:
         _rfRadius(2),
         _rrRadius(2),
         _pRadius(2),
-        _rfScale(16.0f),
+        _rfScale(8.0f),
         _rfDropRatio(0.0f),
         _rrScale(8.0f),
         _rrDropRatio(0.5f),
         _rbScale(1.0f),
-        _pScale(16.0f),
+        _pScale(4.0f),
         _pDropRatio(0.0f)
         {}
     };

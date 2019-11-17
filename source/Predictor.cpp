@@ -32,7 +32,7 @@ void Predictor::forward(
             count += vl._weights.counts(hiddenIndex);
         }
     
-        _hiddenStates[hiddenIndex] = std::tanh(sum / std::max(1, count));
+        _hiddenStates[hiddenIndex] = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
     }
 }
 
@@ -63,7 +63,7 @@ void Predictor::learn(
             count += vl._weights.counts(hiddenIndex);
         }
 
-        float predState = std::tanh(sum / std::max(1, count));
+        float predState = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
 
         float delta = strength * (_historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState);
 

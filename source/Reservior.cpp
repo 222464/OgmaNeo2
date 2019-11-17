@@ -31,7 +31,7 @@ void Reservior::forward(
             count += vl._weights.counts(hiddenIndex);
         }
 
-        _hiddenStates[hiddenIndex] = std::tanh(sum / std::max(1, count));
+        _hiddenStates[hiddenIndex] = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
     }
 }
 
