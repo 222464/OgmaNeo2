@@ -17,34 +17,19 @@ void Predictor::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    // Determine value
-    float value = 0.0f;
-    int count = 0;
-
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(_hiddenSize.x, _hiddenSize.y, 1));
-
-        value += vl._valueWeights.multiply(vl._difference, hiddenIndex);
-        count += vl._valueWeights.counts(hiddenIndex);
-    }
-
-    _hiddenValues[hiddenColumnIndex] = value / std::max(1, count);
-
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._predWeights.multiply(vl._difference, hiddenIndex);
+            sum += vl._weights.multiply(vl._difference, hiddenIndex);
+            count += vl._weights.counts(hiddenIndex);
         }
     
         _hiddenStates[hiddenIndex] = std::tanh(sum / std::max(1, count));
@@ -58,62 +43,36 @@ void Predictor::learn(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    int dist = index / static_cast<float>(_maxHistorySamples);
+    int dist = index - 1;
 
     // Next value
-    float target = std::pow(_gamma, dist);
+    float strength = std::pow(_gamma, dist);
 
-    float value = 0.0f;
-    int count = 0;
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        float sum = 0.0f;
+        int count = 0;
 
-        int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(_hiddenSize.x, _hiddenSize.y, 1));
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        value += vl._valueWeights.multiply(vl._difference, hiddenIndex);
-        count += vl._valueWeights.counts(hiddenIndex);
-    }
+            sum += vl._weights.multiply(vl._difference, hiddenIndex);
+            count += vl._weights.counts(hiddenIndex);
+        }
 
-    float tdError = target - value / std::max(1, count);
+        float predState = std::tanh(sum / std::max(1, count));
 
-    // For each visible layer
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        float delta = _historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState;
 
-        int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(_hiddenSize.x, _hiddenSize.y, 1));
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._valueWeights.deltas(vl._difference, _beta * tdError, hiddenIndex);
-    }
-
-    if (tdError > 0.0f) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-            float sum = 0.0f;
-
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-                sum += vl._predWeights.multiply(vl._difference, hiddenIndex);
-            }
-
-            float predState = std::tanh(sum / std::max(1, count));
-
-            float delta = _historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState;
-
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-                vl._predWeights.deltas(vl._difference, _alpha * delta, hiddenIndex);
-            }
+            vl._weights.deltas(vl._difference, _alpha * delta, hiddenIndex);
         }
     }
 }
@@ -142,24 +101,18 @@ void Predictor::initRandom(
         int numVisible = numVisibleColumns * vld._size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vld._dropRatio, vl._predWeights, cs._rng);
+        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vld._dropRatio, vl._weights, cs._rng);
 
         std::normal_distribution<float> weightDist(0.0f, vld._scale);
 
-        for (int i = 0; i < vl._predWeights._nonZeroValues.size(); i++)
-            vl._predWeights._nonZeroValues[i] = weightDist(cs._rng);
-
-        initSMLocalRF(vld._size, Int3(_hiddenSize.x, _hiddenSize.y, 1), vld._radius, vld._dropRatio, vl._valueWeights, cs._rng);
-
-        for (int i = 0; i < vl._valueWeights._nonZeroValues.size(); i++)
-            vl._valueWeights._nonZeroValues[i] = 0.0f;
+        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
+            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
         vl._difference = FloatBuffer(numVisible, 0.0f);
     }
 
     // Hidden
     _hiddenStates = FloatBuffer(numHidden, 0.0f);
-    _hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
 }
 
 void Predictor::activate(
@@ -267,7 +220,6 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
     writeBufferToStream(os, &_hiddenStates);
-    writeBufferToStream(os, &_hiddenValues);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -279,8 +231,7 @@ void Predictor::writeToStream(
 
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
-        writeSMToStream(os, vl._predWeights);
-        writeSMToStream(os, vl._valueWeights);
+        writeSMToStream(os, vl._weights);
     }
 }
 
@@ -295,7 +246,6 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenStates);
-    readBufferFromStream(is, &_hiddenValues);
 
     int numVisibleLayers;
     
@@ -313,8 +263,7 @@ void Predictor::readFromStream(
 
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        readSMFromStream(is, vl._predWeights);
-        readSMFromStream(is, vl._valueWeights);
+        readSMFromStream(is, vl._weights);
 
         vl._difference = FloatBuffer(numVisible, 0.0f);
     }

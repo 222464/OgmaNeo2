@@ -35,8 +35,7 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _predWeights;
-        SparseMatrix _valueWeights;
+        SparseMatrix _weights;
 
         FloatBuffer _difference;
     };
@@ -50,7 +49,6 @@ private:
     Int3 _hiddenSize; // Size of the output/hidden/prediction
 
     FloatBuffer _hiddenStates; // Hidden states
-    FloatBuffer _hiddenValues; // Hidden values
 
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
@@ -99,10 +97,10 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.01f),
+    _alpha(0.1f),
     _gamma(0.95f),
-    _maxHistorySamples(33),
-    _historyIters(5)
+    _maxHistorySamples(65),
+    _historyIters(8)
     {}
 
     // Create with random initialization
