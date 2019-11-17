@@ -65,7 +65,7 @@ void Predictor::learn(
 
         float predState = std::tanh(sum / std::max(1, count));
 
-        float delta = _historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState;
+        float delta = strength * (_historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState);
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
