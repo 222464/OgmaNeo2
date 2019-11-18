@@ -29,7 +29,7 @@ void Predictor::forward(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiply(vl._difference, hiddenIndex);
-            count += vl._weights.counts(hiddenIndex);
+            count += vl._weights.count(hiddenIndex);
         }
     
         _hiddenStates[hiddenIndex] = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
@@ -60,7 +60,7 @@ void Predictor::learn(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiply(vl._difference, hiddenIndex);
-            count += vl._weights.counts(hiddenIndex);
+            count += vl._weights.count(hiddenIndex);
         }
 
         float predState = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));

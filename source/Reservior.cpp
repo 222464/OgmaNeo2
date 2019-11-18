@@ -30,11 +30,11 @@ void Reservior::forward(
 
             if (vld._noDiagonal) {
                 sum += vl._weights.multiplyNoDiagonal(*inputStates[vli], hiddenIndex);
-                count += vl._weights.counts(hiddenIndex) - 1;
+                count += vl._weights.count(hiddenIndex) - 1;
             }
             else {
                 sum += vl._weights.multiply(*inputStates[vli], hiddenIndex);
-                count += vl._weights.counts(hiddenIndex);
+                count += vl._weights.count(hiddenIndex);
             }
         }
 
