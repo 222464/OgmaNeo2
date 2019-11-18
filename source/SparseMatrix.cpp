@@ -756,3 +756,21 @@ void SparseMatrix::hebbErrorsT(
 	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
 		_nonZeroValues[_nonZeroValueIndices[j]] += errors[_rowIndices[j]];
 }
+
+float SparseMatrix::multiplyNoDiagonal(
+	const std::vector<float> &in,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++) {
+		if (row == _columnIndices[j])
+			continue;
+
+		sum += _nonZeroValues[j] * in[_columnIndices[j]];
+	}
+
+	return sum;
+}

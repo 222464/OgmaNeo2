@@ -97,10 +97,10 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.1f),
-    _gamma(0.7f),
-    _maxHistorySamples(65),
-    _historyIters(8)
+    _alpha(0.01f),
+    _gamma(1.0f),
+    _maxHistorySamples(256),
+    _historyIters(32)
     {}
 
     // Create with random initialization

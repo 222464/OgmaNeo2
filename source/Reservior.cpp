@@ -26,9 +26,16 @@ void Reservior::forward(
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiply(*inputStates[vli], hiddenIndex);
-            count += vl._weights.counts(hiddenIndex);
+            if (vld._noDiagonal) {
+                sum += vl._weights.multiplyNoDiagonal(*inputStates[vli], hiddenIndex);
+                count += vl._weights.counts(hiddenIndex) - 1;
+            }
+            else {
+                sum += vl._weights.multiply(*inputStates[vli], hiddenIndex);
+                count += vl._weights.counts(hiddenIndex);
+            }
         }
 
         _hiddenStates[hiddenIndex] = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));

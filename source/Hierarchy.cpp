@@ -40,6 +40,7 @@ void Hierarchy::initRandom(
                 rVisibleLayerDescs[i]._radius = layerDescs[l]._rfRadius;
                 rVisibleLayerDescs[i]._scale = layerDescs[l]._rfScale;
                 rVisibleLayerDescs[i]._dropRatio = layerDescs[l]._rfDropRatio;
+                rVisibleLayerDescs[i]._noDiagonal = false;
             }
 
             // Predictors
@@ -69,6 +70,7 @@ void Hierarchy::initRandom(
             rVisibleLayerDescs[0]._radius = layerDescs[l]._rfRadius;
             rVisibleLayerDescs[0]._scale = layerDescs[l]._rfScale;
             rVisibleLayerDescs[0]._dropRatio = layerDescs[l]._rfDropRatio;
+            rVisibleLayerDescs[0]._noDiagonal = false;
 
             _pLayers[l].resize(1);
 
@@ -96,6 +98,7 @@ void Hierarchy::initRandom(
             vld._radius = layerDescs[l]._rrRadius;
             vld._scale = layerDescs[l]._rrScale;
             vld._dropRatio = layerDescs[l]._rrDropRatio;
+            vld._noDiagonal = true;
 
             rVisibleLayerDescs.push_back(vld);
         }

@@ -23,13 +23,16 @@ public:
         float _scale; // Scale of weights
         float _dropRatio; // Ratio of weights to drop
 
+        bool _noDiagonal;
+
         // Defaults
         VisibleLayerDesc()
         :
         _size(4, 4, 16),
         _radius(2),
         _scale(1.0f),
-        _dropRatio(0.0f)
+        _dropRatio(0.0f),
+        _noDiagonal(false)
         {}
     };
 

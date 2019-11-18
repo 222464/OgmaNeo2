@@ -340,5 +340,10 @@ struct SparseMatrix {
 		const std::vector<float> &errors,
 		int column
 	);
+
+	float multiplyNoDiagonal(
+		const std::vector<float> &in,
+		int row
+	);
 };
 } // namespace ogmaneo
