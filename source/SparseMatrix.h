@@ -69,129 +69,43 @@ struct SparseMatrix {
 	// Generate a transpose, must be called after the original has been created
 	void initT();
 
-	// --- Dense ---
-
 	float multiply(
 		const std::vector<float> &in,
 		int row
 	);
-
-	float distance(
-		const std::vector<float> &in,
-		int row
-	);
-
-	// Count number of elements in each row
-	int counts(
-		int row
-	);
-
-	float counts(
-		const std::vector<float> &in,
-		int row
-	);
-
-	// --- Transpose ---
 
 	float multiplyT(
 		const std::vector<float> &in,
 		int column
 	);
 
-	float distanceT(
+	float multiplyNoDiagonal(
+		const std::vector<float> &in,
+		int row
+	);
+
+	float multiplyNoDiagonalT(
 		const std::vector<float> &in,
 		int column
 	);
 
-	// Count number of elements in each column
-	int countsT(
+	int count(
+		int row
+	);
+
+	int countT(
 		int column
 	);
 
-	float countsT(
+	float total(
+		const std::vector<float> &in,
+		int row
+	);
+
+	float totalT(
 		const std::vector<float> &in,
 		int column
 	);
-
-	// --- One-Hot Vectors Operations ---
-
-	float multiplyOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float multiplyOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
-	float multiplyOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		int row,
-		int oneHotSize
-	);
-
-	float multiplyOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		int column,
-		int oneHotSize
-	);
-
-	float minOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float minOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
-	float maxOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float maxOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
-	float countsOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &in,
-		int row,
-		int oneHotSize
-	);
-
-	float countsOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &in,
-		int column,
-		int oneHotSize
-	);
-
-	float distanceOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	float distanceOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize
-	);
-
-	// --- Delta Rules ---
 
 	void deltas(
 		const std::vector<float> &in,
@@ -204,76 +118,6 @@ struct SparseMatrix {
 		float delta,
 		int column
 	);
-
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int row,
-		int oneHotSize
-	);
-
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int column,
-		int oneHotSize
-	);
-
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int row,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
-	);
-
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		float delta,
-		int column,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
-	);
-
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int row,
-		int oneHotSize
-	);
-
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int column,
-		int oneHotSize
-	);
-
-	void deltaOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int row,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
-	);
-
-	void deltaOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
-		float delta,
-		int column,
-		int oneHotSize,
-		float lowerBound,
-		float upperBound
-	);
-
-	// --- Normalization ---
 
 	void normalize(
 		int row
@@ -291,8 +135,6 @@ struct SparseMatrix {
 		int column
 	);
 
-	// --- Copy ---
-
 	void copyRow(
 		const SparseMatrix &source,
 		int row
@@ -301,49 +143,6 @@ struct SparseMatrix {
 	void copyColumn(
 		const SparseMatrix &source,
 		int column
-	);
-
-	// --- Hebb Rules ---
-
-	void hebb(
-		const std::vector<float> &in,
-		int row,
-		float alpha
-	);
-
-	void hebbT(
-		const std::vector<float> &in,
-		int column,
-		float alpha
-	);
-
-	void hebbOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float alpha
-	);
-
-	void hebbOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize,
-		float alpha
-	);
-
-	void hebbErrors(
-		const std::vector<float> &errors,
-		int row
-	);
-
-	void hebbErrorsT(
-		const std::vector<float> &errors,
-		int column
-	);
-
-	float multiplyNoDiagonal(
-		const std::vector<float> &in,
-		int row
 	);
 };
 } // namespace ogmaneo
