@@ -46,7 +46,7 @@ void Reservoir::forward(
                 VisibleLayer &vl = _visibleLayers[vli];
                 const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                vl._weights.hebb(*inputStates[vli], hiddenIndex, _alpha * _hiddenStates[hiddenIndex]);
+                vl._weights.hebb(*inputStates[vli], hiddenIndex, _hiddenStates[hiddenIndex], _alpha);
             }
         }
     }

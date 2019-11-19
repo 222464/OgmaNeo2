@@ -56,7 +56,7 @@ void Predictor::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebb(vl._difference, hiddenIndex, _alpha * strength * _historySamples[index - 1]->_hiddenTargetStates[hiddenIndex]);
+            vl._weights.hebb(vl._difference, hiddenIndex, _historySamples[index - 1]->_hiddenTargetStates[hiddenIndex], _alpha * strength);
         }
     }
 }

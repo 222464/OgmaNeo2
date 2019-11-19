@@ -148,12 +148,14 @@ struct SparseMatrix {
 	void hebb(
 		const std::vector<float> &in,
 		int row,
+		float post,
 		float alpha
 	);
 
 	void hebbT(
 		const std::vector<float> &in,
 		int column,
+		float post,
 		float alpha
 	);
 };

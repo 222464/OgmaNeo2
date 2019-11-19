@@ -77,7 +77,7 @@ public:
 
     Reservoir()
     :
-    _alpha(0.001f)
+    _alpha(0.0f)
     {}
 
     // Create a sparse coding layer with random initialization
