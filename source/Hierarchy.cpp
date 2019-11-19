@@ -151,7 +151,7 @@ void Hierarchy::step(
         if (fullLayerInputs.size() < _rLayers[l].getNumVisibleLayers())
             fullLayerInputs.push_back(&_rLayers[l].getHiddenStatesPrev());
 
-        _rLayers[l].step(cs, fullLayerInputs, learnEnabled);
+        _rLayers[l].step(cs, fullLayerInputs);
     }
 
     // Backward

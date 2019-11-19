@@ -58,27 +58,20 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputStates,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputStates
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Reservoir* sc,
-        const std::vector<const FloatBuffer*> &inputStates,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputStates
     ) {
-        sc->forward(pos, rng, inputStates, learnEnabled);
+        sc->forward(pos, rng, inputStates);
     }
 
 public:
-    float _alpha; // Self-organization learning rate
-
-    Reservoir()
-    :
-    _alpha(0.0f)
-    {}
+    Reservoir() {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
@@ -91,8 +84,7 @@ public:
     // Activate the sparse coder (perform sparse coding)
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &inputStates,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputStates
     );
 
     // Write to stream

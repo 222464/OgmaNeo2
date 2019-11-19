@@ -13,8 +13,7 @@ using namespace ogmaneo;
 void Reservoir::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputStates,
-    bool learnEnabled
+    const std::vector<const FloatBuffer*> &inputStates
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -40,15 +39,6 @@ void Reservoir::forward(
         }
 
         _hiddenStates[hiddenIndex] = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
-
-        if (learnEnabled) {
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-                vl._weights.hebb(*inputStates[vli], hiddenIndex, _hiddenStates[hiddenIndex], _alpha);
-            }
-        }
     }
 }
 
@@ -100,8 +90,7 @@ void Reservoir::initRandom(
 
 void Reservoir::step(
     ComputeSystem &cs,
-    const std::vector<const FloatBuffer*> &inputStates,
-    bool learnEnabled
+    const std::vector<const FloatBuffer*> &inputStates
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -117,9 +106,9 @@ void Reservoir::step(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputStates, learnEnabled);
+            forward(Int2(x, y), cs._rng, inputStates);
 #else
-    runKernel2(cs, std::bind(Reservoir::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputStates, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Reservoir::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 

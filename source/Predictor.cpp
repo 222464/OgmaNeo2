@@ -51,12 +51,28 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
+        float sum = 0.0f;
+        int count = 0;
+
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebb(vl._difference, hiddenIndex, _historySamples[index - 1]->_hiddenTargetStates[hiddenIndex], _alpha * strength);
+            sum += vl._weights.multiply(vl._difference, hiddenIndex);
+            count += vl._weights.count(hiddenIndex);
+        }
+
+        float predState = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
+
+        float delta = strength * (_historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState) * (1.0f - predState * predState);
+
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            vl._weights.deltas(vl._difference, _alpha * delta, hiddenIndex);
         }
     }
 }
