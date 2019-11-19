@@ -308,3 +308,25 @@ void SparseMatrix::copyColumn(
 	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
 		_nonZeroValues[j] = source._nonZeroValues[j];
 }
+
+void SparseMatrix::hebb(
+	const std::vector<float> &in,
+	int row,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] += alpha * (in[_columnIndices[j]] - _nonZeroValues[j]);
+}
+
+void SparseMatrix::hebbT(
+	const std::vector<float> &in,
+	int column,
+	float alpha
+) {
+	int nextIndex = column + 1;
+	
+	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
+		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (in[_rowIndices[j]] - _nonZeroValues[_nonZeroValueIndices[j]]);
+}

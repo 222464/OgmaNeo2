@@ -6,14 +6,15 @@
 //  in the OGMANEO_LICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
-#include "Reservior.h"
+#include "Reservoir.h"
 
 using namespace ogmaneo;
 
-void Reservior::forward(
+void Reservoir::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputStates
+    const std::vector<const FloatBuffer*> &inputStates,
+    bool learnEnabled
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
@@ -39,10 +40,19 @@ void Reservior::forward(
         }
 
         _hiddenStates[hiddenIndex] = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
+
+        if (learnEnabled) {
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                vl._weights.hebb(*inputStates[vli], hiddenIndex, _alpha * _hiddenStates[hiddenIndex]);
+            }
+        }
     }
 }
 
-void Reservior::initRandom(
+void Reservoir::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs,
@@ -88,9 +98,10 @@ void Reservior::initRandom(
         _hiddenBiases[i] = biasDist(cs._rng);
 }
 
-void Reservior::step(
+void Reservoir::step(
     ComputeSystem &cs,
-    const std::vector<const FloatBuffer*> &inputStates
+    const std::vector<const FloatBuffer*> &inputStates,
+    bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -106,13 +117,13 @@ void Reservior::step(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, inputStates);
+            forward(Int2(x, y), cs._rng, inputStates, learnEnabled);
 #else
-    runKernel2(cs, std::bind(Reservior::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputStates), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Reservoir::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputStates, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 }
 
-void Reservior::writeToStream(
+void Reservoir::writeToStream(
     std::ostream &os
 ) const {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
@@ -139,7 +150,7 @@ void Reservior::writeToStream(
     }
 }
 
-void Reservior::readFromStream(
+void Reservoir::readFromStream(
     std::istream &is
 ) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));

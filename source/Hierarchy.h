@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Reservior.h"
+#include "Reservoir.h"
 #include "Predictor.h"
 
 #include <memory>
@@ -28,7 +28,7 @@ public:
         Int3 _hiddenSize; // Size of hidden layer
 
         int _rfRadius; // Revervior forward radius
-        int _rrRadius; // Reservior recurrent radius
+        int _rrRadius; // Reservoir recurrent radius
         int _pRadius; // Predictor radius
 
         float _rfScale;
@@ -57,7 +57,7 @@ public:
     };
 private:
     // Layers
-    std::vector<Reservior> _rLayers;
+    std::vector<Reservoir> _rLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
     
     // Input dimensions
@@ -123,14 +123,14 @@ public:
     }
 
     // Retrieve a reservior layer
-    Reservior &getRLayer(
+    Reservoir &getRLayer(
         int l // Layer index
     ) {
         return _rLayers[l];
     }
 
     // Retrieve a reservior layer, const version
-    const Reservior &getRLayer(
+    const Reservoir &getRLayer(
         int l // Layer index
     ) const {
         return _rLayers[l];

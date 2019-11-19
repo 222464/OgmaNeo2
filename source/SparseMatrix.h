@@ -144,5 +144,17 @@ struct SparseMatrix {
 		const SparseMatrix &source,
 		int column
 	);
+
+	void hebb(
+		const std::vector<float> &in,
+		int row,
+		float alpha
+	);
+
+	void hebbT(
+		const std::vector<float> &in,
+		int column,
+		float alpha
+	);
 };
 } // namespace ogmaneo

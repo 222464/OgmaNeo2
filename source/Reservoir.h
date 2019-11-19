@@ -12,7 +12,7 @@
 
 namespace ogmaneo {
 // Sparse coder
-class Reservior {
+class Reservoir {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
@@ -58,20 +58,27 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputStates
+        const std::vector<const FloatBuffer*> &inputStates,
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Reservior* sc,
-        const std::vector<const FloatBuffer*> &inputStates
+        Reservoir* sc,
+        const std::vector<const FloatBuffer*> &inputStates,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputStates);
+        sc->forward(pos, rng, inputStates, learnEnabled);
     }
 
 public:
-    Reservior() {}
+    float _alpha; // Self-organization learning rate
+
+    Reservoir()
+    :
+    _alpha(0.001f)
+    {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
@@ -84,7 +91,8 @@ public:
     // Activate the sparse coder (perform sparse coding)
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &inputStates
+        const std::vector<const FloatBuffer*> &inputStates,
+        bool learnEnabled
     );
 
     // Write to stream

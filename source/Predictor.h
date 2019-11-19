@@ -87,20 +87,12 @@ private:
     }
 
 public:
-    float _alpha; // Prediction learning rate
-    float _beta; // Value learning rate
-    float _gamma; // Discount factor
-
-    int _maxHistorySamples;
-    int _historyIters;
+    float _alpha; // Self-organization learning rate
 
     // Defaults
     Predictor()
     :
-    _alpha(0.01f),
-    _gamma(0.99f),
-    _maxHistorySamples(256),
-    _historyIters(32)
+    _alpha(0.001f)
     {}
 
     // Create with random initialization

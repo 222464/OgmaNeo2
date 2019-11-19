@@ -29,7 +29,7 @@ void Hierarchy::initRandom(
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
         // Create sparse coder visible layer descriptors
-        std::vector<Reservior::VisibleLayerDesc> rVisibleLayerDescs;
+        std::vector<Reservoir::VisibleLayerDesc> rVisibleLayerDescs;
 
         // If first layer
         if (l == 0) {
@@ -92,7 +92,7 @@ void Hierarchy::initRandom(
 
         // Recurrent
         if (layerDescs[l]._rrRadius != -1) {
-            Reservior::VisibleLayerDesc vld;
+            Reservoir::VisibleLayerDesc vld;
 
             vld._size = layerDescs[l]._hiddenSize;
             vld._radius = layerDescs[l]._rrRadius;
@@ -151,7 +151,7 @@ void Hierarchy::step(
         if (fullLayerInputs.size() < _rLayers[l].getNumVisibleLayers())
             fullLayerInputs.push_back(&_rLayers[l].getHiddenStatesPrev());
 
-        _rLayers[l].step(cs, fullLayerInputs);
+        _rLayers[l].step(cs, fullLayerInputs, learnEnabled);
     }
 
     // Backward
