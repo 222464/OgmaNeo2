@@ -47,19 +47,19 @@ void Hierarchy::initRandom(
             _pLayers[l].resize(inputSizes.size());
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
+            Predictor::VisibleLayerDesc pVisibleLayerDesc;
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-            pVisibleLayerDescs[0]._scale = layerDescs[l]._pScale;
-            pVisibleLayerDescs[0]._dropRatio = layerDescs[l]._pDropRatio;
+            pVisibleLayerDesc._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDesc._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDesc._scale = layerDescs[l]._pScale;
+            pVisibleLayerDesc._dropRatio = layerDescs[l]._pDropRatio;
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
 
-                    _pLayers[l][p]->initRandom(cs, inputSizes[p], pVisibleLayerDescs);
+                    _pLayers[l][p]->initRandom(cs, inputSizes[p], pVisibleLayerDesc);
                 }
             }
         }
@@ -75,18 +75,18 @@ void Hierarchy::initRandom(
             _pLayers[l].resize(1);
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
+            Predictor::VisibleLayerDesc pVisibleLayerDesc;
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-            pVisibleLayerDescs[0]._scale = layerDescs[l]._pScale;
-            pVisibleLayerDescs[0]._dropRatio = layerDescs[l]._pDropRatio;
+            pVisibleLayerDesc._size = layerDescs[l]._hiddenSize;
+            pVisibleLayerDesc._radius = layerDescs[l]._pRadius;
+            pVisibleLayerDesc._scale = layerDescs[l]._pScale;
+            pVisibleLayerDesc._dropRatio = layerDescs[l]._pDropRatio;
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 _pLayers[l][p] = std::make_unique<Predictor>();
 
-                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDescs);
+                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
             }
         }
 
@@ -162,9 +162,9 @@ void Hierarchy::step(
         for (int p = 0; p < _pLayers[l].size(); p++) {
             if (_pLayers[l][p] != nullptr) {
                 if (learnEnabled) 
-                    _pLayers[l][p]->learn(cs, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), { &_rLayers[l].getHiddenStates() });
+                    _pLayers[l][p]->learn(cs, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), &_rLayers[l].getHiddenStates());
 
-                _pLayers[l][p]->activate(cs, { feedBackStates }, { &_rLayers[l].getHiddenStates() });
+                _pLayers[l][p]->activate(cs, feedBackStates, &_rLayers[l].getHiddenStates());
             }
         }
     }

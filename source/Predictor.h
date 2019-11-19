@@ -35,13 +35,12 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights;
-
-        FloatBuffer _difference;
+        SparseMatrix _weightsFeedBack;
+        SparseMatrix _weightsInput;
     };
 
     struct HistorySample {
-        std::vector<FloatBuffer> _inputStates;
+        FloatBuffer _inputStates;
         FloatBuffer _hiddenTargetStates;
     };
 
@@ -51,8 +50,8 @@ private:
     FloatBuffer _hiddenStates; // Hidden states
 
     // Visible layers and descs
-    std::vector<VisibleLayer> _visibleLayers;
-    std::vector<VisibleLayerDesc> _visibleLayerDescs;
+    VisibleLayer _visibleLayer;
+    VisibleLayerDesc _visibleLayerDesc;
 
     std::vector<std::shared_ptr<HistorySample>> _historySamples;
 
@@ -60,7 +59,9 @@ private:
 
     void forward(
         const Int2 &pos,
-        std::mt19937 &rng
+        std::mt19937 &rng,
+        const FloatBuffer* feedBackStates,
+        const FloatBuffer* inputStates
     );
 
     void learn(
@@ -72,9 +73,11 @@ private:
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Predictor* p
+        Predictor* p,
+        const FloatBuffer* feedBackStates,
+        const FloatBuffer* inputStates
     ) {
-        p->forward(pos, rng);
+        p->forward(pos, rng, feedBackStates, inputStates);
     }
 
     static void learnKernel(
@@ -107,21 +110,21 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output/prediction size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+        const VisibleLayerDesc &visibleLayerDesc
     ); 
 
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &feedBackStates,
-        const std::vector<const FloatBuffer*> &inputStates
+        const FloatBuffer* feedBackStates,
+        const FloatBuffer* inputStates
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
         const FloatBuffer* hiddenTargetStates,
-        const std::vector<const FloatBuffer*> &inputStates
+        const FloatBuffer* inputStates
     );
 
     // Write to stream
@@ -134,23 +137,14 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get number of visible layers
-    int getNumVisibleLayers() const {
-        return _visibleLayers.size();
-    }
-
     // Get a visible layer
-    const VisibleLayer &getVisibleLayer(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayers[i];
+    const VisibleLayer &getVisibleLayer() const {
+        return _visibleLayer;
     }
 
     // Get a visible layer descriptor
-    const VisibleLayerDesc &getVisibleLayerDesc(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayerDescs[i];
+    const VisibleLayerDesc &getVisibleLayerDesc() const {
+        return _visibleLayerDesc;
     }
 
     // Get the hidden activations (predictions)
