@@ -103,7 +103,7 @@ public:
     _alpha(0.001f),
     _gamma(0.99f),
     _maxHistorySamples(256),
-    _historyIters(8)
+    _historyIters(16)
     {}
 
     // Create with random initialization
