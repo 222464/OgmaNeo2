@@ -558,14 +558,14 @@ void kernel aLearn(
 
     int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
+    setTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCsPrev, hiddenIndexPrev, visibleSize.z);
+    
     float tdError = qUpdate - hiddenActivationsPrev[hiddenIndexPrev] * rescale;
 
     float delta = alpha * tanh(tdError);
 
     for (int c = 0; c < hiddenSize.z; c++)
         deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, delta, traceDecay, address3((int3)(hiddenColumnPosition, c), hiddenSize));
-    
-    setTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCsPrev, hiddenIndexPrev, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
