@@ -174,6 +174,40 @@ void deltaOHVsT(
     }
 }
 
+void deltaTraces(
+    global float* nonZeroValuesW,
+    global float* nonZeroValuesT,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    float delta,
+    float gamma,
+    int row
+) {
+	int nextIndex = row + 1;
+	
+    for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++) {
+		nonZeroValuesW[j] += delta * nonZeroValuesT[j];
+        nonZeroValuesT[j] *= gamma;
+    }
+}
+
+void setTraceOHVs(
+    global float* nonZeroValuesT,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const int* nonZeroIndices,
+    int row,
+    int oneHotSize
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+		nonZeroValuesT[j] = 1.0f;
+	}
+}
+
 float multiply(
 	global const float* nonZeroValues,
     global const int* rowRanges,
@@ -499,18 +533,19 @@ void kernel aInhibit(
 void kernel aLearn(
     global const int* visibleCsPrev,
     global const float* hiddenActivations,
-    global const float* hiddenActivationsPartial,
+    global const float* hiddenActivationsPrev,
     global const int* hiddenCs,
     global const int* hiddenCsPrev,
     global const int* hiddenCounts,
-    global float* nonZeroValues,
+    global float* nonZeroValuesW,
+    global float* nonZeroValuesT,
     global const int* rowRanges,
     global const int* columnIndices,
     int3 visibleSize,
     int3 hiddenSize,
     float alpha,
-    float g,
-    float q
+    float gamma,
+    float reward
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -518,11 +553,21 @@ void kernel aLearn(
 
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
-    float qUpdate = q + g * hiddenActivations[address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize)] * rescale;
+    float qUpdate = reward + gamma * hiddenActivations[address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize)] * rescale;
 
-    float errorValue = tanh(qUpdate - hiddenActivationsPartial[hiddenColumnIndex] * rescale);
+    int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+
+    float tdError = qUpdate - hiddenActivationsPrev[hiddenIndexPrev] * rescale;
+
+    float delta = alpha * tanh(tdError);
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, delta, gamma, hiddenIndex);
+    }
     
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize), visibleSize.z);
+    setTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCsPrev, hiddenIndexPrev, visibleSize.z);
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------

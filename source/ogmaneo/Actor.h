@@ -27,34 +27,24 @@ public:
 
     struct VisibleLayer {
         SparseMatrix _weights;
-    };
+        SparseMatrix _traces;
 
-    struct HistorySample {
-        std::vector<cl::Buffer> _visibleCs;
-        cl::Buffer _hiddenCsPrev;
-    
-        float _reward;
+        cl::Buffer _visibleCsPrev;
     };
 
 private:
     Int3 _hiddenSize;
 
-    int _historySize;
-
     cl::Buffer _hiddenCounts;
 
     cl::Buffer _hiddenCs;
 
-    cl::Buffer _hiddenActivations;
-    cl::Buffer _hiddenActivationsPartial;
-
-    std::vector<HistorySample> _historySamples;
+    DoubleBuffer _hiddenActivations;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
-    cl::Kernel _forwardPartialKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
 
@@ -72,7 +62,6 @@ public:
         ComputeSystem &cs,
         ComputeProgram &prog,
         Int3 hiddenSize,
-        int historyCapacity,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs,
         std::mt19937 &rng
     );

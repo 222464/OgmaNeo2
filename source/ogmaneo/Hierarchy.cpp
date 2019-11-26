@@ -96,7 +96,7 @@ void Hierarchy::init(
                 if (inputTypes[a] == InputType::_act) {
                     _aLayers[a] = std::make_unique<Actor>();
 
-                    _aLayers[a]->init(cs, prog, inputSizes[a], firstLayerDesc._historyCapacity, aVisibleLayerDescs, rng);
+                    _aLayers[a]->init(cs, prog, inputSizes[a], aVisibleLayerDescs, rng);
                 }
                 else
                     _aLayers[a] = nullptr;

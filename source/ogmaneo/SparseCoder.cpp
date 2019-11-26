@@ -138,10 +138,10 @@ void SparseCoder::writeToStream(
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
+        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
+
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
-
-        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         vl._weights.writeToStream(cs, os);
     }
