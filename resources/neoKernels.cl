@@ -561,11 +561,8 @@ void kernel aLearn(
 
     float delta = alpha * tanh(tdError);
 
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
-
-        deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, delta, gamma, hiddenIndex);
-    }
+    for (int c = 0; c < hiddenSize.z; c++)
+        deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, delta, gamma, address3((int3)(hiddenColumnPosition, c), hiddenSize));
     
     setTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCsPrev, hiddenIndexPrev, visibleSize.z);
 }
