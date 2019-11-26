@@ -41,6 +41,7 @@ void Actor::init(
         int numVisibleColumns = vld._size.x * vld._size.y;
 
         vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.01f, 0.0f, rng);
+        vl._traces.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, 0.0f, 0.0f, rng);
 
         int argIndex = 0;
 
