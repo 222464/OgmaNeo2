@@ -520,7 +520,7 @@ void kernel aLearn(
 
     float qUpdate = q + g * hiddenActivations[address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize)] * rescale;
 
-    float errorValue = fmin(1.0f, fmax(-1.0f, qUpdate - hiddenActivationsPartial[hiddenColumnIndex] * rescale));
+    float errorValue = tanh(qUpdate - hiddenActivationsPartial[hiddenColumnIndex] * rescale);
     
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize), visibleSize.z);
 }
