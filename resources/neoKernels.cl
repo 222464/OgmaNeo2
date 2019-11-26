@@ -180,14 +180,14 @@ void deltaTraces(
     global const int* rowRanges,
     global const int* columnIndices,
     float delta,
-    float gamma,
+    float traceDecay,
     int row
 ) {
 	int nextIndex = row + 1;
 	
     for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++) {
 		nonZeroValuesW[j] += delta * nonZeroValuesT[j];
-        nonZeroValuesT[j] *= gamma;
+        nonZeroValuesT[j] *= traceDecay;
     }
 }
 
@@ -545,6 +545,7 @@ void kernel aLearn(
     int3 hiddenSize,
     float alpha,
     float gamma,
+    float traceDecay,
     float reward
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
@@ -562,7 +563,7 @@ void kernel aLearn(
     float delta = alpha * tanh(tdError);
 
     for (int c = 0; c < hiddenSize.z; c++)
-        deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, delta, gamma, address3((int3)(hiddenColumnPosition, c), hiddenSize));
+        deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, delta, traceDecay, address3((int3)(hiddenColumnPosition, c), hiddenSize));
     
     setTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCsPrev, hiddenIndexPrev, visibleSize.z);
 }

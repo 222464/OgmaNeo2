@@ -51,11 +51,13 @@ private:
 public:
     cl_float _alpha;
     cl_float _gamma;
+    cl_float _traceDecay;
 
     Actor()
     :
     _alpha(0.01f),
-    _gamma(0.99f)
+    _gamma(0.99f),
+    _traceDecay(0.98f)
     {}
 
     void init(
