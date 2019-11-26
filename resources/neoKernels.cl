@@ -554,13 +554,13 @@ void kernel aLearn(
 
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
-    float qUpdate = reward + gamma * hiddenActivations[address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize)] * rescale;
+    float q = reward + gamma * hiddenActivations[address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize)] * rescale;
 
     int hiddenIndexPrev = address3((int3)(hiddenColumnPosition, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
     setTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCsPrev, hiddenIndexPrev, visibleSize.z);
 
-    float tdError = qUpdate - hiddenActivationsPrev[hiddenIndexPrev] * rescale;
+    float tdError = q - hiddenActivationsPrev[hiddenIndexPrev] * rescale;
 
     float delta = alpha * tanh(tdError);
 
