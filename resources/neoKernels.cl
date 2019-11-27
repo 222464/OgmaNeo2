@@ -484,25 +484,6 @@ void kernel aForward(
     hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 }
 
-void kernel aForwardPartial(
-    global const int* visibleCs,
-    global const int* hiddenCs,
-    global float* hiddenActivationsPartial,
-    global const float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
-    int3 visibleSize,
-    int3 hiddenSize
-) {
-    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
-
-    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
-
-    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize);
-
-    hiddenActivationsPartial[hiddenColumnIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
-}
-
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
