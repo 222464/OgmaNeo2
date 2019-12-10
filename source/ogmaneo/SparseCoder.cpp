@@ -85,8 +85,8 @@ void SparseCoder::step(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     // Initialize to 0
-    cs.getQueue().enqueueFillBuffer(_hiddenStimulus, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
-    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenStimulus, static_cast<cl_float>(0), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0), 0, numHidden * sizeof(cl_float));
 
     // Forward
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {

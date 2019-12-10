@@ -349,7 +349,7 @@ void kernel scInhibit(
     global const int* rowRanges,
     global const int* columnIndices,
     int3 hiddenSize,
-    unsigned char enableLateralInhibition
+    uchar enableLateralInhibition
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
