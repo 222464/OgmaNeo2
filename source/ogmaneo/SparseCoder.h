@@ -56,7 +56,7 @@ public:
 
     SparseCoder()
     :
-    _explainIters(3),
+    _explainIters(4),
     _alpha(0.5f)
     {}
 
