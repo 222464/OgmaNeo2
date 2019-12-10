@@ -137,6 +137,30 @@ float multiplyOHVsT(
     return sum;
 }
 
+float multiplyNoDiagonalOHVs(
+    global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const int* nonZeroIndices,
+    int row,
+    int oneHotSize
+) {
+    float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+        if (columnIndices[j] == row)
+            continue;
+
+		sum += nonZeroValues[j];
+	}
+
+    return sum;
+}
+
 void deltaOHVs(
     global float* nonZeroValues,
     global const int* rowRanges,
@@ -260,9 +284,24 @@ float total(
 
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
+void kernel scCount(
+    global const int* rowRanges,
+    global int* hiddenCounts,
+    int3 visibleSize,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+	      
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, 0), hiddenSize);
+
+    hiddenCounts[hiddenColumnIndex] += count(rowRanges, hiddenIndex) / visibleSize.z;
+}
+
 void kernel scForward(
-    global const int* visibleCs,
-    global float* hiddenActivations,
+    global const int* inputCs,
+    global float* hiddenStimulus,
     global const float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -273,22 +312,44 @@ void kernel scForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
+    hiddenStimulus[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, inputCs, hiddenIndex, visibleSize.z);
 }
 
 void kernel scInhibit(
-    global const float* hiddenActivations,
+    global const float* hiddenStimulus,
+    global float* hiddenActivations,
+    global const int* hiddenCsTemp,
     global int* hiddenCs,
-    int3 hiddenSize
+    global const int* hiddenCounts,
+    global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    int3 hiddenSize,
+    unsigned char enableLateralInhibition
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+    
+    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
+
     int maxIndex = 0;
-    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    float maxValue = -999999.0f;
     
     // Find max
-    for (int c = 1; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        float lateralInhibition;
+        
+        if (enableLateralInhibition)
+            lateralInhibition = multiplyNoDiagonalOHVs(nonZeroValues, rowRanges, columnIndices, hiddenCsTemp, hiddenIndex, hiddenSize.z) / max(1, count(rowRanges, hiddenIndex) / hiddenSize.z - 1); // -1 for no diagonal
+        else
+            lateralInhibition = 0.0f;
+
+        hiddenActivations[hiddenIndex] += hiddenStimulus[hiddenIndex] * rescale - lateralInhibition;
+
+        float value = hiddenActivations[hiddenIndex];
 
         if (value > maxValue) {
             maxValue = value;
@@ -301,50 +362,38 @@ void kernel scInhibit(
 }
 
 void kernel scLearn(
-    global const int* visibleCs,
+    global const int* inputCs,
     global const int* hiddenCs,
+    global const int* hiddenUsages,
     global float* nonZeroValues,
-    global const int* nonZeroValueIndices,
-    global const int* columnRanges,
-    global const int* rowIndices,
+    global const int* rowRanges,
+    global const int* columnIndices,
     int3 visibleSize,
-    int3 hiddenSize,
-    float alpha
+    int3 hiddenSize
 ) {
-    int2 visibleColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    int visibleColumnIndex = address2(visibleColumnPosition, visibleSize.xy);
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+    
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize);
 
-    int visibleC = visibleCs[visibleColumnIndex];
+    float alpha = 0.5f / (1 + hiddenUsages[hiddenIndex]);
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    hebbOHVs(nonZeroValues, rowRanges, columnIndices, inputCs, hiddenIndex, visibleSize.z, alpha);
+}
 
-    for (int c = 0; c < visibleSize.z; c++) {
-        int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
+void kernel scUsage(
+    global const int* hiddenCs,
+    global int* hiddenUsages,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-        float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize);
 
-            maxIndex = c;
-        }
-    }
-
-    if (maxIndex != visibleC) {
-        for (int c = 0; c < visibleSize.z; c++) {
-            int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
-
-            float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
-
-            sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
-
-            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - exp(sum));
-
-            deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
-        }
-    }
+    hiddenUsages[hiddenIndex] = min(999999, hiddenUsages[hiddenIndex] + 1);
 }
 
 // ------------------------------------------- Predictor -------------------------------------------

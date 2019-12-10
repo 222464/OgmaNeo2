@@ -32,9 +32,15 @@ public:
 private:
     Int3 _hiddenSize;
 
-    cl::Buffer _hiddenCs;
+    SparseMatrix _laterals;
 
+    cl::Buffer _hiddenCounts;
+    
+    DoubleBuffer _hiddenCs;
+
+    cl::Buffer _hiddenStimulus;
     cl::Buffer _hiddenActivations;
+    cl::Buffer _hiddenUsages;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -42,27 +48,28 @@ private:
     cl::Kernel _forwardKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
+    cl::Kernel _usageKernel;
 
 public:
-    cl_float _alpha;
+    int _explainIters;
 
     SparseCoder()
     :
-    _alpha(0.1f)
+    _explainIters(3)
     {}
 
     void init(
         ComputeSystem &cs,
         ComputeProgram &prog,
         Int3 hiddenSize,
+        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs,
         std::mt19937 &rng
     );
 
     void step(
         ComputeSystem &cs,
-        const std::vector<cl::Buffer> &visibleCs,
-        std::mt19937 &rng,
+        const std::vector<cl::Buffer> &inputCs,
         bool learnEnabled
     );
 
@@ -94,10 +101,10 @@ public:
     }
 
     const cl::Buffer &getHiddenCs() const {
-        return _hiddenCs;
+        return _hiddenCs[_front];
     }
 
-    Int3 getHiddenSize() const {
+    const Int3 &getHiddenSize() const {
         return _hiddenSize;
     }
 };
