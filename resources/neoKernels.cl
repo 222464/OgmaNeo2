@@ -324,7 +324,7 @@ void kernel scCount(
 }
 
 void kernel scForward(
-    global const int* inputCs,
+    global const int* visibleCs,
     global float* hiddenStimulus,
     global const float* nonZeroValues,
     global const int* rowRanges,
@@ -336,7 +336,7 @@ void kernel scForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenStimulus[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, inputCs, hiddenIndex, visibleSize.z);
+    hiddenStimulus[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 }
 
 void kernel scInhibit(
@@ -386,7 +386,7 @@ void kernel scInhibit(
 }
 
 void kernel scLearn(
-    global const int* inputCs,
+    global const int* visibleCs,
     global const int* hiddenCs,
     global const int* hiddenUsages,
     global float* nonZeroValues,
@@ -403,7 +403,7 @@ void kernel scLearn(
 
     float alpha = 0.5f / (1 + hiddenUsages[hiddenIndex]);
 
-    hebbOHVs(nonZeroValues, rowRanges, columnIndices, inputCs, hiddenIndex, visibleSize.z, alpha);
+    hebbOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z, alpha);
 }
 
 void kernel scUsage(

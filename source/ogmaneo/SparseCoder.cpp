@@ -78,7 +78,7 @@ void SparseCoder::init(
 
 void SparseCoder::step(
     ComputeSystem &cs,
-    const std::vector<cl::Buffer> &inputCs,
+    const std::vector<cl::Buffer> &visibleCs,
     bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
@@ -95,7 +95,7 @@ void SparseCoder::step(
 
         int argIndex = 0;
 
-        _forwardKernel.setArg(argIndex++, inputCs[vli]);
+        _forwardKernel.setArg(argIndex++, visibleCs[vli]);
         _forwardKernel.setArg(argIndex++, _hiddenStimulus);
         _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
         _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
@@ -142,7 +142,7 @@ void SparseCoder::step(
 
             int argIndex = 0;
 
-            _learnKernel.setArg(argIndex++, inputCs[vli]);
+            _learnKernel.setArg(argIndex++, visibleCs[vli]);
             _learnKernel.setArg(argIndex++, _hiddenCs[_front]);
             _learnKernel.setArg(argIndex++, _hiddenUsages);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);

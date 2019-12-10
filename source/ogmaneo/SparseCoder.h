@@ -69,7 +69,7 @@ public:
 
     void step(
         ComputeSystem &cs,
-        const std::vector<cl::Buffer> &inputCs,
+        const std::vector<cl::Buffer> &visibleCs,
         bool learnEnabled
     );
 
