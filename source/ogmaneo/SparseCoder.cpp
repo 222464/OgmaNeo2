@@ -171,17 +171,17 @@ void SparseCoder::step(
 
             cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
-    }
+        
+        // Usage update
+        {
+            int argIndex = 0;
 
-    // Usage update
-    {
-        int argIndex = 0;
+            _usageKernel.setArg(argIndex++, _hiddenCs[_front]);
+            _usageKernel.setArg(argIndex++, _hiddenUsages);
+            _usageKernel.setArg(argIndex++, _hiddenSize);
 
-        _usageKernel.setArg(argIndex++, _hiddenCs[_front]);
-        _usageKernel.setArg(argIndex++, _hiddenUsages);
-        _usageKernel.setArg(argIndex++, _hiddenSize);
-
-        cs.getQueue().enqueueNDRangeKernel(_usageKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            cs.getQueue().enqueueNDRangeKernel(_usageKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+        }
     }
 }
 
