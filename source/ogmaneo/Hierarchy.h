@@ -26,6 +26,7 @@ public:
         Int3 _hiddenSize;
 
         cl_int _ffRadius;
+        cl_int _lRadius;
         cl_int _aRadius;
 
         int _temporalHorizon;
@@ -36,6 +37,7 @@ public:
         :
         _hiddenSize(4, 4, 16),
         _ffRadius(2),
+        _lRadius(2),
         _aRadius(2),
         _temporalHorizon(2),
         _historyCapacity(32)
@@ -46,6 +48,7 @@ public:
         Int3 _hiddenSize;
 
         cl_int _ffRadius;
+        cl_int _lRadius;
         cl_int _pRadius;
 
         int _ticksPerUpdate;
@@ -56,6 +59,7 @@ public:
         :
         _hiddenSize(4, 4, 16),
         _ffRadius(2),
+        _lRadius(2),
         _pRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2)

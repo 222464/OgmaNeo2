@@ -144,7 +144,10 @@ void Hierarchy::init(
                 _pLayers[pl][p].init(cs, prog, _scLayers[l - 1].getHiddenSize(), pVisibleLayerDescs, rng);
         }
 		
-        _scLayers[l].init(cs, prog, l == 0 ? firstLayerDesc._hiddenSize : higherLayerDescs[pl]._hiddenSize, scVisibleLayerDescs, rng);
+        _scLayers[l].init(cs, prog,
+            l == 0 ? firstLayerDesc._hiddenSize : higherLayerDescs[pl]._hiddenSize,
+            l == 0 ? firstLayerDesc._lRadius : higherLayerDescs[pl]._lRadius,
+            scVisibleLayerDescs, rng);
     }
 }
 
@@ -194,7 +197,7 @@ void Hierarchy::step(
 
             _updates[l] = true;
             
-            _scLayers[l].step(cs, _histories[l], rng, learnEnabled);
+            _scLayers[l].step(cs, _histories[l], learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
