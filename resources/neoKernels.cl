@@ -393,7 +393,8 @@ void kernel scLearn(
     global const int* rowRanges,
     global const int* columnIndices,
     int3 visibleSize,
-    int3 hiddenSize
+    int3 hiddenSize,
+    float alpha
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
@@ -401,9 +402,9 @@ void kernel scLearn(
     
     int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize);
 
-    float alpha = 0.5f / (1 + hiddenUsages[hiddenIndex]);
+    float rate = 0.5f / (1 + alpha * hiddenUsages[hiddenIndex]);
 
-    hebbOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z, alpha);
+    hebbOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z, rate);
 }
 
 void kernel scUsage(

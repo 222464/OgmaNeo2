@@ -150,6 +150,7 @@ void SparseCoder::step(
             _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
             _learnKernel.setArg(argIndex++, vld._size);
             _learnKernel.setArg(argIndex++, _hiddenSize);
+            _learnKernel.setArg(argIndex++, _alpha);
 
             cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
@@ -166,6 +167,7 @@ void SparseCoder::step(
             _learnKernel.setArg(argIndex++, _laterals._columnIndices);
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _hiddenSize);
+            _learnKernel.setArg(argIndex++, _alpha);
 
             cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
@@ -193,6 +195,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_explainIters), sizeof(cl_int));
+    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
 
     writeBufferToStream(cs, os, _hiddenCs[_front], numHiddenColumns * sizeof(cl_int));
     writeBufferToStream(cs, os, _hiddenUsages, numHidden * sizeof(cl_int));
@@ -227,6 +230,7 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_explainIters), sizeof(cl_int));
+    is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
 
     readBufferFromStream(cs, is, _hiddenCs[_front], numHiddenColumns * sizeof(cl_int));
     _hiddenCs[_back] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));

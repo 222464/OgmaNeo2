@@ -51,11 +51,13 @@ private:
     cl::Kernel _usageKernel;
 
 public:
-    int _explainIters;
+    int _explainIters; // Explaining-away iterations
+    cl_float _alpha; // Learning rate decay
 
     SparseCoder()
     :
-    _explainIters(3)
+    _explainIters(3),
+    _alpha(0.1f)
     {}
 
     void init(
