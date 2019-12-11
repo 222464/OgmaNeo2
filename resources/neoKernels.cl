@@ -402,7 +402,7 @@ void kernel scLearn(
     
     int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize);
 
-    float rate = 1.0f / (1 + alpha * hiddenUsages[hiddenIndex]);
+    float rate = 1.0f / (1.0f + alpha * hiddenUsages[hiddenIndex]);
 
     hebbOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z, rate);
 }
