@@ -715,7 +715,7 @@ void kernel imLearn(
 
         float delta = hiddenC - c;
 
-        float strength = exp(-delta * delta * gamma) * hiddenResources[hiddenIndex];
+        float strength = exp(-delta * delta * gamma / fmax(0.001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
 
         hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, strength);
     }
