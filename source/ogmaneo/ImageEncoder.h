@@ -53,7 +53,7 @@ public:
     ImageEncoder()
     :
     _alpha(0.1f),
-    _gamma(0.3f)
+    _gamma(0.2f)
     {}
 
     void init(
