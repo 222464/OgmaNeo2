@@ -371,7 +371,7 @@ void kernel scInhibit(
         else
             lateralInhibition = 0.0f;
 
-        hiddenActivations[hiddenIndex] += hiddenStimulus[hiddenIndex] * rescale * (1.0f- lateralInhibition);
+        hiddenActivations[hiddenIndex] += hiddenStimulus[hiddenIndex] * rescale - lateralInhibition;
 
         float value = hiddenActivations[hiddenIndex];
 
