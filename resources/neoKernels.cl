@@ -402,7 +402,7 @@ void kernel scLearn(
     
     int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize);
 
-    float rate = 1.0f / (1.0f + alpha * hiddenUsages[hiddenIndex]);
+    float rate = 0.5f / (1.0f + alpha * hiddenUsages[hiddenIndex]);
 
     hebbOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z, rate);
 }
@@ -634,7 +634,7 @@ void kernel aLearn(
     if (hiddenPosition.z == hiddenSize.z) {
         float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
 
-        float update = alpha * tdError;
+        float update = alpha * tanh(tdError);
 
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
@@ -643,7 +643,7 @@ void kernel aLearn(
 
         float tdErrorPrev = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
         
-        float update = (tdErrorPrev > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+        float update = beta * tanh(tdErrorPrev) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
         
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
