@@ -31,16 +31,13 @@ public:
 
         int _temporalHorizon;
 
-        int _historyCapacity;
-
         FirstLayerDesc()
         :
         _hiddenSize(4, 4, 16),
         _ffRadius(2),
         _lRadius(2),
         _aRadius(2),
-        _temporalHorizon(2),
-        _historyCapacity(32)
+        _temporalHorizon(2)
         {}
     };
 
