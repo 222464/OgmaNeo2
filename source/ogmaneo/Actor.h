@@ -55,7 +55,7 @@ public:
 
     Actor()
     :
-    _alpha(0.005f),
+    _alpha(0.1f),
     _gamma(0.99f),
     _traceDecay(0.98f)
     {}
