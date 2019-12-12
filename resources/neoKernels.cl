@@ -371,7 +371,7 @@ void kernel scInhibit(
         else
             lateralInhibition = 0.0f;
 
-        hiddenActivations[hiddenIndex] += hiddenStimulus[hiddenIndex] * rescale - lateralInhibition;
+        hiddenActivations[hiddenIndex] += hiddenStimulus[hiddenIndex] * rescale * (1.0f- lateralInhibition);
 
         float value = hiddenActivations[hiddenIndex];
 
@@ -739,7 +739,7 @@ void kernel imDeplete(
 
         float delta = hiddenC - c;
 
-        float strength = exp(-delta * delta * gamma) * hiddenResources[hiddenIndex];
+        float strength = exp(-delta * delta * gamma / fmax(0.001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
 
         hiddenResources[hiddenIndex] -= alpha * strength;
     }
