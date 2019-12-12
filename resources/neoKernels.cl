@@ -211,7 +211,7 @@ void setTraceOHVs(
 	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
 		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
 
-		nonZeroValuesT[j] += 1.0f;
+		nonZeroValuesT[j] = 1.0f;
 	}
 }
 
