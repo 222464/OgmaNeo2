@@ -632,7 +632,7 @@ void kernel aLearn(
 
     float tdError = q - hiddenActivationsPrev[hiddenIndexPrev] * rescale;
 
-    float delta = alpha * tanh(tdError);
+    float delta = alpha * tdError;
 
     for (int c = 0; c < hiddenSize.z; c++)
         deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, delta, traceDecay, address3((int3)(hiddenColumnPosition, c), hiddenSize));
@@ -652,7 +652,7 @@ void kernel imForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += -distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+    hiddenActivations[hiddenIndex] -= distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
 }
 
 void kernel imInhibit(
