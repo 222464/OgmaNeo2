@@ -634,7 +634,7 @@ void kernel aLearn(
     if (hiddenPosition.z == hiddenSize.z) {
         float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
 
-        float update = alpha * tanh(tdError);
+        float update = alpha * tdError;
 
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
@@ -643,7 +643,7 @@ void kernel aLearn(
 
         float tdErrorPrev = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
         
-        float update = beta * tanh(tdErrorPrev) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+        float update = (tdErrorPrev > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
         
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
