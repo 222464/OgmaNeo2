@@ -528,32 +528,36 @@ void kernel aInhibit(
 }
 
 void kernel aLearn(
-    global const int* visibleCsPrev,
-    global const float* hiddenValues,
+    global const int* visibleCs,
     global const float* hiddenValuesPrev,
-    global const float* hiddenValuesPrevPrev,
+    global const float* hiddenValues,
     global const float* hiddenActivationsPrev,
-    global const int* hiddenCsPrev,
+    global const int* hiddenCs,
     global const int* hiddenCounts,
-    global float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
+    global float* nonZeroValuesW,
+    global const int* rowRangesW,
+    global const int* columnIndicesW,
+    global float* nonZeroValuesT,
+    global const int* rowRangesT,
+    global const int* columnIndicesT,
     int3 visibleSize,
     int3 hiddenSize,
     float alpha,
     float beta,
-    float g,
-    float q
+    float gamma,
+    float reward
 ) {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 	
     int hiddenColumnIndex = address2(hiddenPosition.xy, hiddenSize.xy);
 
-    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
+    int hiddenC = hiddenCs[hiddenColumnIndex];
 
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
-    float qUpdate = q + g * hiddenValues[hiddenColumnIndex] * rescale;
+    float qUpdate = reward + _gamma * hiddenValues[hiddenColumnIndex] * rescale;
+
+    float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
