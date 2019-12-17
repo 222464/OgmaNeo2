@@ -578,6 +578,7 @@ void kernel aLearn(
     float alpha,
     float beta,
     float gamma,
+    float traceDecay,
     float reward
 ) {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
@@ -588,7 +589,7 @@ void kernel aLearn(
 
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
-    float qUpdate = reward + _gamma * hiddenValues[hiddenColumnIndex] * rescale;
+    float qUpdate = reward + gamma * hiddenValues[hiddenColumnIndex] * rescale;
 
     float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
@@ -601,7 +602,7 @@ void kernel aLearn(
     else {
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-        float increment = (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivations[hiddenIndex] : -hiddenActivations[hiddenIndex]);
+        float increment = (hiddenPosition.z == hiddenC ? 1.0f - hiddenActivations[hiddenIndex] : -hiddenActivations[hiddenIndex]);
         
         deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, beta * tdError, traceDecay, hiddenIndex1);
         incTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCs, increment, hiddenIndex1, visibleSize.z);
