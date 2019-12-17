@@ -603,6 +603,7 @@ void kernel aLearn(
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
         float increment = (hiddenPosition.z == hiddenC ? 1.0f - hiddenActivations[hiddenIndex] : -hiddenActivations[hiddenIndex]);
+        //float increment = (hiddenPosition.z == hiddenC ? 1.0f : 0.0f);
         
         deltaTraces(nonZeroValuesW, nonZeroValuesT, rowRanges, columnIndices, beta * tdError, traceDecay, hiddenIndex1);
         incTraceOHVs(nonZeroValuesT, rowRanges, columnIndices, visibleCs, increment, hiddenIndex1, visibleSize.z);
