@@ -143,11 +143,9 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, _hiddenCs);
             _learnKernel.setArg(argIndex++, _hiddenCounts);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+            _learnKernel.setArg(argIndex++, vl._traces._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
             _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
-            _learnKernel.setArg(argIndex++, vl._traces._nonZeroValues);
-            _learnKernel.setArg(argIndex++, vl._traces._rowRanges);
-            _learnKernel.setArg(argIndex++, vl._traces._columnIndices);
             _learnKernel.setArg(argIndex++, vld._size);
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
