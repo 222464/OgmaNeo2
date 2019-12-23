@@ -50,7 +50,7 @@ public:
         _rfDropRatio(0.0f),
         _rrScale(1.0f),
         _rrDropRatio(0.5f),
-        _rbScale(1.0f),
+        _rbScale(0.1f),
         _pScale(1.0f),
         _pDropRatio(0.0f)
         {}

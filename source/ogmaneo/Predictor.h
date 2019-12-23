@@ -35,8 +35,7 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weightsFeedBack;
-        SparseMatrix _weightsInput;
+        SparseMatrix _weights;
     };
 
     struct HistorySample {
@@ -91,7 +90,6 @@ private:
 
 public:
     float _alpha; // Prediction learning rate
-    float _beta; // Value learning rate
     float _gamma; // Discount factor
 
     int _maxHistorySamples;
@@ -100,10 +98,10 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.001f),
+    _alpha(0.01f),
     _gamma(0.99f),
-    _maxHistorySamples(256),
-    _historyIters(16)
+    _maxHistorySamples(512),
+    _historyIters(8)
     {}
 
     // Create with random initialization
