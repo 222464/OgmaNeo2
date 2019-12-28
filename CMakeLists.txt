@@ -33,8 +33,6 @@ set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
     "${SOURCE_PATH}/ogmaneo/Helpers.cpp"
     "${SOURCE_PATH}/ogmaneo/SparseCoder.cpp"
-    "${SOURCE_PATH}/ogmaneo/Predictor.cpp"
-    "${SOURCE_PATH}/ogmaneo/Actor.cpp"
     "${SOURCE_PATH}/ogmaneo/Hierarchy.cpp"
     "${SOURCE_PATH}/ogmaneo/ImageEncoder.cpp"
 	"${SOURCE_PATH}/ogmaneo/SparseMatrix.cpp"
@@ -43,8 +41,6 @@ set(SOURCES
 set(HEADERS
 	"${SOURCE_PATH}/ogmaneo/Helpers.h"
     "${SOURCE_PATH}/ogmaneo/SparseCoder.h"
-    "${SOURCE_PATH}/ogmaneo/Predictor.h"
-    "${SOURCE_PATH}/ogmaneo/Actor.h"
     "${SOURCE_PATH}/ogmaneo/Hierarchy.h"
     "${SOURCE_PATH}/ogmaneo/ImageEncoder.h"
 	"${SOURCE_PATH}/ogmaneo/SparseMatrix.h"

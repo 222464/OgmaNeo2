@@ -9,8 +9,6 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
-#include "Actor.h"
 
 #include <memory>
 
@@ -18,8 +16,7 @@ namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
     _none = 0,
-    _prediction = 1,
-    _action = 2
+    _action = 1
 };
 
 // A SPH
@@ -29,33 +26,49 @@ public:
     struct LayerDesc {
         Int3 _hiddenSize; // Size of hidden layer
 
-        int _ffRadius; // Feed forward radius
-        int _pRadius; // Prediction radius
+        int _ffRadius; // Sparse coder radius
+        int _rRadius; // Routing radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
         int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
 
-        // If there is an actor (only valid for first layer)
-        int _aRadius;
-        int _historyCapacity;
-
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
         _ffRadius(2),
-        _pRadius(2),
+        _rRadius(2),
         _ticksPerUpdate(2),
-        _temporalHorizon(2),
-        _aRadius(2),
-        _historyCapacity(16)
+        _temporalHorizon(2)
         {}
     };
+
+    struct RouteLayer {
+        std::vector<SparseMatrix> _weights;
+        
+        std::vector<IntBuffer> _visibleCounts;
+
+        std::vector<FloatBuffer> _errors;
+        std::vector<FloatBuffer> _activations;
+
+        IntBuffer _hiddenCounts;
+    };
+
+    struct HistorySample {
+        std::vector<IntBuffer> _states;
+
+        std::vector<IntBuffer> _actionsPrev;
+
+        float _reward;
+    };
+
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
-    std::vector<std::unique_ptr<Actor>> _aLayers;
+    std::vector<RouteLayer> _rLayers;
+
+    std::vector<FloatBuffer> _qs;
+    std::vector<IntBuffer> _actions;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -70,9 +83,89 @@ private:
     // Input dimensions
     std::vector<Int3> _inputSizes;
 
+    // History samples
+    std::vector<HistorySample> _historySamples;
+
+    // --- Kernels ---
+
+    void forward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int l,
+        int vli,
+        const IntBuffer* inputCs
+    );
+
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int l,
+        const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int l,
+        int vli,
+        const IntBuffer* inputCs
+    );
+
+    static void forwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Hierarchy* h,
+        const IntBuffer* hiddenCs,
+        int l,
+        int vli,
+        const IntBuffer* inputCs
+    ) {
+        h->forward(pos, rng, hiddenCs, l, vli, inputCs);
+    }
+
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Hierarchy* h,
+        const IntBuffer* hiddenCs,
+        int l,
+        const std::vector<const IntBuffer*> &inputCs
+    ) {
+        h->backward(pos, rng, hiddenCs, l, inputCs);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Hierarchy* h,
+        const IntBuffer* hiddenCs,
+        int l,
+        int vli,
+        const IntBuffer* inputCs
+    ) {
+        h->learn(pos, rng, hiddenCs, l, vli, inputCs);
+    }
+
 public:
+    float _alpha; // Output learning rate
+    float _beta; // Hidden learning rate
+    float _gamma; // Discount factor
+
+    int _maxHistorySamples; // Maximum number of history samples
+    int _historyIters; // Number of times to iterate over history
+
     // Default
-    Hierarchy() {}
+    Hierarchy()
+    :
+    _alpha(0.01f),
+    _beta(0.01f),
+    _gamma(0.99f),
+    _maxHistorySamples(64),
+    _historyIters(8)
+    {}
 
     // Copy
     Hierarchy(
@@ -98,8 +191,8 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
+        float reward, // Reinforcement signal
+        bool learnEnabled = true // Whether learning is enabled
     );
 
     // Write to stream
@@ -118,13 +211,10 @@ public:
     }
 
     // Retrieve predictions
-    const IntBuffer &getPredictionCs(
+    const IntBuffer &getActionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        if (_aLayers[i] != nullptr) // If is an action layer
-            return _aLayers[i]->getHiddenCs();
-
-        return _pLayers.front()[i]->getHiddenCs();
+        return _actions[i];
     }
 
     // Whether this layer received on update this timestep
@@ -165,30 +255,6 @@ public:
         int l // Layer index
     ) const {
         return _scLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayers(
-        int l // Layer index
-    ) {
-        return _pLayers[l];
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayers(
-        int l // Layer index
-    ) const {
-        return _pLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Actor>> &getALayers() {
-        return _aLayers;
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
-        return _aLayers;
     }
 };
 } // namespace ogmaneo
