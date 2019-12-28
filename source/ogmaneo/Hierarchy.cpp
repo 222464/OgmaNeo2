@@ -38,7 +38,7 @@ void Hierarchy::forward(
                 else
                     sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-                sum *= std::sqrt(1.0f / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]));
+                sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
             
                 if (sum > maxValue) {
                     maxValue = sum;
@@ -57,7 +57,7 @@ void Hierarchy::forward(
             else
                 sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-            sum *= std::sqrt(1.0f / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]));
+            sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
             
             maxValue = sum;
         }
@@ -78,8 +78,8 @@ void Hierarchy::forward(
         else
             sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
-        sum *= std::sqrt(1.0f / std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]));
-            
+        sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
+
         _rLayers[l]._activations[vli][visibleColumnIndex] = sigmoid(sum);
     }
 }
@@ -106,8 +106,8 @@ void Hierarchy::backward(
                 error += _rLayers[l]._weights[vli].multiplyOHVsT(*inputCs[vli], _rLayers[l]._errors[vli], hiddenIndex, _inputSizes[vli].z);
         }
 
-        error *= std::sqrt(1.0f / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]));
-            
+        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
+
         _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
     }
     else {
@@ -115,7 +115,7 @@ void Hierarchy::backward(
 
         float error = _rLayers[l]._weights[0].multiplyOHVsT(*inputCs[0], _rLayers[l]._errors[0], hiddenIndex, _scLayers[l - 1].getHiddenSize().z);
 
-        error *= std::sqrt(1.0f / std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]));
+        error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
         
         _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
     }
