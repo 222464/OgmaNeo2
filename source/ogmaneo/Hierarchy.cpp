@@ -80,7 +80,7 @@ void Hierarchy::forward(
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
 
-        _rLayers[l]._activations[vli][visibleColumnIndex] = sum;
+        _rLayers[l]._activations[vli][visibleColumnIndex] = std::min(1.0f, std::max(0.0f, sum));
     }
 }
 
@@ -108,7 +108,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 1.0f ? error : 0.0f);//error * act * (1.0f - act);
     }
     else {
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
@@ -117,7 +117,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
         
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 1.0f ? error : 0.0f);//error * act * (1.0f - act);
     }
 }
 
@@ -134,7 +134,7 @@ void Hierarchy::learn(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _inputSizes[vli]);
 
-        float delta = _alpha * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
+        float delta = _alpha * _rLayers[l]._errors[vli][visibleColumnIndex];
         
         if (l == _scLayers.size() - 1)
             _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -148,7 +148,7 @@ void Hierarchy::learn(
 
         int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
 
-        float delta = _beta * std::min(1.0f, std::max(-1.0f, _rLayers[l]._errors[vli][visibleColumnIndex]));
+        float delta = _beta * _rLayers[l]._errors[vli][visibleColumnIndex];
         
         if (l == _scLayers.size() - 1)
             _rLayers[l]._weights[vli].deltaOHVs(*hiddenCs, delta, visibleIndex, _scLayers[l].getHiddenSize().z);
@@ -186,7 +186,7 @@ void Hierarchy::initRandom(
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
-        //std::normal_distribution<float> weightDistLow(0.0f, 0.01f);
+        std::normal_distribution<float> weightDistLow(0.0f, 0.01f);
         std::uniform_real_distribution<float> weightDistHigh(0.99f, 1.0f);
 
         // Histories for all input layers or just the one sparse coder (if not the first layer)
@@ -230,7 +230,7 @@ void Hierarchy::initRandom(
 
                     // Init weights
                     for (int j = 0; j < _rLayers[l]._weights[i]._nonZeroValues.size(); j++)
-                        _rLayers[l]._weights[i]._nonZeroValues[j] = weightDistHigh(cs._rng);
+                        _rLayers[l]._weights[i]._nonZeroValues[j] = weightDistLow(cs._rng);
 
                     for (int x = 0; x < layerDescs[l]._hiddenSize.x; x++)
                         for (int y = 0; y < layerDescs[l]._hiddenSize.y; y++) {
