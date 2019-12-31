@@ -141,6 +141,12 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float multiplyNoDiagonalOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
 	float multiplyOHVs(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &nonZeroScalars,

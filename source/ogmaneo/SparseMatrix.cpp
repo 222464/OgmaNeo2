@@ -289,6 +289,27 @@ float SparseMatrix::multiplyOHVsT(
 	return sum;
 }
 
+float SparseMatrix::multiplyNoDiagonalOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		if (_columnIndices[j] == row)
+			continue;
+
+		sum += _nonZeroValues[j];
+	}
+
+	return sum;
+}
+
 float SparseMatrix::multiplyOHVs(
 	const std::vector<int> &nonZeroIndices,
 	const std::vector<float> &nonZeroScalars,
