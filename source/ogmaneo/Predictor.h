@@ -35,7 +35,8 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights;
+        SparseMatrix _feedBackWeights;
+        SparseMatrix _inputWeights;
     };
 
     struct HistorySample {
@@ -100,7 +101,7 @@ public:
     :
     _alpha(0.01f),
     _maxHistorySamples(512),
-    _historyIters(8)
+    _historyIters(16)
     {}
 
     // Create with random initialization
