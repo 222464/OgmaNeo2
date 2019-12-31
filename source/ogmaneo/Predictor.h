@@ -39,6 +39,7 @@ public:
     };
 
     struct HistorySample {
+        FloatBuffer _feedBackStates;
         FloatBuffer _inputStates;
         FloatBuffer _hiddenTargetStates;
     };
@@ -121,8 +122,9 @@ public:
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
-        const FloatBuffer* hiddenTargetStates,
-        const FloatBuffer* inputStates
+        const FloatBuffer* feedBackStates,
+        const FloatBuffer* inputStates,
+        const FloatBuffer* hiddenTargetStates
     );
 
     // Write to stream

@@ -91,7 +91,6 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const FloatBuffer*> &inputStates, // Input layer column states
-        const FloatBuffer* goalStates,
         bool learnEnabled = true // Whether learning is enabled
     );
 

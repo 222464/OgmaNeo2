@@ -138,7 +138,6 @@ const Hierarchy &Hierarchy::operator=(
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const FloatBuffer*> &inputStates,
-    const FloatBuffer* goalStates,
     bool learnEnabled
 ) {
     assert(inputStates.size() == _inputSizes.size());
@@ -156,13 +155,13 @@ void Hierarchy::step(
 
     // Backward
     for (int l = _rLayers.size() - 1; l >= 0; l--) {
-        const FloatBuffer* feedBackStates = l < _rLayers.size() - 1 ? &_pLayers[l + 1][0]->getHiddenStates() : goalStates;
+        const FloatBuffer* feedBackStates = l < _rLayers.size() - 1 ? &_pLayers[l + 1][0]->getHiddenStates() : nullptr;
 
         // Step actor layers
         for (int p = 0; p < _pLayers[l].size(); p++) {
             if (_pLayers[l][p] != nullptr) {
                 if (learnEnabled) 
-                    _pLayers[l][p]->learn(cs, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), &_rLayers[l].getHiddenStates());
+                    _pLayers[l][p]->learn(cs, feedBackStates, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), &_rLayers[l].getHiddenStates());
 
                 _pLayers[l][p]->activate(cs, feedBackStates, &_rLayers[l].getHiddenStates());
             }

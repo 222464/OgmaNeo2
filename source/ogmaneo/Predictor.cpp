@@ -22,7 +22,7 @@ void Predictor::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _visibleLayer._weights.multiply(*feedBackStates, hiddenIndex) - _visibleLayer._weights.multiply(*inputStates, hiddenIndex);
+        float sum = (feedBackStates == nullptr ? 0.0f : _visibleLayer._weights.multiply(*feedBackStates, hiddenIndex)) - _visibleLayer._weights.multiply(*inputStates, hiddenIndex);
         int count = _visibleLayer._weights.count(hiddenIndex);
     
         _hiddenStates[hiddenIndex] = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
@@ -44,7 +44,7 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _visibleLayer._weights.multiply(_historySamples[index - 1]->_inputStates, hiddenIndex) - _visibleLayer._weights.multiply(_historySamples[index]->_inputStates, hiddenIndex);
+        float sum = (_historySamples[index]->_feedBackStates.empty() ? 0.0f : _visibleLayer._weights.multiply(_historySamples[index]->_feedBackStates, hiddenIndex)) - _visibleLayer._weights.multiply(_historySamples[index]->_inputStates, hiddenIndex);
         int count = _visibleLayer._weights.count(hiddenIndex);
 
         float predState = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
@@ -104,8 +104,9 @@ void Predictor::activate(
 
 void Predictor::learn(
     ComputeSystem &cs,
-    const FloatBuffer* hiddenTargetStates,
-    const FloatBuffer* inputStates
+    const FloatBuffer* feedBackStates,
+    const FloatBuffer* inputStates,
+    const FloatBuffer* hiddenTargetStates
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -113,8 +114,9 @@ void Predictor::learn(
     // Add history sample
     std::shared_ptr<HistorySample> sample = std::make_shared<HistorySample>();
 
-    sample->_hiddenTargetStates = *hiddenTargetStates;
+    sample->_feedBackStates = (feedBackStates == nullptr ? FloatBuffer{} : *feedBackStates);
     sample->_inputStates = *inputStates;
+    sample->_hiddenTargetStates = *hiddenTargetStates;
 
     _historySamples.insert(_historySamples.begin(), std::move(sample));
 
