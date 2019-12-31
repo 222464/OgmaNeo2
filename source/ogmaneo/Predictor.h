@@ -91,7 +91,6 @@ private:
 
 public:
     float _alpha; // Prediction learning rate
-    float _gamma; // Discount factor
 
     int _maxHistorySamples;
     int _historyIters;
@@ -100,7 +99,6 @@ public:
     Predictor()
     :
     _alpha(0.01f),
-    _gamma(0.99f),
     _maxHistorySamples(512),
     _historyIters(8)
     {}

@@ -161,7 +161,7 @@ void Hierarchy::step(
         for (int p = 0; p < _pLayers[l].size(); p++) {
             if (_pLayers[l][p] != nullptr) {
                 if (learnEnabled) 
-                    _pLayers[l][p]->learn(cs, feedBackStates, l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates(), &_rLayers[l].getHiddenStates());
+                    _pLayers[l][p]->learn(cs, feedBackStates, &_rLayers[l].getHiddenStates(), l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates());
 
                 _pLayers[l][p]->activate(cs, feedBackStates, &_rLayers[l].getHiddenStates());
             }

@@ -35,12 +35,7 @@ void Predictor::learn(
     int index
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
-
-    int dist = index - 1;
-
-    // Next value
-    float strength = _alpha * std::pow(_gamma, dist);
-
+    
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
@@ -49,10 +44,12 @@ void Predictor::learn(
 
         float predState = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
 
-        float delta = strength * (_historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState) * (1.0f - predState * predState);
+        float delta = _alpha * (_historySamples[index - 1]->_hiddenTargetStates[hiddenIndex] - predState) * (1.0f - predState * predState);
+
+        if (!_historySamples[index]->_feedBackStates.empty())
+            _visibleLayer._weights.deltas(_historySamples[index]->_feedBackStates, delta, hiddenIndex);
 
         _visibleLayer._weights.deltas(_historySamples[index]->_inputStates, -delta, hiddenIndex);
-        _visibleLayer._weights.deltas(_historySamples[index - 1]->_inputStates, delta, hiddenIndex);
     }
 }
 
