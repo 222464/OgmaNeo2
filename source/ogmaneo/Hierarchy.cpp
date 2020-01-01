@@ -144,9 +144,7 @@ void Hierarchy::learn(
     else {
         int visibleColumnIndex = address2(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
 
-        int inputC = (*inputCs)[visibleColumnIndex];
-
-        int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
+        int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _scLayers[l - 1].getHiddenSize());
 
         float delta = _beta * _rLayers[l]._errors[vli][visibleColumnIndex];
         
