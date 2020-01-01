@@ -67,9 +67,7 @@ void Hierarchy::forward(
     else {
         int visibleColumnIndex = address2(pos, Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y));
 
-        int inputC = (*inputCs)[visibleColumnIndex];
-
-        int visibleIndex = address3(Int3(pos.x, pos.y, inputC), _scLayers[l - 1].getHiddenSize());
+        int visibleIndex = address3(Int3(pos.x, pos.y, (*inputCs)[visibleColumnIndex]), _scLayers[l - 1].getHiddenSize());
 
         float sum;
 
@@ -79,8 +77,8 @@ void Hierarchy::forward(
             sum = _rLayers[l]._weights[vli].multiplyOHVs(*hiddenCs, _rLayers[l + 1]._activations[0], visibleIndex, _scLayers[l].getHiddenSize().z);
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
-
-        _rLayers[l]._activations[vli][visibleColumnIndex] = sigmoid(sum);
+        
+        _rLayers[l]._activations[vli][visibleColumnIndex] = std::tanh(sum);
     }
 }
 
@@ -108,7 +106,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * (1.0f - act * act);
     }
     else {
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
@@ -117,7 +115,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
         
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * (1.0f - act * act);
     }
 }
 
