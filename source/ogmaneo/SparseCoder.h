@@ -53,7 +53,7 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* inputCs,
         int vli
     );
 
@@ -70,7 +70,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* inputCs,
         int vli
     ) {
         sc->learn(pos, rng, inputCs, vli);
