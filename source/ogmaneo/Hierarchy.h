@@ -84,7 +84,7 @@ private:
     std::vector<Int3> _inputSizes;
 
     // History samples
-    std::vector<HistorySample> _historySamples;
+    std::vector<std::shared_ptr<HistorySample>> _historySamples;
 
     // --- Kernels ---
 

@@ -354,7 +354,13 @@ const Hierarchy &Hierarchy::operator=(
     _maxHistorySamples = other._maxHistorySamples;
     _historyIters = other._historyIters;
 
-    _historySamples = other._historySamples;
+    _historySamples.resize(other._historySamples.size());
+
+    for (int t = 0; t < _historySamples.size(); t++) {
+        _historySamples[t] = std::make_shared<HistorySample>();
+
+        (*_historySamples[t]) = (*other._historySamples[t]);
+    }
 
     return *this;
 }
@@ -405,10 +411,10 @@ void Hierarchy::step(
     _updates.clear();
     _updates.resize(_scLayers.size(), false);
 
-    HistorySample ns;
+    std::shared_ptr<HistorySample> ns = std::make_shared<HistorySample>();
 
-    ns._states.resize(_scLayers.size());
-    ns._reward = reward;
+    ns->_states.resize(_scLayers.size());
+    ns->_reward = reward;
 
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
@@ -448,15 +454,15 @@ void Hierarchy::step(
             }
         }
 
-        ns._states[l] = _scLayers[l].getHiddenCs();
+        ns->_states[l] = _scLayers[l].getHiddenCs();
     }
 
     // Action into replay buffer
-    ns._actionsPrev.resize(_actions.size());
+    ns->_actionsPrev.resize(_actions.size());
 
     for (int vli = 0; vli < _actions.size(); vli++)
         if (!_actions[vli].empty())
-            ns._actionsPrev[vli] = *inputCs[vli];
+            ns->_actionsPrev[vli] = *inputCs[vli];
 
     // Add history sample
     _historySamples.insert(_historySamples.begin(), ns);
@@ -467,8 +473,8 @@ void Hierarchy::step(
     // Learn
     if (learnEnabled && _historySamples.size() > 2) {
         // Find latest Q on-policy
-        const HistorySample &s = _historySamples[1];
-        const HistorySample &sNext = _historySamples[0];
+        const HistorySample &s = *_historySamples[1];
+        const HistorySample &sNext = *_historySamples[0];
             
         for (int l = _scLayers.size() - 1; l >= 0; l--) {
             if (l == 0) {
@@ -504,8 +510,8 @@ void Hierarchy::step(
         for (int it = 0; it < _historyIters; it++) {
             int t = sampleDist(cs._rng);
 
-            const HistorySample &s = _historySamples[t];
-            const HistorySample &sNext = _historySamples[t - 1];
+            const HistorySample &s = *_historySamples[t];
+            const HistorySample &sNext = *_historySamples[t - 1];
 
             for (int l = _scLayers.size() - 1; l >= 0; l--) {
                 if (l == 0) {
@@ -538,7 +544,7 @@ void Hierarchy::step(
             float g = 1.0f;
             
             for (int t2 = t - 1; t2 >= 1; t2--) {
-                baseQ += g * _historySamples[t2]._reward;
+                baseQ += g * _historySamples[t2]->_reward;
 
                 g *= _gamma;
             }
@@ -611,9 +617,9 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
                 for (int x = 0; x < _inputSizes[i].x; x++)
                     for (int y = 0; y < _inputSizes[i].y; y++)
-                        forward(Int2(x, y), cs._rng, &ns._states[l], l, i, nullptr);
+                        forward(Int2(x, y), cs._rng, &ns->_states[l], l, i, nullptr);
 #else
-                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns._states[l], l, i, nullptr), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
+                runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns->_states[l], l, i, nullptr), Int2(_inputSizes[i].x, _inputSizes[i].y), cs._rng, cs._batchSize2);
 #endif
             }
         }
@@ -621,9 +627,9 @@ void Hierarchy::step(
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < _scLayers[l - 1].getHiddenSize().x; x++)
                 for (int y = 0; y < _scLayers[l - 1].getHiddenSize().y; y++)
-                    forward(Int2(x, y), cs._rng, &ns._states[l], l, 0, &ns._states[l - 1]);
+                    forward(Int2(x, y), cs._rng, &ns->_states[l], l, 0, &ns->_states[l - 1]);
 #else
-            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns._states[l], l, 0, &ns._states[l - 1]), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Hierarchy::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, &ns->_states[l], l, 0, &ns->_states[l - 1]), Int2(_scLayers[l - 1].getHiddenSize().x, _scLayers[l - 1].getHiddenSize().y), cs._rng, cs._batchSize2);
 #endif
         }
     }
@@ -690,7 +696,7 @@ void Hierarchy::writeToStream(
 
     // History samples
     for (int t = 0; t < numHistorySamples; t++) {
-        const HistorySample &s = _historySamples[t];
+        const HistorySample &s = *_historySamples[t];
 
         for (int l = 0; l < _scLayers.size(); l++)
             writeBufferToStream(os, &s._states[l]);
@@ -800,7 +806,9 @@ void Hierarchy::readFromStream(
 
     // History samples
     for (int t = 0; t < numHistorySamples; t++) {
-        HistorySample &s = _historySamples[t];
+        _historySamples[t] = std::make_shared<HistorySample>();
+
+        HistorySample &s = *_historySamples[t];
 
         s._states.resize(_scLayers.size());
 
