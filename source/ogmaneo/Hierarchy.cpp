@@ -78,7 +78,7 @@ void Hierarchy::forward(
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
         
-        _rLayers[l]._activations[vli][visibleColumnIndex] = std::tanh(sum);
+        _rLayers[l]._activations[vli][visibleColumnIndex] = sigmoid(sum);
     }
 }
 
@@ -106,7 +106,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * (1.0f - act * act);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
     }
     else {
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
@@ -115,7 +115,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
         
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * (1.0f - act * act);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
     }
 }
 
