@@ -53,7 +53,7 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float target = (hc == targetC ? 1.0f : 0.0f);
+        float target = (hc == targetC ? 1.0f : -1.0f);
 
         float sum = 0.0f;
         int count = 0;
@@ -66,7 +66,7 @@ void Predictor::learn(
             count += vl._weights.count(hiddenIndex) / vld._size.z;
         }
 
-        float delta = _alpha * (target - sigmoid(sum / std::max(1, count))); // Delta
+        float delta = _alpha * (target - std::tanh(sum / std::max(1, count))); // Delta
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
