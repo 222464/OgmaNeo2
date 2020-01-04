@@ -296,6 +296,15 @@ void initSMLocalRF(
     SparseMatrix &mat // Matrix to fill
 );
 
+void initSMLocalRF(
+    const Int3 &inSize,
+    const Int3 &outSize,
+    int radius,
+    float dropRatio, // Ratio of columns to drop
+    SparseMatrix &mat,
+    std::mt19937 &rng
+);
+
 // --- Sparse Matrix Serialization ---
 
 void writeSMToStream(

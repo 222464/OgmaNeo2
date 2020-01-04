@@ -74,14 +74,14 @@ void Predictor::learn(
     if (maxIndex != targetC) {
         int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
         int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
-
+        
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.deltaOHVs(vl._inputCsPrev, _alpha, hiddenIndexTarget, vld._size.z); // Apply delta rule
-            vl._weights.deltaOHVs(vl._inputCsPrev, -_alpha, hiddenIndexMax, vld._size.z); // Apply delta rule
+            vl._weights.deltaOHVs(vl._inputCsPrev, _alpha, hiddenIndexTarget, vld._size.z);
+            vl._weights.deltaOHVs(vl._inputCsPrev, -_alpha, hiddenIndexMax, vld._size.z);
         }
     }
 }
