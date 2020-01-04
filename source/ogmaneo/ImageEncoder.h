@@ -18,13 +18,15 @@ public:
     struct VisibleLayerDesc {
         Int3 _size; // Size of input
 
-        int _radius; // Radius onto input
+        int _encRadius; // Radius onto input
+        int _decRadius; // Radius onto hidden
 
         // Defaults
         VisibleLayerDesc()
         :
         _size(4, 4, 16),
-        _radius(2)
+        _encRadius(2),
+        _decRadius(2)
         {}
     };
 

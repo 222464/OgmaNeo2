@@ -56,7 +56,7 @@ void ImageEncoder::backward(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float sum = vl._decWeights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._decWeights.countT(visibleIndex) / _hiddenSize.z);
+        float sum = vl._decWeights.multiplyOHVs(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._decWeights.count(visibleIndex) / _hiddenSize.z);
 
         vl._reconActs[visibleIndex] = sum;
     }
@@ -79,7 +79,7 @@ void ImageEncoder::learn(
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float sum = vl._decWeights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._decWeights.countT(visibleIndex) / _hiddenSize.z);
+        float sum = vl._decWeights.multiplyOHVs(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._decWeights.count(visibleIndex) / _hiddenSize.z);
 
         activations[vc] = sum;
 
@@ -94,7 +94,7 @@ void ImageEncoder::learn(
 
             float delta = _alpha * ((*inputActs)[visibleIndex] - activations[vc]);
 
-            vl._decWeights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
+            vl._decWeights.deltaOHVs(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
         }
     }
 }
@@ -126,17 +126,14 @@ void ImageEncoder::initRandom(
         int numVisible = numVisibleColumns * vld._size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._encWeights);
+        initSMLocalRF(vld._size, _hiddenSize, vld._encRadius, vl._encWeights);
+        initSMLocalRF(_hiddenSize, vld._size, vld._decRadius, vl._decWeights);
 
-        vl._decWeights = vl._encWeights;
-
-        for (int i = 0; i < vl._encWeights._nonZeroValues.size(); i++) {
+        for (int i = 0; i < vl._encWeights._nonZeroValues.size(); i++)
             vl._encWeights._nonZeroValues[i] = encWeightDist(cs._rng);
-            vl._decWeights._nonZeroValues[i] = decWeightDist(cs._rng);
-        }
 
-        // Generate transpose (needed for reconstruction)
-        vl._decWeights.initT();
+        for (int i = 0; i < vl._decWeights._nonZeroValues.size(); i++)
+            vl._decWeights._nonZeroValues[i] = decWeightDist(cs._rng);
 
         vl._reconActs = FloatBuffer(numVisible, 0.0f);
     }
