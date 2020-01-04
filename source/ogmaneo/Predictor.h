@@ -40,8 +40,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden state
 
-    FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
-
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -84,7 +82,7 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(0.5f)
+    _alpha(1.0f)
     {}
 
     // Create with random initialization

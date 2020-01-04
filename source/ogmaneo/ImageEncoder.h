@@ -30,7 +30,8 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix _encWeights;
+        SparseMatrix _decWeights;
 
         FloatBuffer _reconActs;
     };
@@ -39,8 +40,6 @@ private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
     IntBuffer _hiddenCs; // Hidden states
-
-    FloatBuffer _hiddenResources; // Resources
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -51,8 +50,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActs
     );
 
     void backward(
@@ -62,35 +60,51 @@ private:
         int vli
     );
 
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const FloatBuffer* inputActs,
+        int vli
+    );
+
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        ImageEncoder* enc,
+        const std::vector<const FloatBuffer*> &inputActs
     ) {
-        sc->forward(pos, rng, inputActs, learnEnabled);
+        enc->forward(pos, rng, inputActs);
     }
 
     static void backwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        ImageEncoder* sc,
+        ImageEncoder* enc,
         const IntBuffer* hiddenCs,
         int vli
     ) {
-        sc->backward(pos, rng, hiddenCs, vli);
+        enc->backward(pos, rng, hiddenCs, vli);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* enc,
+        const FloatBuffer* inputActs,
+        int vli
+    ) {
+        enc->learn(pos, rng, inputActs, vli);
     }
 
 public:
     float _alpha; // Resource depletion rate
-    float _gamma; // SOM falloff
+    float _epsilon; // Error tolerance
 
     // Defaults
     ImageEncoder()
     :
-    _alpha(0.1f),
-    _gamma(0.1f)
+    _alpha(0.5f),
+    _epsilon(0.001f)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -101,10 +115,14 @@ public:
     );
 
     // Activate the sparse coder (perform sparse coding)
-    void step(
+    void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const FloatBuffer*> &inputActs, // Input states
-        bool learnEnabled // Whether to learn
+        const std::vector<const FloatBuffer*> &inputActs // Input states
+    );
+
+    void learn(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const FloatBuffer*> &targetActs // Target states
     );
 
     void reconstruct(
