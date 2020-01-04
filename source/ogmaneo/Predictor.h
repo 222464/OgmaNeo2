@@ -82,7 +82,7 @@ public:
     // Defaults
     Predictor()
     :
-    _alpha(1.0f)
+    _alpha(0.01f)
     {}
 
     // Create with random initialization
@@ -95,7 +95,7 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &visibleCs // Hidden/output/prediction size
+        const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction size
     );
 
     // Learning predictions (update weights)
