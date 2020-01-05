@@ -373,10 +373,11 @@ void ogmaneo::initSMLocalRF(
                 Int3 outPos(ox, oy, oz);
 
                 int nonZeroInRow = 0;
+                int maskIndex = 0;
 
                 for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
                     for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
-                        if (!mask[address2(Int2(ix, iy), Int2(inSize.x, inSize.y))]) {
+                        if (!mask[maskIndex]) {
                             for (int iz = 0; iz < inSize.z; iz++) {
                                 Int3 inPos(ix, iy, iz);
 
@@ -388,6 +389,8 @@ void ogmaneo::initSMLocalRF(
                                 nonZeroInRow++;
                             }
                         }
+
+                        maskIndex++;
                     }
 
                 mat._rowRanges[address3(outPos, outSize)] = nonZeroInRow;
