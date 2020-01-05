@@ -50,7 +50,7 @@ void SparseCoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebbDecreasingOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
+            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
         }
     }
 }
