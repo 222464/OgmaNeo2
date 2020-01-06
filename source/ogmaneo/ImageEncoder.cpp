@@ -52,9 +52,11 @@ void ImageEncoder::forward(
 
             float delta = maxIndex - hc;
 
-            float strength = std::exp(-delta * delta * _gamma / std::max(0.001f, _hiddenResources[hiddenIndex])) * _hiddenResources[hiddenIndex];
+            float strength = std::exp(-delta * delta * _gamma * _hiddenResources[hiddenIndex]) / _hiddenResources[hiddenIndex];
 
-            _hiddenResources[hiddenIndex] -= _alpha * strength;
+            _hiddenResources[hiddenIndex] += _alpha * strength;
+
+            _hiddenResources[hiddenIndex] = std::min(999999.0f, _hiddenResources[hiddenIndex]);
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
