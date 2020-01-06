@@ -324,6 +324,99 @@ void ogmaneo::initSMLocalRF(
     mat._columns = inSize.x * inSize.y * inSize.z;
 }
 
+void ogmaneo::initSMLocalRF(
+    const Int3 &inSize,
+    const Int3 &outSize,
+    int radius,
+    float dropRatio,
+    SparseMatrix &mat,
+    std::mt19937 &rng
+) {
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    int numOut = outSize.x * outSize.y * outSize.z;
+
+    // Projection constant
+    Float2 outToIn = Float2(static_cast<float>(inSize.x) / static_cast<float>(outSize.x),
+        static_cast<float>(inSize.y) / static_cast<float>(outSize.y));
+
+    int diam = radius * 2 + 1;
+
+    int numWeightsPerOutput = diam * diam * inSize.z;
+
+    int weightsSize = numOut * numWeightsPerOutput;
+
+    mat._nonZeroValues.reserve(weightsSize);
+
+    mat._rowRanges.resize(numOut + 1);
+
+    mat._columnIndices.reserve(weightsSize);
+
+    // Initialize weight matrix
+    for (int ox = 0; ox < outSize.x; ox++)
+        for (int oy = 0; oy < outSize.y; oy++) {
+            Int2 visiblePositionCenter = project(Int2(ox, oy), outToIn);
+
+            // Lower corner
+            Int2 fieldLowerBound(visiblePositionCenter.x - radius, visiblePositionCenter.y - radius);
+
+            // Bounds of receptive field, clamped to input size
+            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterUpperBound(std::min(inSize.x - 1, visiblePositionCenter.x + radius), std::min(inSize.y - 1, visiblePositionCenter.y + radius));
+
+            std::vector<bool> mask(diam * diam);
+
+            for (int i = 0; i < mask.size(); i++)
+                mask[i] = dist01(rng) < dropRatio;
+
+            for (int oz = 0; oz < outSize.z; oz++) {
+                Int3 outPos(ox, oy, oz);
+
+                int nonZeroInRow = 0;
+                int maskIndex = 0;
+
+                for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
+                    for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
+                        if (!mask[maskIndex]) {
+                            for (int iz = 0; iz < inSize.z; iz++) {
+                                Int3 inPos(ix, iy, iz);
+
+                                int inIndex = address3(inPos, inSize);
+
+                                mat._nonZeroValues.push_back(0.0f);
+                                mat._columnIndices.push_back(inIndex);
+                                
+                                nonZeroInRow++;
+                            }
+                        }
+
+                        maskIndex++;
+                    }
+
+                mat._rowRanges[address3(outPos, outSize)] = nonZeroInRow;
+            }
+        }
+
+    mat._nonZeroValues.shrink_to_fit();
+    mat._columnIndices.shrink_to_fit();
+
+    // Convert rowRanges from counts to cumulative counts
+    int offset = 0;
+
+	for (int i = 0; i < numOut; i++) {
+		int temp = mat._rowRanges[i];
+
+		mat._rowRanges[i] = offset;
+
+		offset += temp;
+	}
+
+    mat._rowRanges[numOut] = offset;
+
+    mat._rows = numOut;
+    mat._columns = inSize.x * inSize.y * inSize.z;
+}
+
 void ogmaneo::writeSMToStream(
     std::ostream &os,
     const SparseMatrix &mat

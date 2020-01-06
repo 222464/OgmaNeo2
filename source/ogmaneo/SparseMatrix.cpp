@@ -136,7 +136,7 @@ int SparseMatrix::count(
 	return _rowRanges[nextIndex] - _rowRanges[row];
 }
 
-float SparseMatrix::count(
+float SparseMatrix::total(
 	const std::vector<float> &in,
 	int row
 ) {
@@ -214,7 +214,7 @@ int SparseMatrix::countT(
 	return _columnRanges[nextIndex] - _columnRanges[column];
 }
 
-float SparseMatrix::countT(
+float SparseMatrix::totalT(
 	const std::vector<float> &in,
 	int column
 ) {
@@ -519,6 +519,27 @@ void SparseMatrix::hebbOHVsT(
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
 			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
+		}
+	}
+}
+
+void SparseMatrix::hebbDecreasingOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[j] += alpha * std::min(0.0f, target - _nonZeroValues[j]);
 		}
 	}
 }

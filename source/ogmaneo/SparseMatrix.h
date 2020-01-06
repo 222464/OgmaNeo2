@@ -85,7 +85,7 @@ struct SparseMatrix {
 		int row
 	);
 
-	float count(
+	float total(
 		const std::vector<float> &in,
 		int row
 	);
@@ -113,7 +113,7 @@ struct SparseMatrix {
 		int column
 	);
 
-	float countT(
+	float totalT(
 		const std::vector<float> &in,
 		int column
 	);
@@ -235,6 +235,13 @@ struct SparseMatrix {
 	void hebbOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
+		int oneHotSize,
+		float alpha
+	);
+
+	void hebbDecreasingOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
 		int oneHotSize,
 		float alpha
 	);
