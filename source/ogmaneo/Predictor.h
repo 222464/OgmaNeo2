@@ -40,8 +40,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden state
 
-    FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
-
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -97,7 +95,7 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &visibleCs // Hidden/output/prediction size
+        const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction size
     );
 
     // Learning predictions (update weights)

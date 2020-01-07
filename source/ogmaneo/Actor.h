@@ -109,8 +109,8 @@ public:
     // Defaults
     Actor()
     :
-    _alpha(0.05f),
-    _beta(0.1f),
+    _alpha(0.01f),
+    _beta(0.01f),
     _gamma(0.99f),
     _historyIters(16)
     {}
@@ -136,7 +136,7 @@ public:
     // Step (get actions and update)
     void step(
         ComputeSystem &cs,
-        const std::vector<const IntBuffer*> &visibleCs,
+        const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         float reward,
         bool learnEnabled

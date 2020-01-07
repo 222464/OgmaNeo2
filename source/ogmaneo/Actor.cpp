@@ -35,7 +35,7 @@ void Actor::forward(
 
     // --- Action ---
 
-    int maxIndex = 0;
+    std::vector<float> activations(_hiddenSize.z);
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -53,14 +53,37 @@ void Actor::forward(
 
         sum /= std::max(1, count);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
+        activations[hc] = sum;
 
-            maxIndex = hc;
-        }
+        maxActivation = std::max(maxActivation, sum);
     }
 
-    _hiddenCs[hiddenColumnIndex] = maxIndex;
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+        
+        total += activations[hc];
+    }
+
+    std::uniform_real_distribution<float> cuspDist(0.0f, total);
+
+    float cusp = cuspDist(rng);
+
+    int selectIndex = 0;
+    float sumSoFar = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        sumSoFar += activations[hc];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = hc;
+
+            break;
+        }
+    }
+    
+    _hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
 void Actor::learn(
@@ -224,8 +247,6 @@ const Actor &Actor::operator=(
 ) {
     _hiddenSize = other._hiddenSize;
 
-    _historySize = other._historySize;
-
     _hiddenCs = other._hiddenCs;
 
     _hiddenValues = other._hiddenValues;
@@ -236,6 +257,9 @@ const Actor &Actor::operator=(
     _alpha = other._alpha;
     _beta = other._beta;
     _gamma = other._gamma;
+    _historyIters = other._historyIters;
+
+    _historySize = other._historySize;
 
     _historySamples.resize(other._historySamples.size());
 
@@ -250,7 +274,7 @@ const Actor &Actor::operator=(
 
 void Actor::step(
     ComputeSystem &cs,
-    const std::vector<const IntBuffer*> &visibleCs,
+    const std::vector<const IntBuffer*> &inputCs,
     const IntBuffer* hiddenCsPrev,
     float reward,
     bool learnEnabled
@@ -262,9 +286,9 @@ void Actor::step(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, visibleCs);
+            forward(Int2(x, y), cs._rng, inputCs);
 #else
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     // Add sample
@@ -294,9 +318,9 @@ void Actor::step(
             // Copy visible Cs
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < numVisibleColumns; x++)
-                copyInt(x, cs._rng, visibleCs[vli], &s._inputCs[vli]);
+                copyInt(x, cs._rng, inputCs[vli], &s._inputCs[vli]);
 #else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &s._inputCs[vli]), numVisibleColumns, cs._rng, cs._batchSize1);
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s._inputCs[vli]), numVisibleColumns, cs._rng, cs._batchSize1);
 #endif
         }
 
@@ -364,8 +388,6 @@ void Actor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
-    os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
-
     writeBufferToStream(os, &_hiddenCs);
 
     writeBufferToStream(os, &_hiddenValues);
@@ -386,6 +408,8 @@ void Actor::writeToStream(
         writeSMToStream(os, vl._valueWeights);
         writeSMToStream(os, vl._actionWeights);
     }
+
+    os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
     int numHistorySamples = _historySamples.size();
 
@@ -417,8 +441,6 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
-    is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
-
     readBufferFromStream(is, &_hiddenCs);
 
     readBufferFromStream(is, &_hiddenValues);
@@ -442,6 +464,8 @@ void Actor::readFromStream(
         readSMFromStream(is, vl._valueWeights);
         readSMFromStream(is, vl._actionWeights);
     }
+
+    is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
     int numHistorySamples;
 
