@@ -105,7 +105,7 @@ public:
     :
     _explainIters(4),
     _alpha(0.3f),
-    _beta(0.4f)
+    _beta(0.4f) // Should be 0.5 or lower
     {}
 
     // Create a sparse coding layer with random initialization
