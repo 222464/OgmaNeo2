@@ -90,7 +90,7 @@ void SparseCoder::learn(
         vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, 0.5f / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _beta / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 0.5f * _beta / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
 
     _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1);
 }
