@@ -90,7 +90,7 @@ void SparseCoder::learn(
         vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, 0.5f / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 0.5f / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _beta / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
 
     _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1);
 }
@@ -202,6 +202,7 @@ void SparseCoder::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_explainIters), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
     writeBufferToStream(os, &_hiddenUsages);
@@ -230,6 +231,7 @@ void SparseCoder::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_explainIters), sizeof(int));
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
     readBufferFromStream(is, &_hiddenUsages);

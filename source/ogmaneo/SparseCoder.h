@@ -98,12 +98,14 @@ private:
 public:
     int _explainIters; // Explaining-away iterations
     float _alpha; // Learning decay
+    float _beta; // Lateral learning rate
 
     // Defaults
     SparseCoder()
     :
     _explainIters(4),
-    _alpha(0.5f)
+    _alpha(0.5f),
+    _beta(0.2f)
     {}
 
     // Create a sparse coding layer with random initialization
