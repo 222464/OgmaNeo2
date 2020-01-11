@@ -78,7 +78,7 @@ void Hierarchy::forward(
 
         sum /= std::max(1, _rLayers[l]._visibleCounts[vli][visibleColumnIndex]);
         
-        _rLayers[l]._activations[vli][visibleColumnIndex] = std::min(1.0f, std::max(0.0f, sum));
+        _rLayers[l]._activations[vli][visibleColumnIndex] = sum;
     }
 }
 
@@ -106,7 +106,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
 
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 1.0f ? error : 0.0f);// * act * (1.0f - act);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;// * act * (1.0f - act);
     }
     else {
         float act = _rLayers[l + 1]._activations[0][hiddenColumnIndex];
@@ -115,7 +115,7 @@ void Hierarchy::backward(
 
         error /= std::max(1, _rLayers[l]._hiddenCounts[hiddenColumnIndex]);
         
-        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = (act > 0.0f && act < 1.0f ? error : 0.0f);// * act * (1.0f - act);
+        _rLayers[l + 1]._errors[0][hiddenColumnIndex] = error;// * act * (1.0f - act);
     }
 }
 
