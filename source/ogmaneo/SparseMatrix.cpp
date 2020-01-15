@@ -381,6 +381,27 @@ float SparseMatrix::distance2OHVsT(
 	return dist;
 }
 
+float SparseMatrix::multiplyNoDiagonalOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+		if (columnIndices[j] == row)
+			continue;
+			
+		sum += nonZeroValues[j];
+	}
+
+	return sum;
+}
+
 void SparseMatrix::deltas(
 	const std::vector<float> &in,
 	float delta,

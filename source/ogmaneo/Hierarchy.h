@@ -30,6 +30,7 @@ public:
         Int3 hiddenSize; // Size of hidden layer
 
         int ffRadius; // Feed forward radius
+        int lRadius; // Lateral radius
         int pRadius; // Prediction radius
 
         int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
@@ -44,6 +45,7 @@ public:
         :
         hiddenSize(4, 4, 16),
         ffRadius(2),
+        lRadius(2),
         pRadius(2),
         ticksPerUpdate(2),
         temporalHorizon(2),

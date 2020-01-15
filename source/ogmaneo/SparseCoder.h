@@ -35,8 +35,16 @@ public:
 
 private:
     Int3 hiddenSize; // Size of hidden/output layer
+    int lateralRadius;
+
+    FloatBuffer hiddenStimuli;
+    FloatBuffer hiddenActivations;
 
     IntBuffer hiddenCs; // Hidden states
+    IntBuffer hiddenCsTemp; // Temporaries for hidden state iteration
+    IntBuffer hiddenUsages; // Number of times used
+
+    SparseMatrix laterals;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -50,11 +58,15 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
+    void inhibit(
+        const Int2 &pos,
+        std::mt19937 &rng
+    );
+
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void forwardKernel(
@@ -66,29 +78,41 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
+    static void inhibitKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc
+    ) {
+        sc->inhibit(pos, rng);
+    }
+
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const IntBuffer* inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->learn(pos, rng, inputCs);
     }
 
 public:
-    float alpha; // Weight learning rate
+    int explainIters; // Explaining-away iterations
+    float alpha; // Learning decay
+    float beta; // Lateral learning rate
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.1f)
+    explainIters(4),
+    alpha(0.5f),
+    beta(0.4f) // Should be 0.5 or lower
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
+        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
@@ -136,6 +160,13 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
+    }
+
+    // Get the weights for a visible layer
+    const SparseMatrix &getWeights(
+        int i // Index of visible layer
+    ) const {
+        return visibleLayers[i].weights;
     }
 };
 } // namespace ogmaneo
