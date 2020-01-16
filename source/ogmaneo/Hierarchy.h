@@ -3,7 +3,7 @@
 //  Copyright(c) 2017-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
-//  in the OGMANEO_LICENSE.md file included in this distribution.
+//  in the OGMANEOLICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
 #pragma once
@@ -15,8 +15,8 @@
 namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
-    _none = 0,
-    _action = 1
+    none = 0,
+    action = 1
 };
 
 // A SPH
@@ -24,67 +24,67 @@ class Hierarchy {
 public:
     // Describes a layer for construction
     struct LayerDesc {
-        Int3 _hiddenSize; // Size of hidden layer
+        Int3 hiddenSize; // Size of hidden layer
 
-        int _ffRadius; // Feed forward radius
-        int _rRadius; // Routing radius
+        int ffRadius; // Feed forward radius
+        int rRadius; // Routing radius
 
-        int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
+        int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
-        int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
+        int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
 
         LayerDesc()
         :
-        _hiddenSize(4, 4, 16),
-        _ffRadius(2),
-        _rRadius(2),
-        _ticksPerUpdate(2),
-        _temporalHorizon(2)
+        hiddenSize(4, 4, 16),
+        ffRadius(2),
+        rRadius(2),
+        ticksPerUpdate(2),
+        temporalHorizon(2)
         {}
     };
 
     struct RouteLayer {
-        std::vector<SparseMatrix> _weights;
+        std::vector<SparseMatrix> weights;
         
-        std::vector<IntBuffer> _visibleCounts;
+        std::vector<IntBuffer> visibleCounts;
 
-        std::vector<FloatBuffer> _errors;
-        std::vector<FloatBuffer> _activations;
+        std::vector<FloatBuffer> errors;
+        std::vector<FloatBuffer> activations;
 
-        IntBuffer _hiddenCounts;
+        IntBuffer hiddenCounts;
     };
 
     struct HistorySample {
-        std::vector<IntBuffer> _states;
+        std::vector<IntBuffer> states;
 
-        std::vector<IntBuffer> _actionsPrev;
+        std::vector<IntBuffer> actionsPrev;
 
-        float _reward;
+        float reward;
     };
 
 private:
     // Layers
-    std::vector<SparseCoder> _scLayers;
-    std::vector<RouteLayer> _rLayers;
+    std::vector<SparseCoder> scLayers;
+    std::vector<RouteLayer> rLayers;
 
-    std::vector<FloatBuffer> _qs;
-    std::vector<IntBuffer> _actions;
+    std::vector<FloatBuffer> qs;
+    std::vector<IntBuffer> actions;
 
     // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
-    std::vector<std::vector<int>> _historySizes;
+    std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
+    std::vector<std::vector<int>> historySizes;
 
     // Per-layer values
-    std::vector<char> _updates;
+    std::vector<char> updates;
 
-    std::vector<int> _ticks;
-    std::vector<int> _ticksPerUpdate;
+    std::vector<int> ticks;
+    std::vector<int> ticksPerUpdate;
 
     // Input dimensions
-    std::vector<Int3> _inputSizes;
+    std::vector<Int3> inputSizes;
 
     // History samples
-    std::vector<std::shared_ptr<HistorySample>> _historySamples;
+    std::vector<std::shared_ptr<HistorySample>> historySamples;
 
     // --- Kernels ---
 
@@ -150,21 +150,21 @@ private:
     }
 
 public:
-    float _alpha; // Output learning rate
-    float _beta; // Hidden learning rate
-    float _gamma; // Discount factor
+    float alpha; // Output learning rate
+    float beta; // Hidden learning rate
+    float gamma; // Discount factor
 
-    int _maxHistorySamples; // Maximum number of history samples
-    int _historyIters; // Number of times to iterate over history
+    int maxHistorySamples; // Maximum number of history samples
+    int historyIters; // Number of times to iterate over history
 
     // Default
     Hierarchy()
     :
-    _alpha(0.01f),
-    _beta(0.01f),
-    _gamma(0.99f),
-    _maxHistorySamples(64),
-    _historyIters(8)
+    alpha(0.01f),
+    beta(0.01f),
+    gamma(0.99f),
+    maxHistorySamples(64),
+    historyIters(8)
     {}
 
     // Copy
@@ -207,54 +207,54 @@ public:
 
     // Get the number of layers (scLayers)
     int getNumLayers() const {
-        return _scLayers.size();
+        return scLayers.size();
     }
 
     // Retrieve predictions
     const IntBuffer &getActionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        return _actions[i];
+        return actions[i];
     }
 
     // Whether this layer received on update this timestep
     bool getUpdate(
         int l // Layer index
     ) const {
-        return _updates[l];
+        return updates[l];
     }
 
     // Get current layer ticks, relative to previous layer
     int getTicks(
         int l // Layer Index
     ) const {
-        return _ticks[l];
+        return ticks[l];
     }
 
     // Get layer ticks per update, relative to previous layer
     int getTicksPerUpdate(
         int l // Layer Index
     ) const {
-        return _ticksPerUpdate[l];
+        return ticksPerUpdate[l];
     }
 
     // Get input sizes
     const std::vector<Int3> &getInputSizes() const {
-        return _inputSizes;
+        return inputSizes;
     }
 
     // Retrieve a sparse coding layer
     SparseCoder &getSCLayer(
         int l // Layer index
     ) {
-        return _scLayers[l];
+        return scLayers[l];
     }
 
     // Retrieve a sparse coding layer, const version
     const SparseCoder &getSCLayer(
         int l // Layer index
     ) const {
-        return _scLayers[l];
+        return scLayers[l];
     }
 };
 } // namespace ogmaneo
