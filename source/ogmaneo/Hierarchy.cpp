@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2017-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEOLICENSE.md file included in this distribution.
@@ -394,7 +394,7 @@ void Hierarchy::step(
             assert(inputSizes[i].x * inputSizes[i].y == inputCs[i]->size());
             
             // Copy
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
             for (int x = 0; x < inputCs[i]->size(); x++)
                 copyInt(x, cs.rng, inputCs[i], lasts[i].get());
 #else
@@ -439,7 +439,7 @@ void Hierarchy::step(
                     histories[lNext][t] = histories[lNext][t - 1];
 
                 // Copy
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                 for (int x = 0; x < scLayers[l].getHiddenCs().size(); x++)
                     copyInt(x, cs.rng, &scLayers[l].getHiddenCs(), last.get());
 #else
@@ -480,7 +480,7 @@ void Hierarchy::step(
                     if (actions[i].empty())
                         continue;
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                     for (int x = 0; x < inputSizes[i].x; x++)
                         for (int y = 0; y < inputSizes[i].y; y++)
                             forward(Int2(x, y), cs.rng, &s.states[l], l, i, &sNext.actionsPrev[i]);
@@ -490,7 +490,7 @@ void Hierarchy::step(
                 }
             }
             else {
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                 for (int x = 0; x < scLayers[l - 1].getHiddenSize().x; x++)
                     for (int y = 0; y < scLayers[l - 1].getHiddenSize().y; y++)
                         forward(Int2(x, y), cs.rng, &s.states[l], l, 0, &s.states[l - 1]);
@@ -517,7 +517,7 @@ void Hierarchy::step(
                         if (actions[i].empty())
                             continue;
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                         for (int x = 0; x < inputSizes[i].x; x++)
                             for (int y = 0; y < inputSizes[i].y; y++)
                                 forward(Int2(x, y), cs.rng, &s.states[l], l, i, &sNext.actionsPrev[i]);
@@ -527,7 +527,7 @@ void Hierarchy::step(
                     }
                 }
                 else {
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                     for (int x = 0; x < scLayers[l - 1].getHiddenSize().x; x++)
                         for (int y = 0; y < scLayers[l - 1].getHiddenSize().y; y++)
                             forward(Int2(x, y), cs.rng, &s.states[l], l, 0, &s.states[l - 1]);
@@ -558,7 +558,7 @@ void Hierarchy::step(
             // Backward
             for (int l = 0; l < scLayers.size() - 1; l++) {
                 if (l == 0) {
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                     for (int x = 0; x < scLayers[l].getHiddenSize().x; x++)
                         for (int y = 0; y < scLayers[l].getHiddenSize().y; y++)
                             backward(Int2(x, y), cs.rng, &s.states[l], l, constGet(sNext.actionsPrev));
@@ -567,7 +567,7 @@ void Hierarchy::step(
 #endif
                 }
                 else {
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                     for (int x = 0; x < scLayers[l].getHiddenSize().x; x++)
                         for (int y = 0; y < scLayers[l].getHiddenSize().y; y++)
                             backward(Int2(x, y), cs.rng, &s.states[l], l, std::vector<const IntBuffer*>{ &s.states[l - 1] });
@@ -584,7 +584,7 @@ void Hierarchy::step(
                         if (actions[i].empty())
                             continue;
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                         for (int x = 0; x < inputSizes[i].x; x++)
                             for (int y = 0; y < inputSizes[i].y; y++)
                                 learn(Int2(x, y), cs.rng, &s.states[l], l, i, &sNext.actionsPrev[i]);
@@ -594,7 +594,7 @@ void Hierarchy::step(
                     }
                 }
                 else {
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                     for (int x = 0; x < scLayers[l - 1].getHiddenSize().x; x++)
                         for (int y = 0; y < scLayers[l - 1].getHiddenSize().y; y++)
                             learn(Int2(x, y), cs.rng, &s.states[l], l, 0, &s.states[l - 1]);
@@ -612,7 +612,7 @@ void Hierarchy::step(
                 if (actions[i].empty())
                     continue;
                     
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                 for (int x = 0; x < inputSizes[i].x; x++)
                     for (int y = 0; y < inputSizes[i].y; y++)
                         forward(Int2(x, y), cs.rng, &ns->states[l], l, i, nullptr);
@@ -622,7 +622,7 @@ void Hierarchy::step(
             }
         }
         else {
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
             for (int x = 0; x < scLayers[l - 1].getHiddenSize().x; x++)
                 for (int y = 0; y < scLayers[l - 1].getHiddenSize().y; y++)
                     forward(Int2(x, y), cs.rng, &ns->states[l], l, 0, &ns->states[l - 1]);
