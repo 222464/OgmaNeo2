@@ -31,18 +31,27 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix weights; // Q weights
-        SparseMatrix traces; // Q traces
+    };
 
-        IntBuffer inputCsPrev;
+    // History sample for delayed updates
+    struct HistorySample {
+        std::vector<IntBuffer> inputCs;
+        IntBuffer hiddenCsPrev;
+        
+        float reward;
     };
 
 private:
     Int3 hiddenSize; // Hidden/output/action size
 
+    // Current history size - fixed after initialization. Determines length of wait before updating
+    int historySize;
+
     IntBuffer hiddenCs; // Hidden states
 
     FloatBuffer hiddenActivations; // Activations of actions
-    FloatBuffer hiddenActivationsPrev; // Activations of actions from the previous timestep
+
+    std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
 
     // Visible layers and descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -59,8 +68,10 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        float reward
+        float q,
+        float g
     );
 
     static void forwardKernel(
@@ -76,24 +87,34 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
+        const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        float reward
+        float q,
+        float g
     ) {
-        a->learn(pos, rng, hiddenCsPrev, reward);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
     }
 
 public:
     float alpha; // Value learning rate
     float gamma; // Discount factor
-    float traceDecay; // Trace decay multiplier
 
     // Defaults
     Actor()
     :
     alpha(0.01f),
-    gamma(0.99f),
-    traceDecay(0.97f)
+    gamma(0.99f)
     {}
+
+    Actor(
+        const Actor &other
+    ) {
+        *this = other;
+    }
+
+    const Actor &operator=(
+        const Actor &other
+    );
 
     // Initialized randomly
     void initRandom(
