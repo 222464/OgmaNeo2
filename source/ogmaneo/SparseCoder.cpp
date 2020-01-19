@@ -31,7 +31,11 @@ void SparseCoder::forward(
         count += vl.weights.count(hiddenIndex);
     }
 
-    hiddenCs[hiddenColumnIndex] = sigmoid(sum * scale * std::sqrt(1.0f / std::max(1, count))) * (hiddenSize.z - 1) + 0.5f;
+    float activation = sum * scale * std::sqrt(1.0f / std::max(1, count));
+
+    hiddenCs[hiddenColumnIndex] = sigmoid(activation - hiddenBiases[hiddenColumnIndex]) * (hiddenSize.z - 1) + 0.5f;
+
+    hiddenBiases[hiddenColumnIndex] += alpha * (activation - hiddenBiases[hiddenColumnIndex]);
 }
 
 void SparseCoder::initRandom(
@@ -65,6 +69,8 @@ void SparseCoder::initRandom(
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
+
+    hiddenBiases = FloatBuffer(numHiddenColumns, 0.0f);
 }
 
 void SparseCoder::step(
@@ -92,6 +98,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&scale), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
 
@@ -118,6 +125,7 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&scale), sizeof(float));
+    is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
 
