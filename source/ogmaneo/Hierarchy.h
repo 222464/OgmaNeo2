@@ -163,8 +163,8 @@ public:
     alpha(0.01f),
     beta(0.01f),
     gamma(0.99f),
-    maxHistorySamples(32),
-    historyIters(4)
+    maxHistorySamples(64),
+    historyIters(8)
     {}
 
     // Copy
