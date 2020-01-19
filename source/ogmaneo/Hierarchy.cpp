@@ -78,7 +78,7 @@ void Hierarchy::forward(
 
         sum /= std::max(1, rLayers[l].visibleCounts[vli][visibleColumnIndex]);
         
-        rLayers[l].activations[vli][visibleColumnIndex] = sigmoid(sum);
+        rLayers[l].activations[vli][visibleColumnIndex] = sum;
     }
 }
 
@@ -94,7 +94,7 @@ void Hierarchy::backward(
     int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCs)[hiddenColumnIndex]), scLayers[l].getHiddenSize());
 
     if (l == 0) {
-        float act = rLayers[l + 1].activations[0][hiddenColumnIndex];
+        //float act = rLayers[l + 1].activations[0][hiddenColumnIndex];
 
         float error = 0.0f;
 
@@ -106,16 +106,16 @@ void Hierarchy::backward(
 
         error /= std::max(1, rLayers[l].hiddenCounts[hiddenColumnIndex]);
 
-        rLayers[l + 1].errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
+        rLayers[l + 1].errors[0][hiddenColumnIndex] = error;// * act * (1.0f - act);
     }
     else {
-        float act = rLayers[l + 1].activations[0][hiddenColumnIndex];
+        //float act = rLayers[l + 1].activations[0][hiddenColumnIndex];
 
         float error = rLayers[l].weights[0].multiplyOHVsT(*inputCs[0], rLayers[l].errors[0], hiddenIndex, scLayers[l - 1].getHiddenSize().z);
 
         error /= std::max(1, rLayers[l].hiddenCounts[hiddenColumnIndex]);
         
-        rLayers[l + 1].errors[0][hiddenColumnIndex] = error * act * (1.0f - act);
+        rLayers[l + 1].errors[0][hiddenColumnIndex] = error;// * act * (1.0f - act);
     }
 }
 
@@ -183,7 +183,7 @@ void Hierarchy::initRandom(
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
         std::normal_distribution<float> weightDistLow(0.0f, 0.01f);
-        std::normal_distribution<float> weightDistHigh(0.0f, 1.0f);
+        std::uniform_real_distribution<float> weightDistHigh(0.99f, 1.0f);
 
         // Histories for all input layers or just the one sparse coder (if not the first layer)
         histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l].temporalHorizon : layerDescs[l].temporalHorizon);
