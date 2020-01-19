@@ -31,16 +31,12 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix weights; // Weight matrix
-
-        FloatBuffer inputErrors;
     };
 
 private:
     Int3 hiddenSize; // Size of hidden/output layer
 
     IntBuffer hiddenCs; // Hidden states
-
-    FloatBuffer hiddenActivations;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -51,63 +47,23 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int it
-    );
-
-    void backward(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const IntBuffer* inputCs,
-        int vli
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const IntBuffer* inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        int it
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, it);
-    }
-
-    static void backwardKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        const IntBuffer* inputCs,
-        int vli
-    ) {
-        sc->backward(pos, rng, inputCs, vli);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        const IntBuffer* inputCs,
-        int vli
-    ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->forward(pos, rng, inputCs);
     }
 
 public:
-    int explainIters; // Code solving iterations
-    float alpha; // Weight learning rate
+    float scale;
 
-    // Defaults
     SparseCoder()
-    :
-    explainIters(3),
-    alpha(0.2f)
+    : scale(2.0f)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -120,8 +76,7 @@ public:
     // Activate the sparse coder (perform sparse coding)
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input states
-        bool learnEnabled // Whether to learn
+        const std::vector<const IntBuffer*> &inputCs // Input states
     );
 
     // Write to stream
