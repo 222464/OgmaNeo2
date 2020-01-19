@@ -119,6 +119,20 @@ float SparseMatrix::multiply(
 	return sum;
 }
 
+float SparseMatrix::multiply(
+	const std::vector<int> &in,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += nonZeroValues[j] * in[columnIndices[j]];
+
+	return sum;
+}
+
 float SparseMatrix::distance2(
 	const std::vector<float> &in,
 	int row
@@ -185,6 +199,20 @@ float SparseMatrix::total(
 
 float SparseMatrix::multiplyT(
 	const std::vector<float> &in,
+	int column
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		sum += nonZeroValues[nonZeroValueIndices[j]] * in[rowIndices[j]];
+
+	return sum;
+}
+
+float SparseMatrix::multiplyT(
+	const std::vector<int> &in,
 	int column
 ) {
 	float sum = 0.0f;

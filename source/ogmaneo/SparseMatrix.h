@@ -76,6 +76,11 @@ struct SparseMatrix {
 		int row
 	);
 
+	float multiply(
+		const std::vector<int> &in,
+		int row
+	);
+
 	float distance2(
 		const std::vector<float> &in,
 		int row
@@ -101,6 +106,11 @@ struct SparseMatrix {
 
 	float multiplyT(
 		const std::vector<float> &in,
+		int column
+	);
+
+	float multiplyT(
+		const std::vector<int> &in,
 		int column
 	);
 

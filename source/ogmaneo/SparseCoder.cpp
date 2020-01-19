@@ -27,13 +27,11 @@ void SparseCoder::forward(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
-        count += vl.weights.count(hiddenIndex) / vld.size.z;
+        sum += vl.weights.multiply(*inputCs[vli], hiddenIndex) / vld.size.z;
+        count += vl.weights.count(hiddenIndex);
     }
 
-    float average = sum / std::max(1, count);
-
-    hiddenCs[hiddenColumnIndex] = sigmoid((average * 2.0f - 1.0f) * count * scale * std::sqrt(1.0f / std::max(1, count))) * (hiddenSize.z - 1) + 0.5f;
+    hiddenCs[hiddenColumnIndex] = sigmoid(sum * scale * std::sqrt(1.0f / std::max(1, count))) * (hiddenSize.z - 1) + 0.5f;
 }
 
 void SparseCoder::initRandom(
@@ -51,7 +49,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
+    std::normal_distribution<float> weightDist(0.0f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -59,7 +57,7 @@ void SparseCoder::initRandom(
         VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld.size, Int3(hiddenSize.x, hiddenSize.y, 1), vld.radius, vl.weights);
+        initSMLocalRF(Int3(vld.size.x, vld.size.y, 1), Int3(hiddenSize.x, hiddenSize.y, 1), vld.radius, vl.weights);
 
         for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
