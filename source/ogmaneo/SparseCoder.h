@@ -38,8 +38,6 @@ private:
 
     IntBuffer hiddenCs; // Hidden states
 
-    FloatBuffer hiddenBiases; // Biases
-
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -63,12 +61,10 @@ private:
 
 public:
     float scale;
-    float alpha;
 
     SparseCoder()
     :
-    scale(8.0f),
-    alpha(0.01f)
+    scale(8.0f)
     {}
 
     // Create a sparse coding layer with random initialization

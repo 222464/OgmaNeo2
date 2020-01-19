@@ -31,11 +31,7 @@ void SparseCoder::forward(
         count += vl.weights.count(hiddenIndex);
     }
 
-    float activation = sum * scale * std::sqrt(1.0f / std::max(1, count));
-
-    hiddenCs[hiddenColumnIndex] = sigmoid(activation - hiddenBiases[hiddenColumnIndex]) * (hiddenSize.z - 1) + 0.5f;
-
-    hiddenBiases[hiddenColumnIndex] += alpha * (activation - hiddenBiases[hiddenColumnIndex]);
+    hiddenCs[hiddenColumnIndex] = sigmoid(sum * scale * std::sqrt(1.0f / std::max(1, count))) * (hiddenSize.z - 1) + 0.5f;
 }
 
 void SparseCoder::initRandom(
@@ -67,10 +63,54 @@ void SparseCoder::initRandom(
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
     }
 
+    // Normalize
+    for (int x = 0; x < hiddenSize.x; x++)
+        for (int y = 0; y < hiddenSize.y; y++) {
+            int hiddenIndex = address3(Int3(x, y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
+
+            float mean = 0.0f;
+            int count = 0;
+
+            for (int vli = 0; vli < visibleLayers.size(); vli++) {
+                VisibleLayer &vl = visibleLayers[vli];
+                VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
+
+                mean += vl.weights.total(hiddenIndex);
+                count += vl.weights.count(hiddenIndex);
+            }
+
+            mean /= std::max(1, count);
+
+            for (int vli = 0; vli < visibleLayers.size(); vli++) {
+                VisibleLayer &vl = visibleLayers[vli];
+                VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
+
+                vl.weights.add(hiddenIndex, -mean);
+            }
+
+            float total2 = 0.0f;
+
+            for (int vli = 0; vli < visibleLayers.size(); vli++) {
+                VisibleLayer &vl = visibleLayers[vli];
+                VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
+
+                total2 += vl.weights.total2(hiddenIndex);
+            }
+
+            total2 /= std::max(1, count);
+
+            float scale = 1.0f / std::sqrt(std::max(0.0001f, total2));
+
+            for (int vli = 0; vli < visibleLayers.size(); vli++) {
+                VisibleLayer &vl = visibleLayers[vli];
+                VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
+
+                vl.weights.multiply(hiddenIndex, scale);
+            }
+        }
+
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    hiddenBiases = FloatBuffer(numHiddenColumns, 0.0f);
 }
 
 void SparseCoder::step(
@@ -98,7 +138,6 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&scale), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
 
@@ -125,7 +164,6 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&scale), sizeof(float));
-    is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
 

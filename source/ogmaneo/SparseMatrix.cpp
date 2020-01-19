@@ -409,6 +409,43 @@ float SparseMatrix::distance2OHVsT(
 	return dist;
 }
 
+float SparseMatrix::total2(
+	int row
+) {
+	float sum2 = 0.0f;
+
+	int nextIndex = row + 1;
+
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum2 += nonZeroValues[j] * nonZeroValues[j];
+
+	return sum2;
+}
+
+void SparseMatrix::add(
+	int row,
+	float value
+) {
+	float mean = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		nonZeroValues[j] += value;
+}
+
+void SparseMatrix::multiply(
+	int row,
+	float value
+) {
+	float mean = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		nonZeroValues[j] *= value;
+}
+
 void SparseMatrix::deltas(
 	const std::vector<float> &in,
 	float delta,

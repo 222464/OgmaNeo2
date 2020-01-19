@@ -177,6 +177,22 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	// --- Normalization ---
+
+	float total2(
+		int row
+	);
+
+	void add(
+		int row,
+		float value
+	);
+
+	void multiply(
+		int row,
+		float value
+	);
+
 	// --- Delta Rules ---
 
 	void deltas(
