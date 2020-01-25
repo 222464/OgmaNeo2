@@ -101,7 +101,7 @@ public:
     :
     alpha(0.01f),
     maxHistorySamples(512),
-    historyIters(8)
+    historyIters(16)
     {}
 
     // Create with random initialization
