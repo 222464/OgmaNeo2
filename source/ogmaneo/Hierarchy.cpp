@@ -16,7 +16,6 @@ using namespace ogmaneo;
 void Hierarchy::initRandom(
     ComputeSystem &cs,
     const std::vector<Int3> &inputSizes,
-    const std::vector<InputType> &inputTypes,
     const std::vector<LayerDesc> &layerDescs
 ) {
     // Create layers
@@ -45,6 +44,7 @@ void Hierarchy::initRandom(
 
             // Predictors
             _pLayers[l].resize(inputSizes.size());
+            _pErrors[l].resize(inputSizes.size());
 
             // Predictor visible layer descriptors
             Predictor::VisibleLayerDesc pVisibleLayerDesc;
@@ -56,11 +56,9 @@ void Hierarchy::initRandom(
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
-                if (inputTypes[p] == InputType::_predict) {
-                    _pLayers[l][p] = std::make_unique<Predictor>();
+                _pLayers[l][p].initRandom(cs, inputSizes[p], pVisibleLayerDesc);
 
-                    _pLayers[l][p]->initRandom(cs, inputSizes[p], pVisibleLayerDesc);
-                }
+                _pErrors[l][p] = FloatBuffer(inputSizes[p].x * inputSizes[p].y * inputSizes[p].z, 0.0f);
             }
         }
         else {
@@ -73,6 +71,7 @@ void Hierarchy::initRandom(
             rVisibleLayerDescs[0]._noDiagonal = false;
 
             _pLayers[l].resize(1);
+            _pErrors[l].resize(1);
 
             // Predictor visible layer descriptors
             Predictor::VisibleLayerDesc pVisibleLayerDesc;
@@ -84,9 +83,9 @@ void Hierarchy::initRandom(
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
-                _pLayers[l][p] = std::make_unique<Predictor>();
+                _pLayers[l][p].initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
 
-                _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDesc);
+                _pErrors[l][p] = FloatBuffer(layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y * layerDescs[l - 1]._hiddenSize.z, 0.0f);
             }
         }
 
@@ -108,33 +107,6 @@ void Hierarchy::initRandom(
     }
 }
 
-const Hierarchy &Hierarchy::operator=(
-    const Hierarchy &other
-) {
-    // Layers
-    _rLayers = other._rLayers;
-
-    _inputSizes = other._inputSizes;
-
-    _pLayers.resize(other._pLayers.size());
-
-    for (int l = 0; l < _rLayers.size(); l++) {
-        _pLayers[l].resize(other._pLayers[l].size());
-
-        for (int v = 0; v < _pLayers[l].size(); v++) {
-            if (other._pLayers[l][v] != nullptr) {
-                _pLayers[l][v] = std::make_unique<Predictor>();
-
-                (*_pLayers[l][v]) = (*other._pLayers[l][v]);
-            }
-            else
-                _pLayers[l][v] = nullptr;
-        }
-    }
-
-    return *this;
-}
-
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const FloatBuffer*> &inputStates,
@@ -144,7 +116,20 @@ void Hierarchy::step(
 
     // Forward
     for (int l = 0; l < _rLayers.size(); l++) {
-        std::vector<const FloatBuffer*> fullLayerInputs = l == 0 ? inputStates : std::vector<const FloatBuffer*>{ &_rLayers[l - 1].getHiddenStates() };
+        std::vector<const FloatBuffer*> fullLayerInputs(inputStates.size());
+
+        // Find differences
+        for (int p = 0; p < _pErrors[l].size(); p++) {
+            // Difference
+#ifdef KERNEL_NOTHREAD
+            for (int x = 0; x < _pErrors[l][p].size(); x++)
+                diffFloat(x, cs._rng, &_pLayers[l][p].getHiddenStates(), &_pErrors[l][p]);
+#else
+            runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, inputStates[p], &_pLayers[l][p].getHiddenStates(), &_pErrors[l][p]), _pErrors[l][p].size(), cs._rng, cs._batchSize1);
+#endif
+
+            fullLayerInputs[p] = &_pErrors[l][p];
+        }
 
         // Add recurrent if needed
         if (fullLayerInputs.size() < _rLayers[l].getNumVisibleLayers())
@@ -155,16 +140,14 @@ void Hierarchy::step(
 
     // Backward
     for (int l = _rLayers.size() - 1; l >= 0; l--) {
-        const FloatBuffer* feedBackStates = l < _rLayers.size() - 1 ? &_pLayers[l + 1][0]->getHiddenStates() : nullptr;
+        const FloatBuffer* feedBackStates = l < _rLayers.size() - 1 ? &_pLayers[l + 1][0].getHiddenStates() : nullptr;
 
         // Step actor layers
         for (int p = 0; p < _pLayers[l].size(); p++) {
-            if (_pLayers[l][p] != nullptr) {
-                if (learnEnabled) 
-                    _pLayers[l][p]->learn(cs, feedBackStates, &_rLayers[l].getHiddenStates(), l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates());
+            if (learnEnabled) 
+                _pLayers[l][p].learn(cs, feedBackStates, &_rLayers[l].getHiddenStates(), l == 0 ? inputStates[p] : &_rLayers[l - 1].getHiddenStates());
 
-                _pLayers[l][p]->activate(cs, feedBackStates, &_rLayers[l].getHiddenStates());
-            }
+            _pLayers[l][p].activate(cs, feedBackStates, &_rLayers[l].getHiddenStates());
         }
     }
 }
@@ -185,14 +168,8 @@ void Hierarchy::writeToStream(
     for (int l = 0; l < numLayers; l++) {
         _rLayers[l].writeToStream(os);
 
-        for (int v = 0; v < _pLayers[l].size(); v++) {
-            char exists = _pLayers[l][v] != nullptr;
-
-            os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
-
-            if (exists)
-                _pLayers[l][v]->writeToStream(os);
-        }
+        for (int v = 0; v < _pLayers[l].size(); v++)
+            _pLayers[l][v].writeToStream(os);
     }
 }
 
@@ -218,17 +195,7 @@ void Hierarchy::readFromStream(
 
         _pLayers[l].resize(l == 0 ? _inputSizes.size() : 1);
 
-        for (int v = 0; v < _pLayers[l].size(); v++) {
-            char exists;
-
-            is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-            if (exists) {
-                _pLayers[l][v] = std::make_unique<Predictor>();
-                _pLayers[l][v]->readFromStream(is);
-            }
-            else
-                _pLayers[l][v] = nullptr;
-        }
+        for (int v = 0; v < _pLayers[l].size(); v++)
+            _pLayers[l][v].readFromStream(is);
     }
 }

@@ -14,12 +14,6 @@
 #include <memory>
 
 namespace ogmaneo {
-// Type of hierarchy input layer
-enum InputType {
-    _none = 0,
-    _predict = 1
-};
-
 // A SPH
 class Hierarchy {
 public:
@@ -58,7 +52,8 @@ public:
 private:
     // Layers
     std::vector<Reservoir> _rLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+    std::vector<std::vector<Predictor>> _pLayers;
+    std::vector<std::vector<FloatBuffer>> _pErrors;
     
     // Input dimensions
     std::vector<Int3> _inputSizes;
@@ -66,24 +61,11 @@ private:
 public:
     // Default
     Hierarchy() {}
-
-    // Copy
-    Hierarchy(
-        const Hierarchy &other // Hierarchy to copy from
-    ) {
-        *this = other;
-    }
-
-    // Assignment
-    const Hierarchy &operator=(
-        const Hierarchy &other // Hierarchy to assign from
-    );
     
     // Create a randomly initialized hierarchy
     void initRandom(
         ComputeSystem &cs, // Compute system
         const std::vector<Int3> &inputSizes, // Sizes of input layers
-        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
         const std::vector<LayerDesc> &layerDescs // Descriptors for layers
     );
 
@@ -113,7 +95,7 @@ public:
     const FloatBuffer &getPredictionStates(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front()[i]->getHiddenStates();
+        return _pLayers.front()[i].getHiddenStates();
     }
 
     // Get input sizes
@@ -136,14 +118,14 @@ public:
     }
 
     // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayer(
+    std::vector<Predictor> &getPLayers(
         int l // Layer index
     ) {
         return _pLayers[l];
     }
 
     // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
+    const std::vector<Predictor> &getPLayers(
         int l // Layer index
     ) const {
         return _pLayers[l];
