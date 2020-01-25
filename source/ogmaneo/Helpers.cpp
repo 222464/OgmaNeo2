@@ -374,21 +374,15 @@ void ogmaneo::initSMLocalRF(
             Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
             Int2 iterUpperBound(std::min(inSize.x - 1, visiblePositionCenter.x + radius), std::min(inSize.y - 1, visiblePositionCenter.y + radius));
 
-            std::vector<bool> mask(diam * diam);
-
-            for (int i = 0; i < mask.size(); i++)
-                mask[i] = dist01(rng) < dropRatio;
-
             for (int oz = 0; oz < outSize.z; oz++) {
                 Int3 outPos(ox, oy, oz);
 
                 int nonZeroInRow = 0;
-                int maskIndex = 0;
 
                 for (int ix = iterLowerBound.x; ix <= iterUpperBound.x; ix++)
                     for (int iy = iterLowerBound.y; iy <= iterUpperBound.y; iy++) {
-                        if (!mask[maskIndex]) {
-                            for (int iz = 0; iz < inSize.z; iz++) {
+                        for (int iz = 0; iz < inSize.z; iz++) {
+                            if (dist01(rng) >= dropRatio) {
                                 Int3 inPos(ix, iy, iz);
 
                                 int inIndex = address3(inPos, inSize);
@@ -399,8 +393,6 @@ void ogmaneo::initSMLocalRF(
                                 nonZeroInRow++;
                             }
                         }
-
-                        maskIndex++;
                     }
 
                 mat.rowRanges[address3(outPos, outSize)] = nonZeroInRow;
