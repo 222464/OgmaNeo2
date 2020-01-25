@@ -45,7 +45,7 @@ public:
         rrScale(1.0f),
         rrDropRatio(0.5f),
         rbScale(0.1f),
-        pScale(1.0f),
+        pScale(0.01f),
         pDropRatio(0.0f)
         {}
     };
