@@ -3,7 +3,7 @@
 //  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
-//  in the OGMANEO_LICENSE.md file included in this distribution.
+//  in the OGMANEOLICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
 #pragma once
@@ -16,42 +16,42 @@ class Reservoir {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size; // Size of input
+        Int3 size; // Size of input
 
-        int _radius; // Radius onto input
+        int radius; // Radius onto input
 
-        float _scale; // Scale of weights
-        float _dropRatio; // Ratio of weights to drop
+        float scale; // Scale of weights
+        float dropRatio; // Ratio of weights to drop
 
-        bool _noDiagonal;
+        bool noDiagonal;
 
         // Defaults
         VisibleLayerDesc()
         :
-        _size(4, 4, 16),
-        _radius(2),
-        _scale(1.0f),
-        _dropRatio(0.0f),
-        _noDiagonal(false)
+        size(4, 4, 16),
+        radius(2),
+        scale(1.0f),
+        dropRatio(0.0f),
+        noDiagonal(false)
         {}
     };
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix weights; // Weight matrix
     };
 
 private:
-    Int3 _hiddenSize; // Size of hidden/output layer
+    Int3 hiddenSize; // Size of hidden/output layer
 
-    FloatBuffer _hiddenStates; // Hidden states
-    FloatBuffer _hiddenStatesPrev; // Previous tick hidden states
+    FloatBuffer hiddenStates; // Hidden states
+    FloatBuffer hiddenStatesPrev; // Previous tick hidden states
 
-    FloatBuffer _hiddenBiases; // Bias weights
+    FloatBuffer hiddenBiases; // Bias weights
 
     // Visible layers and associated descriptors
-    std::vector<VisibleLayer> _visibleLayers;
-    std::vector<VisibleLayerDesc> _visibleLayerDescs;
+    std::vector<VisibleLayer> visibleLayers;
+    std::vector<VisibleLayerDesc> visibleLayerDescs;
     
     // --- Kernels ---
     
@@ -99,43 +99,43 @@ public:
 
     // Get the number of visible layers
     int getNumVisibleLayers() const {
-        return _visibleLayers.size();
+        return visibleLayers.size();
     }
 
     // Get a visible layer
     const VisibleLayer &getVisibleLayer(
         int i // Index of visible layer
     ) const {
-        return _visibleLayers[i];
+        return visibleLayers[i];
     }
 
     // Get a visible layer descriptor
     const VisibleLayerDesc &getVisibleLayerDesc(
         int i // Index of visible layer
     ) const {
-        return _visibleLayerDescs[i];
+        return visibleLayerDescs[i];
     }
 
     // Get the hidden states
     const FloatBuffer &getHiddenStates() const {
-        return _hiddenStates;
+        return hiddenStates;
     }
 
     // Get the hidden states
     const FloatBuffer &getHiddenStatesPrev() const {
-        return _hiddenStatesPrev;
+        return hiddenStatesPrev;
     }
 
     // Get the hidden size
     const Int3 &getHiddenSize() const {
-        return _hiddenSize;
+        return hiddenSize;
     }
 
     // Get the weights for a visible layer
     const SparseMatrix &getWeights(
         int i // Index of visible layer
     ) const {
-        return _visibleLayers[i]._weights;
+        return visibleLayers[i].weights;
     }
 };
 } // namespace ogmaneo

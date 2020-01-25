@@ -3,7 +3,7 @@
 //  Copyright(c) 2017-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
-//  in the OGMANEO_LICENSE.md file included in this distribution.
+//  in the OGMANEOLICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
 #pragma once
@@ -19,44 +19,44 @@ class Hierarchy {
 public:
     // Describes a layer for construction
     struct LayerDesc {
-        Int3 _hiddenSize; // Size of hidden layer
+        Int3 hiddenSize; // Size of hidden layer
 
-        int _rfRadius; // Revervior forward radius
-        int _rrRadius; // Reservoir recurrent radius
-        int _pRadius; // Predictor radius
+        int rfRadius; // Revervior forward radius
+        int rrRadius; // Reservoir recurrent radius
+        int pRadius; // Predictor radius
 
-        float _rfScale;
-        float _rfDropRatio;
-        float _rrScale;
-        float _rrDropRatio;
-        float _rbScale;
+        float rfScale;
+        float rfDropRatio;
+        float rrScale;
+        float rrDropRatio;
+        float rbScale;
 
-        float _pScale;
-        float _pDropRatio;
+        float pScale;
+        float pDropRatio;
 
         LayerDesc()
         :
-        _hiddenSize(4, 4, 16),
-        _rfRadius(2),
-        _rrRadius(2),
-        _pRadius(2),
-        _rfScale(1.0f),
-        _rfDropRatio(0.0f),
-        _rrScale(1.0f),
-        _rrDropRatio(0.5f),
-        _rbScale(0.1f),
-        _pScale(1.0f),
-        _pDropRatio(0.0f)
+        hiddenSize(4, 4, 16),
+        rfRadius(2),
+        rrRadius(2),
+        pRadius(2),
+        rfScale(1.0f),
+        rfDropRatio(0.0f),
+        rrScale(1.0f),
+        rrDropRatio(0.5f),
+        rbScale(0.1f),
+        pScale(1.0f),
+        pDropRatio(0.0f)
         {}
     };
 private:
     // Layers
-    std::vector<Reservoir> _rLayers;
-    std::vector<std::vector<Predictor>> _pLayers;
-    std::vector<std::vector<FloatBuffer>> _pErrors;
+    std::vector<Reservoir> rLayers;
+    std::vector<std::vector<Predictor>> pLayers;
+    std::vector<std::vector<FloatBuffer>> pErrors;
     
     // Input dimensions
-    std::vector<Int3> _inputSizes;
+    std::vector<Int3> inputSizes;
 
 public:
     // Default
@@ -88,47 +88,47 @@ public:
 
     // Get the number of layers (scLayers)
     int getNumLayers() const {
-        return _rLayers.size();
+        return rLayers.size();
     }
 
     // Retrieve predictions
     const FloatBuffer &getPredictionStates(
         int i // Index of input layer to get predictions for
     ) const {
-        return _pLayers.front()[i].getHiddenStates();
+        return pLayers.front()[i].getHiddenStates();
     }
 
     // Get input sizes
     const std::vector<Int3> &getInputSizes() const {
-        return _inputSizes;
+        return inputSizes;
     }
 
     // Retrieve a reservior layer
     Reservoir &getRLayer(
         int l // Layer index
     ) {
-        return _rLayers[l];
+        return rLayers[l];
     }
 
     // Retrieve a reservior layer, const version
     const Reservoir &getRLayer(
         int l // Layer index
     ) const {
-        return _rLayers[l];
+        return rLayers[l];
     }
 
     // Retrieve predictor layer(s)
     std::vector<Predictor> &getPLayers(
         int l // Layer index
     ) {
-        return _pLayers[l];
+        return pLayers[l];
     }
 
     // Retrieve predictor layer(s), const version
     const std::vector<Predictor> &getPLayers(
         int l // Layer index
     ) const {
-        return _pLayers[l];
+        return pLayers[l];
     }
 };
 } // namespace ogmaneo
