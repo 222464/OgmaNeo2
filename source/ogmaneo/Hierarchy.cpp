@@ -21,6 +21,7 @@ void Hierarchy::initRandom(
     // Create layers
     rLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
+    pErrors.resize(layerDescs.size());
 
     // Cache input sizes
     this->inputSizes = inputSizes;
@@ -116,6 +117,8 @@ void Hierarchy::step(
 
     // Forward
     for (int l = 0; l < rLayers.size(); l++) {
+        std::vector<const FloatBuffer*> layerInputs = (l == 0 ? inputStates : std::vector<const FloatBuffer*>{ &rLayers[l - 1].getHiddenStates() });
+
         std::vector<const FloatBuffer*> fullLayerInputs(inputStates.size());
 
         // Find differences
@@ -123,9 +126,9 @@ void Hierarchy::step(
             // Difference
 #ifdef KERNELNOTHREAD
             for (int x = 0; x < pErrors[l][p].size(); x++)
-                diffFloat(x, cs.rng, inputStates[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]);
+                diffFloat(x, cs.rng, inputStates[p], layerInputs[p], &pErrors[l][p]);
 #else
-            runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, inputStates[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]), pErrors[l][p].size(), cs.rng, cs.batchSize1);
+            runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, inputStates[p], layerInputs[p], &pErrors[l][p]), pErrors[l][p].size(), cs.rng, cs.batchSize1);
 #endif
 
             fullLayerInputs[p] = &pErrors[l][p];
