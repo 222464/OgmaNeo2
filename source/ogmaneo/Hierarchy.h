@@ -52,6 +52,7 @@ public:
 private:
     // Layers
     std::vector<Reservoir> rLayers;
+    std::vector<Reservoir> eLayers;
     std::vector<std::vector<Predictor>> pLayers;
     std::vector<std::vector<FloatBuffer>> pErrors;
     
