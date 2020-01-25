@@ -61,7 +61,7 @@ void Reservoir::initRandom(
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
-        VisibleLayerDesc &vld = visibleLayerDescs[vli];
+        VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
 
         int numVisibleColumns = vld.size.x * vld.size.y;
         int numVisible = numVisibleColumns * vld.size.z;

@@ -3,7 +3,7 @@
 //  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
-//  in the OGMANEO_LICENSE.md file included in this distribution.
+//  in the OGMANEOLICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
 #pragma once
@@ -11,50 +11,50 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// A prediction layer (predicts x_(t+1))
+// A prediction layer (predicts x(t+1))
 class Predictor {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size; // Size of input
+        Int3 size; // Size of input
 
-        int _radius; // Radius onto input
+        int radius; // Radius onto input
 
-        float _scale;
-        float _dropRatio;
+        float scale;
+        float dropRatio;
 
         // Defaults
         VisibleLayerDesc()
         :
-        _size(4, 4, 16),
-        _radius(2),
-        _scale(1.0f),
-        _dropRatio(0.0f)
+        size(4, 4, 16),
+        radius(2),
+        scale(1.0f),
+        dropRatio(0.0f)
         {}
     };
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _feedBackWeights;
-        SparseMatrix _inputWeights;
+        SparseMatrix feedBackWeights;
+        SparseMatrix inputWeights;
     };
 
     struct HistorySample {
-        FloatBuffer _feedBackStates;
-        FloatBuffer _inputStates;
-        FloatBuffer _hiddenTargetStates;
+        FloatBuffer feedBackStates;
+        FloatBuffer inputStates;
+        FloatBuffer hiddenTargetStates;
     };
 
 private:
-    Int3 _hiddenSize; // Size of the output/hidden/prediction
+    Int3 hiddenSize; // Size of the output/hidden/prediction
 
-    FloatBuffer _hiddenStates; // Hidden states
+    FloatBuffer hiddenStates; // Hidden states
 
     // Visible layers and descs
-    VisibleLayer _visibleLayer;
-    VisibleLayerDesc _visibleLayerDesc;
+    VisibleLayer visibleLayer;
+    VisibleLayerDesc visibleLayerDesc;
 
-    std::vector<std::shared_ptr<HistorySample>> _historySamples;
+    std::vector<std::shared_ptr<HistorySample>> historySamples;
 
     // --- Kernels ---
 
@@ -91,17 +91,17 @@ private:
     }
 
 public:
-    float _alpha; // Prediction learning rate
+    float alpha; // Prediction learning rate
 
-    int _maxHistorySamples;
-    int _historyIters;
+    int maxHistorySamples;
+    int historyIters;
 
     // Defaults
     Predictor()
     :
-    _alpha(0.01f),
-    _maxHistorySamples(512),
-    _historyIters(16)
+    alpha(0.01f),
+    maxHistorySamples(512),
+    historyIters(16)
     {}
 
     // Create with random initialization
@@ -138,22 +138,22 @@ public:
 
     // Get a visible layer
     const VisibleLayer &getVisibleLayer() const {
-        return _visibleLayer;
+        return visibleLayer;
     }
 
     // Get a visible layer descriptor
     const VisibleLayerDesc &getVisibleLayerDesc() const {
-        return _visibleLayerDesc;
+        return visibleLayerDesc;
     }
 
     // Get the hidden activations (predictions)
     const FloatBuffer &getHiddenStates() const {
-        return _hiddenStates;
+        return hiddenStates;
     }
 
     // Get the hidden size
     const Int3 &getHiddenSize() const {
-        return _hiddenSize;
+        return hiddenSize;
     }
 };
 } // Namespace ogmaneo

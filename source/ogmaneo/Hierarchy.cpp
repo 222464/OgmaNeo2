@@ -23,7 +23,7 @@ void Hierarchy::initRandom(
     pLayers.resize(layerDescs.size());
 
     // Cache input sizes
-    inputSizes = inputSizes;
+    this->inputSizes = inputSizes;
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
@@ -99,7 +99,7 @@ void Hierarchy::initRandom(
             vld.dropRatio = layerDescs[l].rrDropRatio;
             vld.noDiagonal = true;
 
-            rVisibleLayerDescs.pushback(vld);
+            rVisibleLayerDescs.push_back(vld);
         }
 		
         // Create the sparse coding layer
@@ -125,7 +125,7 @@ void Hierarchy::step(
             for (int x = 0; x < pErrors[l][p].size(); x++)
                 diffFloat(x, cs.rng, inputStates[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]);
 #else
-            runKernel1(cs, std::bind(diffFloat, std::placeholders::1, std::placeholders::2, inputStates[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]), pErrors[l][p].size(), cs.rng, cs.batchSize1);
+            runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, inputStates[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]), pErrors[l][p].size(), cs.rng, cs.batchSize1);
 #endif
 
             fullLayerInputs[p] = &pErrors[l][p];
@@ -133,7 +133,7 @@ void Hierarchy::step(
 
         // Add recurrent if needed
         if (fullLayerInputs.size() < rLayers[l].getNumVisibleLayers())
-            fullLayerInputs.pushback(&rLayers[l].getHiddenStatesPrev());
+            fullLayerInputs.push_back(&rLayers[l].getHiddenStatesPrev());
 
         rLayers[l].step(cs, fullLayerInputs);
     }
@@ -157,13 +157,13 @@ void Hierarchy::writeToStream(
 ) const {
     int numLayers = rLayers.size();
 
-    os.write(reinterpretcast<const char*>(&numLayers), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&numLayers), sizeof(int));
 
     int numInputs = inputSizes.size();
 
-    os.write(reinterpretcast<const char*>(&numInputs), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&numInputs), sizeof(int));
 
-    os.write(reinterpretcast<const char*>(inputSizes.data()), numInputs * sizeof(Int3));
+    os.write(reinterpret_cast<const char*>(inputSizes.data()), numInputs * sizeof(Int3));
 
     for (int l = 0; l < numLayers; l++) {
         rLayers[l].writeToStream(os);
@@ -177,15 +177,15 @@ void Hierarchy::readFromStream(
     std::istream &is
 ) {
     int numLayers;
-    is.read(reinterpretcast<char*>(&numLayers), sizeof(int));
+    is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
 
     int numInputs;
 
-    is.read(reinterpretcast<char*>(&numInputs), sizeof(int));
+    is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
 
     inputSizes.resize(numInputs);
 
-    is.read(reinterpretcast<char*>(inputSizes.data()), numInputs * sizeof(Int3));
+    is.read(reinterpret_cast<char*>(inputSizes.data()), numInputs * sizeof(Int3));
 
     rLayers.resize(numLayers);
     pLayers.resize(numLayers);
