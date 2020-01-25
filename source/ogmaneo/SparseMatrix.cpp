@@ -9,12 +9,12 @@ void SparseMatrix::init(
 	const std::vector<int> &rowRanges,
 	const std::vector<int> &columnIndices
 ) {
-	_rows = rows;
-	_columns = columns;
+	rows = rows;
+	columns = columns;
 
-	_nonZeroValues = nonZeroValues;
-	_rowRanges = rowRanges;
-	_columnIndices = columnIndices;
+	this->nonZeroValues = nonZeroValues;
+	this->rowRanges = rowRanges;
+	this->columnIndices = columnIndices;
 }
 
 void SparseMatrix::init(
@@ -22,75 +22,75 @@ void SparseMatrix::init(
 	int columns,
 	const std::vector<float> &data
 ) {
-	_rows = rows;
-	_columns = columns;
+	rows = rows;
+	columns = columns;
 
-	_rowRanges.reserve(_rows + 1);
-	_rowRanges.push_back(0);
+	rowRanges.reserve(rows + 1);
+	rowRanges.push_back(0);
 
 	int nonZeroCountInRow = 0; // Only need to set this to zero once because it's cumulative
 	
-	for (int row = 0; row < _rows; row++) {
-		int rowOffset = row * _columns;
+	for (int row = 0; row < rows; row++) {
+		int rowOffset = row * columns;
 
-		for (int col = 0; col < _columns; col++) {
+		for (int col = 0; col < columns; col++) {
 			int index = rowOffset + col;
 
 			if (data[index] != 0.0f) {
-				_nonZeroValues.push_back(data[index]);
-				_columnIndices.push_back(col);
+				nonZeroValues.push_back(data[index]);
+				columnIndices.push_back(col);
 
 				nonZeroCountInRow++;
 			}
 		}
 
-		_rowRanges.push_back(nonZeroCountInRow);
+		rowRanges.push_back(nonZeroCountInRow);
 	}
 }
 
 void SparseMatrix::initT() {
-	_columnRanges.resize(_columns + 1, 0);
+	columnRanges.resize(columns + 1, 0);
 
-	_rowIndices.resize(_nonZeroValues.size());
+	rowIndices.resize(nonZeroValues.size());
 
-	_nonZeroValueIndices.resize(_nonZeroValues.size());
+	nonZeroValueIndices.resize(nonZeroValues.size());
 
 	// Pattern for T
 	int nextIndex;
 
-	for (int i = 0; i < _rows; i = nextIndex) {
+	for (int i = 0; i < rows; i = nextIndex) {
 		nextIndex = i + 1;
 
-		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; j++)
-			_columnRanges[_columnIndices[j]]++;
+		for (int j = rowRanges[i]; j < rowRanges[nextIndex]; j++)
+			columnRanges[columnIndices[j]]++;
 	}
 
 	// Bring row range array in place using exclusive scan
 	int offset = 0;
 
-	for (int i = 0; i < _columns; i++) {
-		int temp = _columnRanges[i];
+	for (int i = 0; i < columns; i++) {
+		int temp = columnRanges[i];
 
-		_columnRanges[i] = offset;
+		columnRanges[i] = offset;
 
 		offset += temp;
 	}
 
-	_columnRanges[_columns] = offset;
+	columnRanges[columns] = offset;
 
-	std::vector<int> columnOffsets = _columnRanges;
+	std::vector<int> columnOffsets = columnRanges;
 
-	for (int i = 0; i < _rows; i = nextIndex) {
+	for (int i = 0; i < rows; i = nextIndex) {
 		nextIndex = i + 1;
 
-		for (int j = _rowRanges[i]; j < _rowRanges[nextIndex]; j++) {
-			int colIndex = _columnIndices[j];
+		for (int j = rowRanges[i]; j < rowRanges[nextIndex]; j++) {
+			int colIndex = columnIndices[j];
 
 			int nonZeroIndexT = columnOffsets[colIndex];
 
-			_rowIndices[nonZeroIndexT] = i;
+			rowIndices[nonZeroIndexT] = i;
 
-			_nonZeroValueIndices[nonZeroIndexT] = j;
+			nonZeroValueIndices[nonZeroIndexT] = j;
 
 			columnOffsets[colIndex]++;
 		}
@@ -105,8 +105,8 @@ float SparseMatrix::multiply(
 
 	int nextIndex = row + 1;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		sum += _nonZeroValues[j] * in[_columnIndices[j]];
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += nonZeroValues[j] * in[columnIndices[j]];
 
 	return sum;
 }
@@ -119,8 +119,8 @@ float SparseMatrix::multiplyT(
 
 	int nextIndex = column + 1;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		sum += _nonZeroValues[_nonZeroValueIndices[j]] * in[_rowIndices[j]];
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		sum += nonZeroValues[nonZeroValueIndices[j]] * in[rowIndices[j]];
 
 	return sum;
 }
@@ -133,11 +133,11 @@ float SparseMatrix::multiplyNoDiagonal(
 
 	int nextIndex = row + 1;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++) {
-		if (row == _columnIndices[j])
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++) {
+		if (row == columnIndices[j])
 			continue;
 
-		sum += _nonZeroValues[j] * in[_columnIndices[j]];
+		sum += nonZeroValues[j] * in[columnIndices[j]];
 	}
 
 	return sum;
@@ -151,11 +151,11 @@ float SparseMatrix::multiplyNoDiagonalT(
 
 	int nextIndex = column + 1;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++) {
-		if (column == _rowIndices[j])
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++) {
+		if (column == rowIndices[j])
 			continue;
 
-		sum += _nonZeroValues[_nonZeroValueIndices[j]] * in[_rowIndices[j]];
+		sum += nonZeroValues[nonZeroValueIndices[j]] * in[rowIndices[j]];
 	}
 
 	return sum;
@@ -166,7 +166,7 @@ int SparseMatrix::count(
 ) {
 	int nextIndex = row + 1;
 	
-	return _rowRanges[nextIndex] - _rowRanges[row];
+	return rowRanges[nextIndex] - rowRanges[row];
 }
 
 int SparseMatrix::countT(
@@ -174,7 +174,7 @@ int SparseMatrix::countT(
 ) {
 	int nextIndex = column + 1;
 	
-	return _columnRanges[nextIndex] - _columnRanges[column];
+	return columnRanges[nextIndex] - columnRanges[column];
 }
 
 float SparseMatrix::total(
@@ -185,8 +185,8 @@ float SparseMatrix::total(
 
 	int nextIndex = row + 1;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		sum += in[_columnIndices[j]];
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += in[columnIndices[j]];
 
 	return sum;
 }
@@ -199,8 +199,8 @@ float SparseMatrix::totalT(
 
 	int nextIndex = column + 1;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		sum += in[_rowIndices[j]];
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		sum += in[rowIndices[j]];
 
 	return sum;
 }
@@ -212,8 +212,8 @@ void SparseMatrix::deltas(
 ) {
 	int nextIndex = row + 1;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		_nonZeroValues[j] += delta * in[_columnIndices[j]];
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		nonZeroValues[j] += delta * in[columnIndices[j]];
 }
 
 void SparseMatrix::deltasT(
@@ -223,8 +223,8 @@ void SparseMatrix::deltasT(
 ) {
 	int nextIndex = column + 1;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		_nonZeroValues[_nonZeroValueIndices[j]] += delta * in[_rowIndices[j]];
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		nonZeroValues[nonZeroValueIndices[j]] += delta * in[rowIndices[j]];
 }
 
 void SparseMatrix::normalize(
@@ -234,13 +234,13 @@ void SparseMatrix::normalize(
 
 	float sum = 0.0f;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		sum += _nonZeroValues[j] * _nonZeroValues[j];
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += nonZeroValues[j] * nonZeroValues[j];
 
 	float scale = 1.0f / std::max(0.0001f, std::sqrt(sum));
 
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		_nonZeroValues[j] *= scale;
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		nonZeroValues[j] *= scale;
 }
 
 void SparseMatrix::normalizeT(
@@ -250,13 +250,13 @@ void SparseMatrix::normalizeT(
 
 	float sum = 0.0f;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		sum += _nonZeroValues[_nonZeroValueIndices[j]] * _nonZeroValues[_nonZeroValueIndices[j]];
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		sum += nonZeroValues[nonZeroValueIndices[j]] * nonZeroValues[nonZeroValueIndices[j]];
 
 	float scale = 1.0f / std::max(0.0001f, std::sqrt(sum));
 
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		_nonZeroValues[_nonZeroValueIndices[j]] *= scale;
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		nonZeroValues[nonZeroValueIndices[j]] *= scale;
 }
 
 float SparseMatrix::magnitude2(
@@ -266,8 +266,8 @@ float SparseMatrix::magnitude2(
 
 	float sum = 0.0f;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		sum += _nonZeroValues[j] * _nonZeroValues[j];
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += nonZeroValues[j] * nonZeroValues[j];
 
 	return sum;
 }
@@ -279,8 +279,8 @@ float SparseMatrix::magnitude2T(
 
 	float sum = 0.0f;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		sum += _nonZeroValues[_nonZeroValueIndices[j]] * _nonZeroValues[_nonZeroValueIndices[j]];
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		sum += nonZeroValues[nonZeroValueIndices[j]] * nonZeroValues[nonZeroValueIndices[j]];
 
 	return sum;
 }
@@ -293,8 +293,8 @@ void SparseMatrix::copyRow(
 
 	int nextIndex = row + 1;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		_nonZeroValues[j] = source._nonZeroValues[j];
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		nonZeroValues[j] = source.nonZeroValues[j];
 }
 
 void SparseMatrix::copyColumn(
@@ -305,8 +305,8 @@ void SparseMatrix::copyColumn(
 
 	int nextIndex = column + 1;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		_nonZeroValues[j] = source._nonZeroValues[j];
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		nonZeroValues[j] = source.nonZeroValues[j];
 }
 
 void SparseMatrix::hebb(
@@ -317,8 +317,8 @@ void SparseMatrix::hebb(
 ) {
 	int nextIndex = row + 1;
 	
-	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
-		_nonZeroValues[j] += alpha * post * (in[_columnIndices[j]] - post * _nonZeroValues[j]);
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		nonZeroValues[j] += alpha * post * (in[columnIndices[j]] - post * nonZeroValues[j]);
 }
 
 void SparseMatrix::hebbT(
@@ -329,6 +329,6 @@ void SparseMatrix::hebbT(
 ) {
 	int nextIndex = column + 1;
 	
-	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
-		_nonZeroValues[_nonZeroValueIndices[j]] += alpha * post * (in[_rowIndices[j]] - post * _nonZeroValues[_nonZeroValueIndices[j]]);
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+		nonZeroValues[nonZeroValueIndices[j]] += alpha * post * (in[rowIndices[j]] - post * nonZeroValues[nonZeroValueIndices[j]]);
 }
