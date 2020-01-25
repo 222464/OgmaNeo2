@@ -126,9 +126,9 @@ void Hierarchy::step(
             // Difference
 #ifdef KERNEL_NO_THREAD
             for (int x = 0; x < pErrors[l][p].size(); x++)
-                diffFloat(x, cs.rng, inputStates[p], layerInputs[p], &pErrors[l][p]);
+                diffFloat(x, cs.rng, layerInputs[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]);
 #else
-            runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, inputStates[p], layerInputs[p], &pErrors[l][p]), pErrors[l][p].size(), cs.rng, cs.batchSize1);
+            runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, layerInputs[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]), pErrors[l][p].size(), cs.rng, cs.batchSize1);
 #endif
 
             fullLayerInputs[p] = &pErrors[l][p];
