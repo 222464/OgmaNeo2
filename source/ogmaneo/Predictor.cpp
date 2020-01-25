@@ -44,7 +44,7 @@ void Predictor::learn(
 
         float predState = std::tanh(sum * std::sqrt(1.0f / std::max(1, count)));
 
-        float delta = alpha * (historySamples[index - 1]->hiddenTargetStates[hiddenIndex] - predState) * (1.0f - predState * predState);
+        float delta = alpha * (historySamples[index - 1]->hiddenTargetStates[hiddenIndex] - predState);// * (1.0f - predState * predState);
 
         if (!historySamples[index]->feedBackStates.empty())
             visibleLayer.feedBackWeights.deltas(historySamples[index]->feedBackStates, delta, hiddenIndex);
