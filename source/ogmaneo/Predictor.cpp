@@ -94,7 +94,7 @@ void Predictor::activate(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     // Forward kernel
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
     for (int x = 0; x < hiddenSize.x; x++)
         for (int y = 0; y < hiddenSize.y; y++)
             forward(Int2(x, y), cs.rng, feedBackStates, inputStates);
@@ -131,7 +131,7 @@ void Predictor::learn(
             int index = sampleDist(cs.rng);
 
             // Learn kernel
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
             for (int x = 0; x < hiddenSize.x; x++)
                 for (int y = 0; y < hiddenSize.y; y++)
                     learn(Int2(x, y), cs.rng, index);

@@ -96,14 +96,14 @@ void Reservoir::step(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     // Copy to prev
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
     for (int x = 0; x < numHidden; x++)
         copyFloat(x, cs.rng, &hiddenStates, &hiddenStatesPrev);
 #else
     runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenStates, &hiddenStatesPrev), numHidden, cs.rng, cs.batchSize1);
 #endif
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
     for (int x = 0; x < hiddenSize.x; x++)
         for (int y = 0; y < hiddenSize.y; y++)
             forward(Int2(x, y), cs.rng, inputStates);

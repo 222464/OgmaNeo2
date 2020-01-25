@@ -124,7 +124,7 @@ void Hierarchy::step(
         // Find differences
         for (int p = 0; p < pErrors[l].size(); p++) {
             // Difference
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
             for (int x = 0; x < pErrors[l][p].size(); x++)
                 diffFloat(x, cs.rng, inputStates[p], layerInputs[p], &pErrors[l][p]);
 #else
