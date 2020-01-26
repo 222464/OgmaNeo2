@@ -31,10 +31,12 @@ void Hierarchy::initRandom(
     for (int l = 0; l < layerDescs.size(); l++) {
         // Create sparse coder visible layer descriptors
         std::vector<Reservoir::VisibleLayerDesc> rVisibleLayerDescs;
+        std::vector<Reservoir::VisibleLayerDesc> eVisibleLayerDescs;
 
         // If first layer
         if (l == 0) {
             rVisibleLayerDescs.resize(inputSizes.size());
+            eVisibleLayerDescs.resize(inputSizes.size());
 
             for (int i = 0; i < inputSizes.size(); i++) {
                 rVisibleLayerDescs[i].size = inputSizes[i];
@@ -42,6 +44,12 @@ void Hierarchy::initRandom(
                 rVisibleLayerDescs[i].scale = layerDescs[l].rfScale;
                 rVisibleLayerDescs[i].dropRatio = layerDescs[l].rfDropRatio;
                 rVisibleLayerDescs[i].noDiagonal = false;
+
+                eVisibleLayerDescs[i].size = inputSizes[i];
+                eVisibleLayerDescs[i].radius = layerDescs[l].efRadius;
+                eVisibleLayerDescs[i].scale = layerDescs[l].efScale;
+                eVisibleLayerDescs[i].dropRatio = layerDescs[l].efDropRatio;
+                eVisibleLayerDescs[i].noDiagonal = false;
             }
 
             // Predictors
@@ -65,12 +73,19 @@ void Hierarchy::initRandom(
         }
         else {
             rVisibleLayerDescs.resize(1);
+            eVisibleLayerDescs.resize(1);
 
             rVisibleLayerDescs[0].size = layerDescs[l - 1].hiddenSize;
             rVisibleLayerDescs[0].radius = layerDescs[l].rfRadius;
             rVisibleLayerDescs[0].scale = layerDescs[l].rfScale;
             rVisibleLayerDescs[0].dropRatio = layerDescs[l].rfDropRatio;
             rVisibleLayerDescs[0].noDiagonal = false;
+
+            eVisibleLayerDescs[0].size = layerDescs[l - 1].hiddenSize;
+            eVisibleLayerDescs[0].radius = layerDescs[l].efRadius;
+            eVisibleLayerDescs[0].scale = layerDescs[l].efScale;
+            eVisibleLayerDescs[0].dropRatio = layerDescs[l].efDropRatio;
+            eVisibleLayerDescs[0].noDiagonal = false;
 
             pLayers[l].resize(1);
             pErrors[l].resize(1);
@@ -91,8 +106,6 @@ void Hierarchy::initRandom(
             }
         }
 
-        eLayers[l].initRandom(cs, layerDescs[l].hiddenSize, rVisibleLayerDescs, layerDescs[l].rbScale);
-
         // Recurrent
         if (layerDescs[l].rrRadius != -1) {
             Reservoir::VisibleLayerDesc vld;
@@ -108,6 +121,7 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         rLayers[l].initRandom(cs, layerDescs[l].hiddenSize, rVisibleLayerDescs, layerDescs[l].rbScale);
+        eLayers[l].initRandom(cs, layerDescs[l].hiddenSize, eVisibleLayerDescs, 0.0f);
     }
 }
 

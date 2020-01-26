@@ -21,8 +21,9 @@ public:
     struct LayerDesc {
         Int3 hiddenSize; // Size of hidden layer
 
-        int rfRadius; // Revervior forward radius
+        int rfRadius; // Revervoir forward radius
         int rrRadius; // Reservoir recurrent radius
+        int efRadius; // Error radius
         int pRadius; // Predictor radius
 
         float rfScale;
@@ -30,6 +31,9 @@ public:
         float rrScale;
         float rrDropRatio;
         float rbScale;
+
+        float efScale;
+        float efDropRatio;
 
         float pScale;
         float pDropRatio;
@@ -39,12 +43,15 @@ public:
         hiddenSize(4, 4, 16),
         rfRadius(2),
         rrRadius(2),
+        efRadius(2),
         pRadius(2),
         rfScale(1.0f),
         rfDropRatio(0.0f),
         rrScale(1.0f),
         rrDropRatio(0.0f),
         rbScale(0.1f),
+        efScale(4.0f),
+        efDropRatio(0.0f),
         pScale(0.001f),
         pDropRatio(0.0f)
         {}
@@ -104,18 +111,32 @@ public:
         return inputSizes;
     }
 
-    // Retrieve a reservior layer
+    // Retrieve a reservoir layer
     Reservoir &getRLayer(
         int l // Layer index
     ) {
         return rLayers[l];
     }
 
-    // Retrieve a reservior layer, const version
+    // Retrieve a reservoir layer, const version
     const Reservoir &getRLayer(
         int l // Layer index
     ) const {
         return rLayers[l];
+    }
+
+    // Retrieve an error layer
+    Reservoir &getELayer(
+        int l // Layer index
+    ) {
+        return eLayers[l];
+    }
+
+    // Retrieve an error layer, const version
+    const Reservoir &getELayer(
+        int l // Layer index
+    ) const {
+        return eLayers[l];
     }
 
     // Retrieve predictor layer(s)
