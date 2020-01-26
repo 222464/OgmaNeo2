@@ -99,6 +99,8 @@ const Predictor &Predictor::operator=(const Predictor &other) {
 
         *historySamples[t] = *other.historySamples[t];
     }
+
+    return *this;
 }
 
 void Predictor::activate(
