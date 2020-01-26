@@ -104,6 +104,14 @@ public:
     historyIters(16)
     {}
 
+    Predictor(
+        const Predictor &other
+    ) {
+        *this = other;
+    }
+
+    const Predictor &operator=(const Predictor &other);
+
     // Create with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system

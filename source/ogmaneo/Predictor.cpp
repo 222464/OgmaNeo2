@@ -85,6 +85,18 @@ void Predictor::initRandom(
     hiddenStates = FloatBuffer(numHidden, 0.0f);
 }
 
+const Predictor &Predictor::operator=(const Predictor &other) {
+    visibleLayerDesc = other.visibleLayerDesc;
+    visibleLayer = other.visibleLayer;
+
+    hiddenStates = other.hiddenStates;
+
+    historySamples.resize(other.historySamples.size());
+
+    for (int t = 0; t < historySamples.size(); t++)
+        historySamples[t] = std::make_shared<HistorySample>(other.historySamples[t]);
+}
+
 void Predictor::activate(
     ComputeSystem &cs,
     const FloatBuffer* feedBackStates,
@@ -119,7 +131,7 @@ void Predictor::learn(
     sample->inputStates = *inputStates;
     sample->hiddenTargetStates = *hiddenTargetStates;
 
-    historySamples.insert(historySamples.begin(), std::move(sample));
+    historySamples.insert(historySamples.begin(), sample);
 
     if (historySamples.size() > maxHistorySamples)
         historySamples.resize(maxHistorySamples);
@@ -151,6 +163,8 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&maxHistorySamples), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
 
     writeBufferToStream(os, &hiddenStates);
 
@@ -158,6 +172,16 @@ void Predictor::writeToStream(
 
     writeSMToStream(os, visibleLayer.feedBackWeights);
     writeSMToStream(os, visibleLayer.inputWeights);
+
+    int numHistorySamples = historySamples.size();
+
+    os.write(reinterpret_cast<const char*>(&numHistorySamples), sizeof(int));
+
+    for (int t = 0; t < historySamples.size(); t++) {
+        writeBufferToStream(os, &historySamples[t]->feedBackStates);
+        writeBufferToStream(os, &historySamples[t]->inputStates);
+        writeBufferToStream(os, &historySamples[t]->hiddenTargetStates);
+    }
 }
 
 void Predictor::readFromStream(
@@ -169,6 +193,8 @@ void Predictor::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&maxHistorySamples), sizeof(int));
+    is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
     readBufferFromStream(is, &hiddenStates);
 
@@ -176,4 +202,18 @@ void Predictor::readFromStream(
 
     readSMFromStream(is, visibleLayer.feedBackWeights);
     readSMFromStream(is, visibleLayer.inputWeights);
+
+    int numHistorySamples;
+
+    is.read(reinterpret_cast<char*>(&numHistorySamples), sizeof(int));
+
+    historySamples.resize(numHistorySamples);
+
+    for (int t = 0; t < historySamples.size(); t++) {
+        historySamples[t] = std::make_shared<HistorySample>();
+        
+        readBufferFromStream(is, &historySamples[t]->feedBackStates);
+        readBufferFromStream(is, &historySamples[t]->inputStates);
+        readBufferFromStream(is, &historySamples[t]->hiddenTargetStates);
+    }
 }
