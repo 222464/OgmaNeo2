@@ -176,8 +176,11 @@ void Hierarchy::writeToStream(
         rLayers[l].writeToStream(os);
         eLayers[l].writeToStream(os);
 
-        for (int v = 0; v < pLayers[l].size(); v++)
-            pLayers[l][v].writeToStream(os);
+        for (int p = 0; p < pLayers[l].size(); p++) {
+            pLayers[l][p].writeToStream(os);
+
+            writeBufferToStream(os, &pErrors[l][p]);
+        }
     }
 }
 
@@ -198,14 +201,19 @@ void Hierarchy::readFromStream(
     rLayers.resize(numLayers);
     eLayers.resize(numLayers);
     pLayers.resize(numLayers);
+    pErrors.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         rLayers[l].readFromStream(is);
         eLayers[l].readFromStream(is);
 
         pLayers[l].resize(l == 0 ? inputSizes.size() : 1);
+        pErrors[l].resize(pLayers[l].size());
 
-        for (int v = 0; v < pLayers[l].size(); v++)
-            pLayers[l][v].readFromStream(is);
+        for (int p = 0; p < pLayers[l].size(); p++) {
+            pLayers[l][p].readFromStream(is);
+
+            readBufferFromStream(is, &pErrors[l][p]);
+        }
     }
 }
