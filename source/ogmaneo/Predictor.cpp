@@ -93,8 +93,12 @@ const Predictor &Predictor::operator=(const Predictor &other) {
 
     historySamples.resize(other.historySamples.size());
 
-    for (int t = 0; t < historySamples.size(); t++)
-        historySamples[t] = std::make_shared<HistorySample>(other.historySamples[t]);
+    for (int t = 0; t < historySamples.size(); t++) {
+        if (historySamples[t] == nullptr)
+            historySamples[t] = std::make_shared<HistorySample>();
+
+        *historySamples[t] = *other.historySamples[t];
+    }
 }
 
 void Predictor::activate(
