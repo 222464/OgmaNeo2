@@ -91,7 +91,7 @@ void SparseCoder::learn(
         vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, alpha);
     }
 
-    laterals.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
+    laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
 void SparseCoder::initRandom(
@@ -141,8 +141,6 @@ void SparseCoder::initRandom(
 
     for (int i = 0; i < laterals.nonZeroValues.size(); i++)
         laterals.nonZeroValues[i] = lateralWeightDist(cs.rng);
-
-    laterals.initT();
 }
 
 void SparseCoder::step(
