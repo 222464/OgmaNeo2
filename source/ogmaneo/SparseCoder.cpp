@@ -38,7 +38,7 @@ void SparseCoder::forward(
         sum /= std::max(1, count);
 
         hiddenStimuli[hiddenIndex] = sum;
-        hiddenActivations[hiddenIndex] = 0.0f;
+        hiddenActivations[hiddenIndex] = sum;
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -91,7 +91,7 @@ void SparseCoder::learn(
         vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, alpha);
     }
 
-    laterals.hebbSparseOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
+    laterals.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
 void SparseCoder::initRandom(
