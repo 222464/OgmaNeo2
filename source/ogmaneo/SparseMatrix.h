@@ -244,19 +244,5 @@ struct SparseMatrix {
 		int oneHotSize,
 		float alpha
 	);
-
-	void hebbSparseOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float alpha
-	);
-
-	void hebbSparseOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize,
-		float alpha
-	);
 };
 } // namespace ogmaneo
