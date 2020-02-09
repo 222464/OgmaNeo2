@@ -103,7 +103,6 @@ void SparseCoder::initRandom(
     this->visibleLayerDescs = visibleLayerDescs;
 
     this->hiddenSize = hiddenSize;
-    lateralRadius = lateralRadius;
 
     visibleLayers.resize(visibleLayerDescs.size());
 

@@ -35,7 +35,6 @@ public:
 
 private:
     Int3 hiddenSize; // Size of hidden/output layer
-    int lateralRadius;
 
     FloatBuffer hiddenStimuli;
     FloatBuffer hiddenActivations;
