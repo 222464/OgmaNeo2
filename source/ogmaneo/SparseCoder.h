@@ -42,6 +42,8 @@ private:
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsTemp; // Temporaries for hidden state iteration
 
+    IntBuffer hiddenUsages;
+
     SparseMatrix laterals;
 
     // Visible layers and associated descriptors
@@ -102,8 +104,8 @@ public:
     SparseCoder()
     :
     explainIters(5),
-    alpha(0.01f),
-    beta(0.01f)
+    alpha(0.5f),
+    beta(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
