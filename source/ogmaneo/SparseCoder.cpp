@@ -63,7 +63,7 @@ void SparseCoder::inhibit(
 
         float sum = laterals.multiplyNoDiagonalOHVs(hiddenCsTemp, hiddenIndex, hiddenSize.z) / std::max(1, laterals.count(hiddenIndex) / hiddenSize.z - 1); // -1 for missing diagonal
         
-        hiddenActivations[hiddenIndex] += hiddenStimuli[hiddenIndex] - sum;
+        hiddenActivations[hiddenIndex] += std::max(0.0f, hiddenStimuli[hiddenIndex] - sum);
 
         if (hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = hiddenActivations[hiddenIndex];
@@ -110,7 +110,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> forwardWeightDist(0.0f, 0.01f);
+    std::uniform_real_distribution<float> forwardWeightDist(0.99f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
