@@ -85,8 +85,6 @@ void SparseCoder::learnForward(
 
     float delta = alpha * std::tanh(error) * ((hiddenCs[hiddenColumnIndex] + 0.5f) - (hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1) + 0.5f));
 
-    delta *= hiddenActivations[hiddenColumnIndex] * (1.0f - hiddenActivations[hiddenColumnIndex]);
-
     int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
 
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -110,7 +108,7 @@ void SparseCoder::learnBackward(
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
-        float delta = alpha * vl.inputErrors[visibleIndex];
+        float delta = beta * vl.inputErrors[visibleIndex];
 
         vl.fbWeights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
     }
@@ -199,6 +197,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&beta), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
 
@@ -226,6 +225,7 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&beta), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
 

@@ -111,12 +111,14 @@ private:
     }
 
 public:
-    float alpha; // Weight learning rate
+    float alpha; // FF weight learning rate
+    float beta; // FB weight learning rate
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.1f)
+    alpha(0.1f),
+    beta(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
