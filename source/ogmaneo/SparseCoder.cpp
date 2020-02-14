@@ -52,7 +52,7 @@ void SparseCoder::backward(
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
-        float activation = vl.fbWeights.multiplyT(hiddenActivations, visibleIndex) / std::max(1, vl.fbWeights.countT(visibleIndex));
+        float activation = vl.fbWeights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.fbWeights.countT(visibleIndex) / hiddenSize.z);
 
         vl.inputErrors[visibleIndex] = (vc == targetC ? 1.0f : 0.0f) - sigmoid(activation);
     }
@@ -65,21 +65,28 @@ void SparseCoder::learnForward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
-
     float error = 0.0f;
     int count = 0;
 
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+    {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hiddenCs[hiddenColumnIndex]), hiddenSize);
 
-        error += vl.ffWeights.multiply(vl.inputErrors, hiddenIndex);
-        count += vl.ffWeights.count(hiddenIndex);
+        // For each visible layer
+        for (int vli = 0; vli < visibleLayers.size(); vli++) {
+            VisibleLayer &vl = visibleLayers[vli];
+            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+            error += vl.fbWeights.multiply(vl.inputErrors, hiddenIndex);
+            count += vl.fbWeights.count(hiddenIndex);
+        }
+
+        error /= std::max(1, count);
+        error *= hiddenActivations[hiddenColumnIndex] * (1.0f - hiddenActivations[hiddenColumnIndex]);
     }
 
-    float delta = alpha * error / std::max(1, count) * hiddenActivations[hiddenColumnIndex] * (1.0f - hiddenActivations[hiddenColumnIndex]);
+    float delta = alpha * ((hiddenCs[hiddenColumnIndex] + 0.5f) - hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1) + 0.5f);
+
+    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
 
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
@@ -136,12 +143,13 @@ void SparseCoder::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld.size, Int3(hiddenSize.x, hiddenSize.y, 1), vld.radius, vl.ffWeights);
 
-        vl.fbWeights = vl.ffWeights;
-
-        for (int i = 0; i < vl.ffWeights.nonZeroValues.size(); i++) {
+        for (int i = 0; i < vl.ffWeights.nonZeroValues.size(); i++)
             vl.ffWeights.nonZeroValues[i] = weightDist(cs.rng);
+
+        initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.fbWeights);
+
+        for (int i = 0; i < vl.fbWeights.nonZeroValues.size(); i++)
             vl.fbWeights.nonZeroValues[i] = weightDist(cs.rng);
-        }
 
         // Generate transpose (needed for reconstruction)
         vl.fbWeights.initT();
