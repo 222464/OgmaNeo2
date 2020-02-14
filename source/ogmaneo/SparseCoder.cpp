@@ -83,7 +83,7 @@ void SparseCoder::learnForward(
         error /= std::max(1, count);
     }
 
-    float delta = alpha * error * ((hiddenCs[hiddenColumnIndex] + 0.5f) - (hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1)));
+    float delta = alpha * error * ((hiddenCs[hiddenColumnIndex] + 0.5f) - (hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1) + 0.5f));
 
     delta *= hiddenActivations[hiddenColumnIndex] * (1.0f - hiddenActivations[hiddenColumnIndex]);
 
