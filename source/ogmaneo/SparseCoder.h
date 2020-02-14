@@ -70,7 +70,6 @@ private:
     void learnBackward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* inputCs,
         int vli
     );
 
@@ -106,10 +105,9 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const IntBuffer* inputCs,
         int vli
     ) {
-        sc->learnBackward(pos, rng, inputCs, vli);
+        sc->learnBackward(pos, rng, vli);
     }
 
 public:

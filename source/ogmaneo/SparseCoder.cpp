@@ -17,7 +17,7 @@ void SparseCoder::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), hiddenSize);
+    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
 
     float sum = 0.0f;
     int count = 0;
@@ -65,7 +65,7 @@ void SparseCoder::learnForward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), hiddenSize);
+    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
 
     float error = 0.0f;
     int count = 0;
@@ -92,7 +92,6 @@ void SparseCoder::learnForward(
 void SparseCoder::learnBackward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const IntBuffer* inputCs,
     int vli
 ) {
     VisibleLayer &vl = visibleLayers[vli];
@@ -161,9 +160,6 @@ void SparseCoder::step(
     const std::vector<const IntBuffer*> &inputCs,
     bool learnEnabled
 ) {
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
-
     runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 
     if (learnEnabled) {
@@ -180,7 +176,7 @@ void SparseCoder::step(
             VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            runKernel2(cs, std::bind(SparseCoder::learnBackwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(SparseCoder::learnBackwardKernel, std::placeholders::_1, std::placeholders::_2, this, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 }
