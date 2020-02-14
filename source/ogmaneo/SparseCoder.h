@@ -30,7 +30,8 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix weights; // Weight matrix
+        SparseMatrix ffWeights; // Tile
+        SparseMatrix fbWeights; // Reconstruction
 
         FloatBuffer inputErrors;
     };
@@ -39,7 +40,6 @@ private:
     Int3 hiddenSize; // Size of hidden/output layer
 
     IntBuffer hiddenCs; // Hidden states
-
     FloatBuffer hiddenActivations;
 
     // Visible layers and associated descriptors
@@ -51,8 +51,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int it
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     void backward(
@@ -62,7 +61,13 @@ private:
         int vli
     );
 
-    void learn(
+    void learnForward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void learnBackward(
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* inputCs,
@@ -73,10 +78,9 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        int it
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, it);
+        sc->forward(pos, rng, inputCs);
     }
 
     static void backwardKernel(
@@ -89,24 +93,31 @@ private:
         sc->backward(pos, rng, inputCs, vli);
     }
 
-    static void learnKernel(
+    static void learnForwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs
+    ) {
+        sc->learnForward(pos, rng, inputCs);
+    }
+
+    static void learnBackwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
         const IntBuffer* inputCs,
         int vli
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->learnBackward(pos, rng, inputCs, vli);
     }
 
 public:
-    int explainIters; // Code solving iterations
     float alpha; // Weight learning rate
 
     // Defaults
     SparseCoder()
     :
-    explainIters(5),
     alpha(0.1f)
     {}
 
