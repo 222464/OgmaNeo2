@@ -81,10 +81,11 @@ void SparseCoder::learnForward(
         }
 
         error /= std::max(1, count);
-        error *= hiddenActivations[hiddenColumnIndex] * (1.0f - hiddenActivations[hiddenColumnIndex]);
     }
 
-    float delta = alpha * ((hiddenCs[hiddenColumnIndex] + 0.5f) - hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1) + 0.5f);
+    float delta = alpha * error * ((hiddenCs[hiddenColumnIndex] + 0.5f) - (hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1)));
+
+    delta *= hiddenActivations[hiddenColumnIndex] * (1.0f - hiddenActivations[hiddenColumnIndex]);
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
 
@@ -111,7 +112,7 @@ void SparseCoder::learnBackward(
 
         float delta = alpha * vl.inputErrors[visibleIndex];
 
-        vl.fbWeights.deltasT(hiddenActivations, delta, visibleIndex);
+        vl.fbWeights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
     }
 }
 
