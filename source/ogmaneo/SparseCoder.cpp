@@ -17,23 +17,36 @@ void SparseCoder::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
-    float sum = 0.0f;
-    int count = 0;
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+        float sum = 0.0f;
+        int count = 0;
 
-        sum += vl.ffWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
-        count += vl.ffWeights.count(hiddenIndex) / vld.size.z;
+        // For each visible layer
+        for (int vli = 0; vli < visibleLayers.size(); vli++) {
+            VisibleLayer &vl = visibleLayers[vli];
+            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+            sum += vl.ffWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            count += vl.ffWeights.count(hiddenIndex) / vld.size.z;
+        }
+
+        sum /= std::max(1, count);
+
+        if (sum > maxActivation) {
+            maxActivation = sum;
+
+            maxIndex = hc;
+        }
     }
 
-    hiddenActivations[hiddenColumnIndex] = sigmoid(sum / std::max(1, count));
+    hiddenActivations[hiddenColumnIndex] = maxActivation;
 
-    hiddenCs[hiddenColumnIndex] = hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1) + 0.5f;
+    hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void SparseCoder::backward(
@@ -68,24 +81,20 @@ void SparseCoder::learnForward(
     float error = 0.0f;
     int count = 0;
 
-    {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hiddenCs[hiddenColumnIndex]), hiddenSize);
+    int hiddenIndex = address3(Int3(pos.x, pos.y, hiddenCs[hiddenColumnIndex]), hiddenSize);
 
-        // For each visible layer
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
-            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+    // For each visible layer
+    for (int vli = 0; vli < visibleLayers.size(); vli++) {
+        VisibleLayer &vl = visibleLayers[vli];
+        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            error += vl.fbWeights.multiply(vl.inputErrors, hiddenIndex);
-            count += vl.fbWeights.count(hiddenIndex);
-        }
-
-        error /= std::max(1, count);
+        error += vl.fbWeights.multiply(vl.inputErrors, hiddenIndex);
+        count += vl.fbWeights.count(hiddenIndex);
     }
 
-    float delta = alpha * std::tanh(error) * ((hiddenCs[hiddenColumnIndex] + 0.5f) - (hiddenActivations[hiddenColumnIndex] * (hiddenSize.z - 1) + 0.5f));
+    error /= std::max(1, count);
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, 0), Int3(hiddenSize.x, hiddenSize.y, 1));
+    float delta = alpha * error;
 
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
@@ -140,15 +149,14 @@ void SparseCoder::initRandom(
         int numVisible = numVisibleColumns * vld.size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld.size, Int3(hiddenSize.x, hiddenSize.y, 1), vld.radius, vl.ffWeights);
+        initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.ffWeights);
 
-        for (int i = 0; i < vl.ffWeights.nonZeroValues.size(); i++)
+        vl.fbWeights = vl.ffWeights;
+
+        for (int i = 0; i < vl.ffWeights.nonZeroValues.size(); i++) {
             vl.ffWeights.nonZeroValues[i] = weightDist(cs.rng);
-
-        initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.fbWeights);
-
-        for (int i = 0; i < vl.fbWeights.nonZeroValues.size(); i++)
             vl.fbWeights.nonZeroValues[i] = weightDist(cs.rng);
+        }
 
         // Generate transpose (needed for reconstruction)
         vl.fbWeights.initT();
