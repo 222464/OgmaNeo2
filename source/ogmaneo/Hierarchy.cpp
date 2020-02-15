@@ -154,12 +154,12 @@ void Hierarchy::initRandom(
             vld.radius = layerDescs[l].rRadius;
 
             scVisibleLayerDescs.push_back(vld);
+
+            hiddenCsPrev[l] = IntBuffer(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0);
         }
 		
         // Create the sparse coding layer
         scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, layerDescs[l].lRadius, scVisibleLayerDescs);
-
-        hiddenCsPrev[l] = IntBuffer(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0);
     }
 }
 
@@ -276,8 +276,8 @@ void Hierarchy::step(
             // Activate sparse coder
             scLayers[l].step(cs, fullLayerInputs, learnEnabled);
 
-            // Copy
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &hiddenCsPrev[l]), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+            if (!hiddenCsPrev[l].empty())
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &hiddenCsPrev[l]), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
             // Add to next layer's history
             if (l < scLayers.size() - 1) {
