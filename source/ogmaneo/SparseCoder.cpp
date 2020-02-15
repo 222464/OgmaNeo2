@@ -88,12 +88,10 @@ void SparseCoder::learn(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, 1.0f / (1.0f + alpha * hiddenUsages[hiddenIndexMax]));
+        vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, alpha);
     }
 
-    laterals.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, 0.5f / (1.0f + beta * hiddenUsages[hiddenIndexMax]));
-
-    hiddenUsages[hiddenIndexMax] = std::min(999999, hiddenUsages[hiddenIndexMax] + 1);
+    laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
 void SparseCoder::initRandom(
@@ -136,8 +134,6 @@ void SparseCoder::initRandom(
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsTemp = IntBuffer(numHiddenColumns);
 
-    hiddenUsages = IntBuffer(numHidden, 0);
-
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
     initSMLocalRF(hiddenSize, hiddenSize, lateralRadius, laterals);
@@ -145,7 +141,7 @@ void SparseCoder::initRandom(
     for (int i = 0; i < laterals.nonZeroValues.size(); i++)
         laterals.nonZeroValues[i] = lateralWeightDist(cs.rng);
 
-    laterals.initT();
+    //laterals.initT();
 }
 
 void SparseCoder::step(
@@ -184,8 +180,6 @@ void SparseCoder::writeToStream(
 
     writeBufferToStream(os, &hiddenCs);
 
-    writeBufferToStream(os, &hiddenUsages);
-
     int numVisibleLayers = visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -215,8 +209,6 @@ void SparseCoder::readFromStream(
     is.read(reinterpret_cast<char*>(&beta), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
-
-    readBufferFromStream(is, &hiddenUsages);
 
     hiddenStimuli = FloatBuffer(numHidden, 0.0f);
     hiddenActivations = FloatBuffer(numHidden, 0.0f);
