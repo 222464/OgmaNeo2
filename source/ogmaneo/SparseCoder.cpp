@@ -38,7 +38,7 @@ void SparseCoder::forward(
         sum /= std::max(1, count);
 
         hiddenStimuli[hiddenIndex] = sum;
-        hiddenActivations[hiddenIndex] = sum;
+        hiddenActivations[hiddenIndex] = 0.0f;
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -63,7 +63,7 @@ void SparseCoder::inhibit(
 
         float sum = laterals.multiplyNoDiagonalOHVs(hiddenCsTemp, hiddenIndex, hiddenSize.z) / std::max(1, laterals.count(hiddenIndex) / hiddenSize.z - 1); // -1 for missing diagonal
         
-        hiddenActivations[hiddenIndex] += hiddenStimuli[hiddenIndex] - sum;
+        hiddenActivations[hiddenIndex] += std::max(0.0f, hiddenStimuli[hiddenIndex] - sum);
 
         if (hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = hiddenActivations[hiddenIndex];
@@ -91,7 +91,7 @@ void SparseCoder::learn(
         vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, alpha);
     }
 
-    laterals.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
+    laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
 void SparseCoder::initRandom(
@@ -141,7 +141,7 @@ void SparseCoder::initRandom(
     for (int i = 0; i < laterals.nonZeroValues.size(); i++)
         laterals.nonZeroValues[i] = lateralWeightDist(cs.rng);
 
-    laterals.initT();
+    //laterals.initT();
 }
 
 void SparseCoder::step(
