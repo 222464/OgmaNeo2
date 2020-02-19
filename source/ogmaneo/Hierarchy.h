@@ -59,9 +59,7 @@ public:
 private:
     // Layers
     std::vector<Reservoir> rLayers;
-    std::vector<Reservoir> eLayers;
     std::vector<std::vector<Predictor>> pLayers;
-    std::vector<std::vector<FloatBuffer>> pErrors;
     
     // Input dimensions
     std::vector<Int3> inputSizes;
@@ -123,20 +121,6 @@ public:
         int l // Layer index
     ) const {
         return rLayers[l];
-    }
-
-    // Retrieve an error layer
-    Reservoir &getELayer(
-        int l // Layer index
-    ) {
-        return eLayers[l];
-    }
-
-    // Retrieve an error layer, const version
-    const Reservoir &getELayer(
-        int l // Layer index
-    ) const {
-        return eLayers[l];
     }
 
     // Retrieve predictor layer(s)

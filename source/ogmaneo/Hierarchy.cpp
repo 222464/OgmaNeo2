@@ -20,9 +20,7 @@ void Hierarchy::initRandom(
 ) {
     // Create layers
     rLayers.resize(layerDescs.size());
-    eLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
-    pErrors.resize(layerDescs.size());
 
     // Cache input sizes
     this->inputSizes = inputSizes;
@@ -54,7 +52,6 @@ void Hierarchy::initRandom(
 
             // Predictors
             pLayers[l].resize(inputSizes.size());
-            pErrors[l].resize(inputSizes.size());
 
             // Predictor visible layer descriptors
             Predictor::VisibleLayerDesc pVisibleLayerDesc;
@@ -65,11 +62,8 @@ void Hierarchy::initRandom(
             pVisibleLayerDesc.dropRatio = layerDescs[l].pDropRatio;
 
             // Create actors
-            for (int p = 0; p < pLayers[l].size(); p++) {
+            for (int p = 0; p < pLayers[l].size(); p++)
                 pLayers[l][p].initRandom(cs, inputSizes[p], pVisibleLayerDesc);
-
-                pErrors[l][p] = FloatBuffer(inputSizes[p].x * inputSizes[p].y * inputSizes[p].z, 0.0f);
-            }
         }
         else {
             rVisibleLayerDescs.resize(1);
@@ -88,7 +82,6 @@ void Hierarchy::initRandom(
             eVisibleLayerDescs[0].noDiagonal = false;
 
             pLayers[l].resize(1);
-            pErrors[l].resize(1);
 
             // Predictor visible layer descriptors
             Predictor::VisibleLayerDesc pVisibleLayerDesc;
@@ -99,11 +92,8 @@ void Hierarchy::initRandom(
             pVisibleLayerDesc.dropRatio = layerDescs[l].pDropRatio;
 
             // Create actors
-            for (int p = 0; p < pLayers[l].size(); p++) {
+            for (int p = 0; p < pLayers[l].size(); p++)
                 pLayers[l][p].initRandom(cs, layerDescs[l - 1].hiddenSize, pVisibleLayerDesc);
-
-                pErrors[l][p] = FloatBuffer(layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y * layerDescs[l - 1].hiddenSize.z, 0.0f);
-            }
         }
 
         // Recurrent
@@ -121,7 +111,6 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         rLayers[l].initRandom(cs, layerDescs[l].hiddenSize, rVisibleLayerDescs, layerDescs[l].rbScale);
-        eLayers[l].initRandom(cs, layerDescs[l].hiddenSize, eVisibleLayerDescs, 0.0f);
     }
 }
 
@@ -134,24 +123,13 @@ void Hierarchy::step(
 
     // Forward
     for (int l = 0; l < rLayers.size(); l++) {
-        std::vector<const FloatBuffer*> layerInputs = (l == 0 ? inputStates : std::vector<const FloatBuffer*>{ &eLayers[l - 1].getHiddenStates() });
-
-        std::vector<const FloatBuffer*> layerErrors(inputStates.size());
-
-        // Find differences
-        for (int p = 0; p < pErrors[l].size(); p++) {
-            // Difference
-            runKernel1(cs, std::bind(diffFloat, std::placeholders::_1, std::placeholders::_2, layerInputs[p], &pLayers[l][p].getHiddenStates(), &pErrors[l][p]), pErrors[l][p].size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
-
-            layerErrors[p] = &pErrors[l][p];
-        }
+        std::vector<const FloatBuffer*> layerInputs = (l == 0 ? inputStates : std::vector<const FloatBuffer*>{ &rLayers[l - 1].getHiddenStates() });
 
         // Add recurrent if needed
         if (layerInputs.size() < rLayers[l].getNumVisibleLayers())
             layerInputs.push_back(&rLayers[l].getHiddenStatesPrev());
 
         rLayers[l].step(cs, layerInputs);
-        eLayers[l].step(cs, layerErrors);
     }
 
     // Backward
@@ -161,7 +139,7 @@ void Hierarchy::step(
         // Step actor layers
         for (int p = 0; p < pLayers[l].size(); p++) {
             if (learnEnabled) 
-                pLayers[l][p].learn(cs, feedBackStates, &rLayers[l].getHiddenStates(), l == 0 ? inputStates[p] : &eLayers[l - 1].getHiddenStates());
+                pLayers[l][p].learn(cs, feedBackStates, &rLayers[l].getHiddenStates(), l == 0 ? inputStates[p] : &rLayers[l - 1].getHiddenStates());
 
             pLayers[l][p].activate(cs, feedBackStates, &rLayers[l].getHiddenStates());
         }
@@ -183,13 +161,9 @@ void Hierarchy::writeToStream(
 
     for (int l = 0; l < numLayers; l++) {
         rLayers[l].writeToStream(os);
-        eLayers[l].writeToStream(os);
 
-        for (int p = 0; p < pLayers[l].size(); p++) {
+        for (int p = 0; p < pLayers[l].size(); p++)
             pLayers[l][p].writeToStream(os);
-
-            writeBufferToStream(os, &pErrors[l][p]);
-        }
     }
 }
 
@@ -208,21 +182,13 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(inputSizes.data()), numInputs * sizeof(Int3));
 
     rLayers.resize(numLayers);
-    eLayers.resize(numLayers);
     pLayers.resize(numLayers);
-    pErrors.resize(numLayers);
-
     for (int l = 0; l < numLayers; l++) {
         rLayers[l].readFromStream(is);
-        eLayers[l].readFromStream(is);
 
         pLayers[l].resize(l == 0 ? inputSizes.size() : 1);
-        pErrors[l].resize(pLayers[l].size());
 
-        for (int p = 0; p < pLayers[l].size(); p++) {
+        for (int p = 0; p < pLayers[l].size(); p++)
             pLayers[l][p].readFromStream(is);
-
-            readBufferFromStream(is, &pErrors[l][p]);
-        }
     }
 }
