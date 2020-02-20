@@ -88,6 +88,8 @@ void Hierarchy::initRandom(
             if (l < scLayers.size() - 1)
                 pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
+            pVisibleLayerDescs[0].canPropagate = true;
+
             // Actor visible layer descriptors
             std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(1);
 
@@ -137,6 +139,8 @@ void Hierarchy::initRandom(
 
             if (l < scLayers.size() - 1)
                 pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
+            
+            pVisibleLayerDescs[0].canPropagate = true;
 
             // Create actors
             for (int p = 0; p < pLayers[l].size(); p++) {
