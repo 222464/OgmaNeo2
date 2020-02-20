@@ -120,7 +120,7 @@ void Predictor::initRandom(
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
-        VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
+        const VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
 
         int numVisibleColumns = vld.size.x * vld.size.y;
 
@@ -153,19 +153,19 @@ void Predictor::activate(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenActivations, &hiddenActivationsPrev), numHiddenColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
+    runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenActivations, &hiddenActivationsPrev), numHidden, cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
     // Copy to prevs
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
-        VisibleLayerDesc &vld = visibleLayerDescs[vli];
+        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
         int numVisibleColumns = vld.size.x * vld.size.y;
 
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &vl.inputCs, &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCs), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
     }
-    
+
     // Forward kernel
     runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 }
@@ -176,11 +176,14 @@ void Predictor::propagate(
     FloatBuffer* errors,
     int vli
 ) {
-    assert(visibleLayerDescs[vli].canPropagate);
+    VisibleLayer &vl = visibleLayers[vli];
+    const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+    assert(vld.canPropagate);
 
     runKernel2(cs, std::bind(Predictor::errorKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 
-    runKernel2(cs, std::bind(Predictor::propKernel, std::placeholders::_1, std::placeholders::_2, this, errors, vli), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+    runKernel2(cs, std::bind(Predictor::propKernel, std::placeholders::_1, std::placeholders::_2, this, errors, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 }
 
 void Predictor::learn(
