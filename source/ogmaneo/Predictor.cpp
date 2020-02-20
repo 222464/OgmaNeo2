@@ -74,7 +74,7 @@ void Predictor::prop(
 
     int visibleIndex = address3(Int3(pos.x, pos.y, vl.inputCsPrev[visibleColumnIndex]), vld.size);
 
-    (*errors)[visibleColumnIndex] += vl.weights.multiplyOHVsT.multiplyT(hiddenErrors, visibleIndex) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
+    (*errors)[visibleColumnIndex] += vl.weights.multiplyT(hiddenErrors, visibleIndex) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 }
 
 void Predictor::learn(
