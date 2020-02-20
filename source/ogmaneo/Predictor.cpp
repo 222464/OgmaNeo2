@@ -22,6 +22,7 @@ void Predictor::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -29,7 +30,12 @@ void Predictor::forward(
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
             sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
+
+        sum /= std::max(1, count);
+
+        hiddenActivations[hiddenIndex] = sum;
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -38,6 +44,38 @@ void Predictor::forward(
     }
 
     hiddenCs[address2(pos, Int2(hiddenSize.x, hiddenSize.y))] = maxIndex;
+}
+
+void Predictor::error(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenTargetCs
+) {
+    int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
+
+    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
+
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+        hiddenErrors[hiddenIndex] = ((hc == targetC ? 1.0f : -1.0f) - std::tanh(hiddenActivationsPrev[hiddenIndex]));
+    }
+}
+
+void Predictor::prop(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    FloatBuffer* errors,
+    int vli
+) {
+    VisibleLayer &vl = visibleLayers[vli];
+    VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+    int visibleColumnIndex = address2(pos, Int2(vld.size.x, vld.size.y));
+
+    int visibleIndex = address3(Int3(pos.x, pos.y, vl.inputCsPrev[visibleColumnIndex]), vld.size);
+
+    (*errors)[visibleColumnIndex] = vl.weights.multiplyOHVsT.multiplyT(hiddenErrors, visibleIndex) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 }
 
 void Predictor::learn(
@@ -52,20 +90,7 @@ void Predictor::learn(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = 0.0f;
-        int count = 0;
-
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
-            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-            sum += vl.weights.multiplyOHVs(vl.inputCsPrev, hiddenIndex, vld.size.z);
-            count += vl.weights.count(hiddenIndex) / vld.size.z;
-        }
-
-        sum /= std::max(1, count);
-
-        float delta = alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+        float delta = alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(hiddenActivationsPrev[hiddenIndex]));
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
@@ -106,11 +131,19 @@ void Predictor::initRandom(
         for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
 
+        if (vld.canPropagate)
+            vl.weights.initT();
+
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
     }
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
+
+    hiddenActivations = FloatBuffer(numHidden, 0.0f);
+    hiddenActivationsPrev = FloatBuffer(numHidden, 0.0f);
+
+    hiddenErrors = FloatBuffer(numHidden, 0.0f);
 }
 
 void Predictor::activate(
@@ -119,6 +152,8 @@ void Predictor::activate(
 ) {
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
+
+    runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenActivations, &hiddenActivationsPrev), numHiddenColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
     // Forward kernel
     runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
@@ -132,6 +167,19 @@ void Predictor::activate(
 
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
     }
+}
+
+void Predictor::propagate(
+    ComputeSystem &cs,
+    const IntBuffer* hiddenTargetCs,
+    FloatBuffer* errors,
+    int vli
+) {
+    assert(visibleLayerDescs[vli].canPropagate);
+
+    runKernel2(cs, std::bind(Predictor::errorKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+
+    runKernel2(cs, std::bind(Predictor::propKernel, std::placeholders::_1, std::placeholders::_2, this, errors, vli), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 }
 
 void Predictor::learn(
@@ -153,6 +201,11 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
+
+    writeBufferToStream(os, &hiddenActivations);
+    writeBufferToStream(os, &hiddenActivationsPrev);
+
+    writeBufferToStream(os, &hiddenErrors);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -181,6 +234,11 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
+
+    readBufferFromStream(is, &hiddenActivations);
+    readBufferFromStream(is, &hiddenActivationsPrev);
+
+    readBufferFromStream(is, &hiddenErrors);
 
     int numVisibleLayers;
     

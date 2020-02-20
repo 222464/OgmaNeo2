@@ -20,11 +20,14 @@ public:
 
         int radius; // Radius onto input
 
+        unsigned char canPropagate;
+
         // Defaults
         VisibleLayerDesc()
         :
         size(4, 4, 16),
-        radius(2)
+        radius(2),
+        canPropagate(false)
         {}
     };
 
@@ -40,6 +43,11 @@ private:
 
     IntBuffer hiddenCs; // Hidden state
 
+    FloatBuffer hiddenActivations;
+    FloatBuffer hiddenActivationsPrev;
+
+    FloatBuffer hiddenErrors;
+
     // Visible layers and descs
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -50,6 +58,19 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void error(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenTargetCs
+    );
+
+    void prop(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        FloatBuffer* errors,
+        int vli
     );
 
     void learn(
@@ -65,6 +86,25 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     ) {
         p->forward(pos, rng, inputCs);
+    }
+
+    static void errorKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Predictor* p,
+        const IntBuffer* hiddenTargetCs
+    ) {
+        p->error(pos, rng, hiddenTargetCs);
+    }
+
+    static void propKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Predictor* p,
+        FloatBuffer* errors,
+        int vli
+    ) {
+        p->prop(pos, rng, errors, vli);
     }
 
     static void learnKernel(
@@ -96,6 +136,13 @@ public:
     void activate(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction size
+    );
+
+    void propagate(
+        ComputeSystem &cs, // Compute system
+        const IntBuffer* hiddenTargetCs, // Targets
+        FloatBuffer* errors, // Propagation accumulation
+        int vli // Index of input to propagate to
     );
 
     // Learning predictions (update weights)

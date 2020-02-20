@@ -20,25 +20,19 @@ public:
 
         int radius; // Radius onto input
 
-        unsigned char recurrent; // Whether is recurrent
-
         // Defaults
         VisibleLayerDesc()
         :
         size(4, 4, 16),
-        radius(2),
-        recurrent(false)
+        radius(2)
         {}
     };
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix ffWeights; // Tile
-        SparseMatrix fbWeights; // Reconstruction
+        SparseMatrix weights;
 
         IntBuffer inputCsPrev;
-
-        FloatBuffer inputErrors;
     };
 
 private:
@@ -61,23 +55,10 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void backward(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const IntBuffer* inputCs,
-        int vli
-    );
-
     void learnForward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void learnBackward(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        int vli
+        const FloatBuffer* errors
     );
 
     static void forwardKernel(
@@ -89,45 +70,24 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
-    static void backwardKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        const IntBuffer* inputCs,
-        int vli
-    ) {
-        sc->backward(pos, rng, inputCs, vli);
-    }
-
     static void learnForwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
+        const FloatBuffer* errors
     ) {
-        sc->learnForward(pos, rng, inputCs);
-    }
-
-    static void learnBackwardKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        int vli
-    ) {
-        sc->learnBackward(pos, rng, vli);
+        sc->learnForward(pos, rng, errors);
     }
 
 public:
-    float alpha; // FF weight learning rate
-    float beta; // FB weight learning rate
+    float alpha; // Weight learning rate
     float gamma; // Refractory decay
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.01f),
-    beta(0.1f),
-    gamma(0.5f)
+    alpha(0.001f),
+    gamma(0.9f)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -138,10 +98,14 @@ public:
     );
 
     // Activate the sparse coder (perform sparse coding)
-    void step(
+    void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input states
-        bool learnEnabled // Whether to learn
+        const std::vector<const IntBuffer*> &inputCs // Input states
+    );
+
+    void learn(
+        ComputeSystem &cs, // Compute system
+        const FloatBuffer* errors
     );
 
     // Write to stream
