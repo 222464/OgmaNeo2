@@ -48,7 +48,7 @@ void SparseCoder::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        activations[hc] = (activations[hc] - minActivation + 1.0f) * (1.0f - hiddenRefractories[hiddenIndex]);
+        activations[hc] = (activations[hc] - minActivation) * (1.0f - hiddenRefractories[hiddenIndex]);
 
         if (activations[hc] > maxActivation) {
             maxActivation = activations[hc];
@@ -103,8 +103,10 @@ void SparseCoder::learnForward(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        error += vl.fbWeights.multiply(vl.inputErrors, hiddenIndex);
-        count += vl.fbWeights.count(hiddenIndex);
+        if (!vld.recurrent) {
+            error += vl.fbWeights.multiply(vl.inputErrors, hiddenIndex);
+            count += vl.fbWeights.count(hiddenIndex);
+        }
     }
 
     error /= std::max(1, count);
@@ -166,15 +168,21 @@ void SparseCoder::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.ffWeights);
 
-        vl.fbWeights = vl.ffWeights;
+        if (!vld.recurrent) {
+            vl.fbWeights = vl.ffWeights;
 
-        for (int i = 0; i < vl.ffWeights.nonZeroValues.size(); i++) {
-            vl.ffWeights.nonZeroValues[i] = weightDist(cs.rng);
-            vl.fbWeights.nonZeroValues[i] = weightDist(cs.rng);
+            for (int i = 0; i < vl.ffWeights.nonZeroValues.size(); i++) {
+                vl.ffWeights.nonZeroValues[i] = weightDist(cs.rng);
+                vl.fbWeights.nonZeroValues[i] = weightDist(cs.rng);
+            }
+
+            // Generate transpose (needed for reconstruction)
+            vl.fbWeights.initT();
         }
-
-        // Generate transpose (needed for reconstruction)
-        vl.fbWeights.initT();
+        else {
+            for (int i = 0; i < vl.ffWeights.nonZeroValues.size(); i++)
+                vl.ffWeights.nonZeroValues[i] = 0.0f;
+        }
 
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
 
@@ -204,7 +212,8 @@ void SparseCoder::step(
             VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            if (!vld.recurrent)
+                runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
 
         runKernel2(cs, std::bind(SparseCoder::learnForwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
@@ -213,7 +222,8 @@ void SparseCoder::step(
             VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            runKernel2(cs, std::bind(SparseCoder::learnBackwardKernel, std::placeholders::_1, std::placeholders::_2, this, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            if (!vld.recurrent)
+                runKernel2(cs, std::bind(SparseCoder::learnBackwardKernel, std::placeholders::_1, std::placeholders::_2, this, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 

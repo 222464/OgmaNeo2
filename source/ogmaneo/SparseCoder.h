@@ -20,11 +20,14 @@ public:
 
         int radius; // Radius onto input
 
+        unsigned char recurrent; // Whether is recurrent
+
         // Defaults
         VisibleLayerDesc()
         :
         size(4, 4, 16),
-        radius(2)
+        radius(2),
+        recurrent(false)
         {}
     };
 
@@ -122,9 +125,9 @@ public:
     // Defaults
     SparseCoder()
     :
-    alpha(0.01f),
-    beta(0.1f),
-    gamma(0.9f)
+    alpha(0.1f),
+    beta(0.5f),
+    gamma(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
