@@ -47,7 +47,7 @@ void SparseCoder::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        activations[hc] = (activations[hc] - minActivation + 1.0f);// * (1.0f - hiddenRefractories[hiddenIndex]);
+        activations[hc] = (activations[hc] - minActivation + 1.0f) * (1.0f - hiddenRefractories[hiddenIndex]);
 
         if (activations[hc] > maxActivation) {
             maxActivation = activations[hc];
@@ -110,8 +110,14 @@ void SparseCoder::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.weights);
 
-        for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
-            vl.weights.nonZeroValues[i] = weightDist(cs.rng);
+        if (vld.recurrent) {
+            for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
+                vl.weights.nonZeroValues[i] = 0.0f;
+        }
+        else {
+            for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
+                vl.weights.nonZeroValues[i] = weightDist(cs.rng);
+        }
 
         vl.inputCs = IntBuffer(numVisibleColumns, 0);
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
