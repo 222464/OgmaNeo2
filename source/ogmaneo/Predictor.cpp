@@ -12,8 +12,7 @@ using namespace ogmaneo;
 
 void Predictor::forward(
     const Int2 &pos,
-    std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs
+    std::mt19937 &rng
 ) {
     int maxIndex = 0;
     float maxActivation = -999999.0f;
@@ -29,7 +28,7 @@ void Predictor::forward(
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            sum += vl.weights.multiplyOHVs(vl.inputCs, hiddenIndex, vld.size.z);
             count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
@@ -75,7 +74,7 @@ void Predictor::prop(
 
     int visibleIndex = address3(Int3(pos.x, pos.y, vl.inputCsPrev[visibleColumnIndex]), vld.size);
 
-    (*errors)[visibleColumnIndex] = vl.weights.multiplyOHVsT.multiplyT(hiddenErrors, visibleIndex) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
+    (*errors)[visibleColumnIndex] += vl.weights.multiplyOHVsT.multiplyT(hiddenErrors, visibleIndex) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 }
 
 void Predictor::learn(
@@ -134,6 +133,7 @@ void Predictor::initRandom(
         if (vld.canPropagate)
             vl.weights.initT();
 
+        vl.inputCs = IntBuffer(numVisibleColumns, 0);
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
     }
 
@@ -156,7 +156,7 @@ void Predictor::activate(
     runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenActivations, &hiddenActivationsPrev), numHiddenColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
     // Forward kernel
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 
     // Copy to prevs
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -165,7 +165,8 @@ void Predictor::activate(
 
         int numVisibleColumns = vld.size.x * vld.size.y;
 
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &vl.inputCs, &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCs), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
     }
 }
 
@@ -219,6 +220,7 @@ void Predictor::writeToStream(
 
         writeSMToStream(os, vl.weights);
 
+        writeBufferToStream(os, &vl.inputCs);
         writeBufferToStream(os, &vl.inputCsPrev);
     }
 }
@@ -255,6 +257,7 @@ void Predictor::readFromStream(
 
         readSMFromStream(is, vl.weights);
 
+        readBufferFromStream(is, &vl.inputCs);
         readBufferFromStream(is, &vl.inputCsPrev);
     }
 }

@@ -32,6 +32,7 @@ public:
     struct VisibleLayer {
         SparseMatrix weights;
 
+        IntBuffer inputCs;
         IntBuffer inputCsPrev;
     };
 
@@ -51,8 +52,7 @@ private:
     
     void forward(
         const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        std::mt19937 &rng
     );
 
     void learnForward(
@@ -64,10 +64,9 @@ private:
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
+        SparseCoder* sc
     ) {
-        sc->forward(pos, rng, inputCs);
+        sc->forward(pos, rng);
     }
 
     static void learnForwardKernel(

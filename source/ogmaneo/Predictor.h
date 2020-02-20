@@ -35,6 +35,7 @@ public:
     struct VisibleLayer {
         SparseMatrix weights; // Weight matrix
 
+        IntBuffer inputCs;
         IntBuffer inputCsPrev; // Previous timestep (prev) input states
     };
 
@@ -56,8 +57,7 @@ private:
 
     void forward(
         const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        std::mt19937 &rng
     );
 
     void error(
@@ -82,10 +82,9 @@ private:
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Predictor* p,
-        const std::vector<const IntBuffer*> &inputCs
+        Predictor* p
     ) {
-        p->forward(pos, rng, inputCs);
+        p->forward(pos, rng);
     }
 
     static void errorKernel(

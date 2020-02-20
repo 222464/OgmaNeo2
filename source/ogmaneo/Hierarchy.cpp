@@ -21,6 +21,7 @@ void Hierarchy::initRandom(
 ) {
     // Create layers
     scLayers.resize(layerDescs.size());
+    scErrors.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
 
     ticks.assign(layerDescs.size(), 0);
@@ -60,7 +61,6 @@ void Hierarchy::initRandom(
 
                     scVisibleLayerDescs[index].size = inputSizes[i];
                     scVisibleLayerDescs[index].radius = layerDescs[l].ffRadius;
-                    scVisibleLayerDescs[index].recurrent = false;
                 }
             }
             
@@ -117,7 +117,6 @@ void Hierarchy::initRandom(
             for (int t = 0; t < layerDescs[l].temporalHorizon; t++) {
                 scVisibleLayerDescs[t].size = layerDescs[l - 1].hiddenSize;
                 scVisibleLayerDescs[t].radius = layerDescs[l].ffRadius;
-                scVisibleLayerDescs[t].recurrent = false;
             }
 
             int inSize = layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y;
@@ -152,13 +151,14 @@ void Hierarchy::initRandom(
 
             vld.size = layerDescs[l].hiddenSize;
             vld.radius = layerDescs[l].rRadius;
-            vld.recurrent = true;
 
             scVisibleLayerDescs.push_back(vld);
         }
 		
         // Create the sparse coding layer
         scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, scVisibleLayerDescs);
+
+        scErrors[l] = FloatBuffer(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0.0f);
     }
 }
 
@@ -167,6 +167,7 @@ const Hierarchy &Hierarchy::operator=(
 ) {
     // Layers
     scLayers = other.scLayers;
+    scErrors = other.scErrors;
 
     historySizes = other.historySizes;
     updates = other.updates;
@@ -308,15 +309,25 @@ void Hierarchy::step(
                 feedBackCs[1] = &pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]]->getHiddenCs();
             }
 
+            // Start error accumulation at0
+            if (learnEnabled)
+                runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &scErrors[l], 0.0f), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+
             // Step actor layers
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
-                    if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get());
-
                     pLayers[l][p]->activate(cs, feedBackCs);
+
+                    if (learnEnabled) {
+                        pLayers[l][p]->propagate(cs, l == 0 ? inputCs[p] : histories[l][p].get(), &scErrors[l], 0);
+
+                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get());
+                    }
                 }
             }
+
+            if (learnEnabled)
+                scLayers[l].learn(cs, &scErrors[l]);
 
             if (l == 0) {
                 // Step actors
@@ -358,6 +369,8 @@ void Hierarchy::writeToStream(
 
         scLayers[l].writeToStream(os);
 
+        writeBufferToStream(os, &scErrors[l]);
+
         // Predictors
         for (int v = 0; v < pLayers[l].size(); v++) {
             char exists = pLayers[l][v] != nullptr;
@@ -395,6 +408,7 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(inputSizes.data()), numInputs * sizeof(Int3));
 
     scLayers.resize(numLayers);
+    scErrors.resize(numLayers);
     pLayers.resize(numLayers);
 
     ticks.resize(numLayers);
@@ -426,6 +440,8 @@ void Hierarchy::readFromStream(
         }
 
         scLayers[l].readFromStream(is);
+
+        readBufferFromStream(is, &scErrors[l]);
         
         pLayers[l].resize(l == 0 ? inputSizes.size() : ticksPerUpdate[l]);
 

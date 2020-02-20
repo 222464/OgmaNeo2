@@ -56,6 +56,7 @@ public:
 private:
     // Layers
     std::vector<SparseCoder> scLayers;
+    std::vector<FloatBuffer> scErrors;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
     std::vector<std::unique_ptr<Actor>> aLayers;
 

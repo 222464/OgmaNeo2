@@ -12,8 +12,7 @@ using namespace ogmaneo;
 
 void SparseCoder::forward(
     const Int2 &pos,
-    std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs
+    std::mt19937 &rng
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
@@ -31,7 +30,7 @@ void SparseCoder::forward(
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            sum += vl.weights.multiplyOHVs(vl.inputCs, hiddenIndex, vld.size.z);
             count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
@@ -114,6 +113,7 @@ void SparseCoder::initRandom(
         for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
 
+        vl.inputCs = IntBuffer(numVisibleColumns, 0);
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
     }
 
@@ -132,8 +132,6 @@ void SparseCoder::activate(
 
     runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &hiddenCs, &hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
-    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
-
     // Copy to prevs
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
@@ -141,8 +139,11 @@ void SparseCoder::activate(
 
         int numVisibleColumns = vld.size.x * vld.size.y;
 
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &vl.inputCs, &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCs), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
     }
+
+    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 }
 
 void SparseCoder::learn(
@@ -182,6 +183,7 @@ void SparseCoder::writeToStream(
 
         writeSMToStream(os, vl.weights);
 
+        writeBufferToStream(os, &vl.inputCs);
         writeBufferToStream(os, &vl.inputCsPrev);
     }
 }
@@ -220,6 +222,7 @@ void SparseCoder::readFromStream(
 
         readSMFromStream(is, vl.weights);
 
+        readBufferFromStream(is, &vl.inputCs);
         readBufferFromStream(is, &vl.inputCsPrev);
     }
 }
