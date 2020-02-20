@@ -134,7 +134,7 @@ void SparseCoder::learnBackward(
 
         float delta = beta * vl.inputErrors[visibleIndex];
 
-        vl.fbWeights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
+        vl.fbWeights.deltaOHVsT(hiddenCsPrev, delta, visibleIndex, hiddenSize.z);
     }
 }
 
