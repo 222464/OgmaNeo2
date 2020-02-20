@@ -144,6 +144,15 @@ void Hierarchy::initRandom(
                 pLayers[l][p]->initRandom(cs, layerDescs[l - 1].hiddenSize, pVisibleLayerDescs);
             }
         }
+
+        if (layerDescs[l].rRadius >= 0) {
+            SparseCoder::VisibleLayerDesc vld;
+
+            vld.size = layerDescs[l].hiddenSize;
+            vld.radius = layerDescs[l].rRadius;
+
+            scVisibleLayerDescs.push_back(vld);
+        }
 		
         // Create the sparse coding layer
         scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, scVisibleLayerDescs);
@@ -253,8 +262,13 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
+            std::vector<const IntBuffer*> fullInputs = constGet(histories[l]);
+
+            if (fullInputs.size() < scLayers[l].getNumVisibleLayers())
+                fullInputs.push_back(&scLayers[l].getHiddenCsPrev());
+
             // Activate sparse coder
-            scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
+            scLayers[l].step(cs, fullInputs, learnEnabled);
 
             // Add to next layer's history
             if (l < scLayers.size() - 1) {

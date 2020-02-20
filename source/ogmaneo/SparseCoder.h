@@ -34,7 +34,7 @@ public:
         SparseMatrix fbWeights; // Reconstruction
 
         IntBuffer inputCsPrev;
-        
+
         FloatBuffer inputErrors;
     };
 
@@ -173,6 +173,11 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return hiddenCs;
+    }
+
+     // Get the previous hidden states
+    const IntBuffer &getHiddenCsPrev() const {
+        return hiddenCsPrev;
     }
 
     // Get the hidden size
