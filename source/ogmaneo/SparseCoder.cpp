@@ -47,7 +47,7 @@ void SparseCoder::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float refractoryActivation = (activations[hc] - minActivation + 1.0f) * (1.0f - hiddenRefractories[hiddenIndex]);
+        float refractoryActivation = (activations[hc] - minActivation) * (1.0f - hiddenRefractories[hiddenIndex]);
 
         if (refractoryActivation > maxActivation) {
             maxActivation = refractoryActivation;
@@ -60,9 +60,7 @@ void SparseCoder::forward(
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
 
-    int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), hiddenSize);
-
-    hiddenRefractories[hiddenIndexMax] = std::max(hiddenRefractories[hiddenIndexMax], std::tanh(activations[maxIndex]));
+    hiddenRefractories[address3(Int3(pos.x, pos.y, maxIndex), hiddenSize)] = 1.0f;
 }
 
 void SparseCoder::learnForward(
