@@ -33,6 +33,8 @@ public:
         SparseMatrix ffWeights; // Tile
         SparseMatrix fbWeights; // Reconstruction
 
+        IntBuffer inputCsPrev;
+        
         FloatBuffer inputErrors;
     };
 
@@ -40,7 +42,9 @@ private:
     Int3 hiddenSize; // Size of hidden/output layer
 
     IntBuffer hiddenCs; // Hidden states
-    FloatBuffer hiddenActivations;
+    IntBuffer hiddenCsPrev; // Previous hidden states
+
+    FloatBuffer hiddenRefractories;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -113,12 +117,14 @@ private:
 public:
     float alpha; // FF weight learning rate
     float beta; // FB weight learning rate
+    float gamma; // Refractory decay
 
     // Defaults
     SparseCoder()
     :
     alpha(0.1f),
-    beta(0.5f)
+    beta(0.1f),
+    gamma(0.9f)
     {}
 
     // Create a sparse coding layer with random initialization
