@@ -47,7 +47,7 @@ void SparseCoder::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        activations[hc] = (activations[hc] - minActivation + 1.0f) * (1.0f - hiddenRefractories[hiddenIndex]);
+        activations[hc] = (activations[hc] - minActivation + 1.0f);// * (1.0f - hiddenRefractories[hiddenIndex]);
 
         if (activations[hc] > maxActivation) {
             maxActivation = activations[hc];
