@@ -45,7 +45,7 @@ private:
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsPrev; // Previous hidden states
 
-    FloatBuffer hiddenRefractories;
+    FloatBuffer hiddenBiases;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -83,13 +83,13 @@ private:
 
 public:
     float alpha; // Weight learning rate
-    float gamma; // Refractory decay
+    float gamma; // Bias learning rate
 
     // Defaults
     SparseCoder()
     :
     alpha(0.1f),
-    gamma(0.98f)
+    gamma(0.001f)
     {}
 
     // Create a sparse coding layer with random initialization
