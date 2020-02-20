@@ -313,7 +313,7 @@ void Hierarchy::step(
                 feedBackCs[1] = &pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]]->getHiddenCs();
             }
 
-            // Start error accumulation at0
+            // Start error accumulation at 0
             if (learnEnabled)
                 runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &scErrors[l], 0.0f), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
