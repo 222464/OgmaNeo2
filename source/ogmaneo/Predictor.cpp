@@ -209,8 +209,6 @@ void Predictor::writeToStream(
     writeBufferToStream(os, &hiddenActivations);
     writeBufferToStream(os, &hiddenActivationsPrev);
 
-    writeBufferToStream(os, &hiddenErrors);
-
     int numVisibleLayers = visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -243,7 +241,7 @@ void Predictor::readFromStream(
     readBufferFromStream(is, &hiddenActivations);
     readBufferFromStream(is, &hiddenActivationsPrev);
 
-    readBufferFromStream(is, &hiddenErrors);
+    hiddenErrors = FloatBuffer(numHidden, 0.0f);
 
     int numVisibleLayers;
     
