@@ -91,7 +91,7 @@ public:
     Predictor()
     :
     alpha(0.1f),
-    historyIters(4)
+    historyIters(3)
     {}
 
     // Create with random initialization

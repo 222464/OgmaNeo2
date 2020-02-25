@@ -184,10 +184,10 @@ void Predictor::writeToStream(
 void Predictor::readFromStream(
     std::istream &is
 ) {
-    is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
-
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
+
+    is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
