@@ -276,7 +276,7 @@ void Hierarchy::step(
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get(), std::vector<const IntBuffer*>{ &scLayers[l].getHiddenCs(), &hiddenCsPrev[l] });
+                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get(), std::vector<const IntBuffer*>{ &hiddenCsPrev[l], &scLayers[l].getHiddenCs() });
 
                     pLayers[l][p]->activate(cs, feedBackCs);
                 }
