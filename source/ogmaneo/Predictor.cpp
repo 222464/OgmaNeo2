@@ -74,9 +74,6 @@ void Predictor::initRandom(
 
     std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
-    // Create layers
-    int numVisibleColumns = visibleLayerDesc.size.x * visibleLayerDesc.size.y;
-
     // Create weight matrix for this visible layer and initialize randomly
     initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weights);
 
@@ -89,6 +86,8 @@ void Predictor::initRandom(
     // Create (pre-allocated) history samples
     historySize = 0;
     historySamples.resize(historyCapacity);
+
+    int numVisibleColumns = visibleLayerDesc.size.x * visibleLayerDesc.size.y;
 
     for (int i = 0; i < historySamples.size(); i++) {
         historySamples[i] = std::make_shared<HistorySample>();
@@ -139,16 +138,18 @@ void Predictor::learn(
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenTargetCs, &s.hiddenTargetCs), hiddenTargetCs->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
     }
 
-    std::uniform_int_distribution<int> historyDist(1, historySize - 1);
+    if (historySize > 1) {
+        std::uniform_int_distribution<int> historyDist(1, historySize - 1);
 
-    for (int it = 0; it < historyIters; it++) {
-        int t = historyDist(cs.rng);
+        for (int it = 0; it < historyIters; it++) {
+            int t = historyDist(cs.rng);
 
-        const HistorySample &s = *historySamples[t];
-        const HistorySample &sPrev = *historySamples[t - 1];
+            const HistorySample &s = *historySamples[t];
+            const HistorySample &sPrev = *historySamples[t - 1];
 
-        // Learn kernel
-        runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &historySamples[historySize - 1]->inputCs, &sPrev.inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            // Learn kernel
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &historySamples[historySize - 1]->inputCs, &sPrev.inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+        }
     }
 }
 
