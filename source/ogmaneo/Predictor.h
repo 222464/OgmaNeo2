@@ -59,7 +59,8 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
         const IntBuffer* inputCs,
-        const IntBuffer* inputCsPrev
+        const IntBuffer* inputCsPrev,
+        float dist
     );
 
     static void forwardKernel(
@@ -78,9 +79,10 @@ private:
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
         const IntBuffer* inputCs,
-        const IntBuffer* inputCsPrev
+        const IntBuffer* inputCsPrev,
+        float dist
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCs, inputCsPrev);
+        p->learn(pos, rng, hiddenTargetCs, inputCs, inputCsPrev, dist);
     }
 
 public:

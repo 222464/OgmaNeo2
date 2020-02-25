@@ -39,23 +39,22 @@ void Predictor::learn(
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs,
     const IntBuffer* inputCs,
-    const IntBuffer* inputCsPrev
+    const IntBuffer* inputCsPrev,
+    float dist
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
 
-        float sum = weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
+    float sum = weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) -
+        weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
-        float delta = alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+    float delta = alpha * (dist - sum);
 
-        weights.deltaOHVs(*inputCs, delta, hiddenIndex, visibleLayerDesc.size.z);
-        weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
-    }
+    weights.deltaOHVs(*inputCs, delta, hiddenIndex, visibleLayerDesc.size.z);
+    weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
 }
 
 void Predictor::initRandom(
@@ -72,7 +71,7 @@ void Predictor::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
+    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
 
     // Create weight matrix for this visible layer and initialize randomly
     initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weights);
@@ -145,8 +144,10 @@ void Predictor::learn(
             const HistorySample &s = *historySamples[t];
             const HistorySample &sPrev = *historySamples[t - 1];
 
+            float dist = static_cast<float>(historySize - 1 - t) / static_cast<float>(historySize - 1);
+
             // Learn kernel
-            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &historySamples[historySize - 1]->inputCs, &sPrev.inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &historySamples[historySize - 1]->inputCs, &sPrev.inputCs, dist), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 }
