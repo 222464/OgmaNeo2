@@ -79,20 +79,17 @@ void Hierarchy::initRandom(
             pLayers[l].resize(inputSizes.size());
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
+            Predictor::VisibleLayerDesc pVisibleLayerDesc;
 
-            pVisibleLayerDescs[0].size = layerDescs[l].hiddenSize;
-            pVisibleLayerDescs[0].radius = layerDescs[l].pRadius;
-
-            if (l < scLayers.size() - 1)
-                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
+            pVisibleLayerDesc.size = layerDescs[l].hiddenSize;
+            pVisibleLayerDesc.radius = layerDescs[l].pRadius;
 
             // Create predictors
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::prediction) {
                     pLayers[l][p] = std::make_unique<Predictor>();
 
-                    pLayers[l][p]->initRandom(cs, inputSizes[p], pVisibleLayerDescs);
+                    pLayers[l][p]->initRandom(cs, inputSizes[p], layerDescs[l].historyCapacity, pVisibleLayerDesc);
                 }
             }
         }
@@ -115,19 +112,16 @@ void Hierarchy::initRandom(
             pLayers[l].resize(layerDescs[l].ticksPerUpdate);
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
+            Predictor::VisibleLayerDesc pVisibleLayerDesc;
 
-            pVisibleLayerDescs[0].size = layerDescs[l].hiddenSize;
-            pVisibleLayerDescs[0].radius = layerDescs[l].pRadius;
-
-            if (l < scLayers.size() - 1)
-                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
+            pVisibleLayerDesc.size = layerDescs[l].hiddenSize;
+            pVisibleLayerDesc.radius = layerDescs[l].pRadius;
 
             // Create predictors
             for (int p = 0; p < pLayers[l].size(); p++) {
                 pLayers[l][p] = std::make_unique<Predictor>();
 
-                pLayers[l][p]->initRandom(cs, layerDescs[l - 1].hiddenSize, pVisibleLayerDescs);
+                pLayers[l][p]->initRandom(cs, layerDescs[l - 1].hiddenSize, layerDescs[l].historyCapacity, pVisibleLayerDesc);
             }
         }
 		
@@ -260,25 +254,23 @@ void Hierarchy::step(
     for (int l = scLayers.size() - 1; l >= 0; l--) {
         if (updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCs(2);
-
-            feedBackCs[0] = &scLayers[l].getHiddenCs();
+            const IntBuffer* feedBackCs;
 
             if (l < scLayers.size() - 1) {
                 assert(pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]] != nullptr);
 
-                feedBackCs[1] = &pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]]->getHiddenCs();
+                feedBackCs = &pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]]->getHiddenCs();
             }
             else
-                feedBackCs[1] = goalCs;
+                feedBackCs = goalCs;
 
             // Step actor layers
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get(), std::vector<const IntBuffer*>{ &hiddenCsPrev[l], &scLayers[l].getHiddenCs() });
+                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get(), &scLayers[l].getHiddenCs());
 
-                    pLayers[l][p]->activate(cs, feedBackCs);
+                    pLayers[l][p]->activate(cs, feedBackCs, &scLayers[l].getHiddenCs());
                 }
             }
         }
