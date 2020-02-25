@@ -7,6 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "Predictor.h"
+#include <iostream>
 
 using namespace ogmaneo;
 
@@ -26,7 +27,9 @@ void Predictor::forward(
 
         float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
             weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) +
-            (hc == hiddenCs[hiddenColumnIndex] ? 0.001f : 0.0f); // Small boost for non-changing inputs
+            (hc == hiddenCs[hiddenColumnIndex] ? 0.0001f : 0.0f); // Small bias for non-changing inputs
+
+        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -49,12 +52,33 @@ void Predictor::learn(
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
+    float nextScale = 0.0f;
+
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+        if (hc == targetC) // Small optization
+            continue;
+
+        float sum = weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+
+        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
+        
+        nextScale = std::max(nextScale, sum);
+    }
+
+    nextScale = std::min(1.0f, nextScale);
+
+    float decay = 1.0f / maxDistance;
+
     int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
 
     float sum = weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) -
         weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
-    float delta = alpha * (scale - sum);
+    sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
+        
+    float delta = alpha * (std::max(scale, nextScale - decay) - sum);
 
     weights.deltaOHVs(*inputCs, delta, hiddenIndex, visibleLayerDesc.size.z);
     weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
