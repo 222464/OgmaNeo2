@@ -152,7 +152,7 @@ void Predictor::learn(
             const HistorySample &s = *historySamples[t + 1];
             const HistorySample &sPrev = *historySamples[t];
 
-            float scale = static_cast<float>(historySize - 1 - t) / static_cast<float>(historySize - 1);
+            float scale = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance);
 
             // Learn kernel
             runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &sPrev.inputCs, scale), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
