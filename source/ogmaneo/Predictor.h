@@ -92,8 +92,8 @@ public:
     // Defaults
     Predictor()
     :
-    alpha(0.1f),
-    historyIters(3)
+    alpha(0.01f),
+    historyIters(8)
     {}
 
     // Create with random initialization
