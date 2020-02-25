@@ -50,7 +50,6 @@ private:
     // Layers
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
-    std::vector<IntBuffer> hiddenCsPrev;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;

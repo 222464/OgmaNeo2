@@ -22,7 +22,6 @@ void Hierarchy::initRandom(
     // Create layers
     scLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
-    hiddenCsPrev.resize(layerDescs.size());
 
     ticks.assign(layerDescs.size(), 0);
 
@@ -127,8 +126,6 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, scVisibleLayerDescs);
-
-        hiddenCsPrev[l].resize(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0);
     }
 }
 
@@ -223,9 +220,6 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
-            // Copy
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &hiddenCsPrev[l]), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
-
             // Activate sparse coder
             scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
 
@@ -315,8 +309,6 @@ void Hierarchy::writeToStream(
             if (exists)
                 pLayers[l][v]->writeToStream(os);
         }
-
-        writeBufferToStream(os, &hiddenCsPrev[l]);
     }
 }
 
@@ -336,7 +328,6 @@ void Hierarchy::readFromStream(
 
     scLayers.resize(numLayers);
     pLayers.resize(numLayers);
-    hiddenCsPrev.resize(numLayers);
 
     ticks.resize(numLayers);
 
@@ -383,7 +374,5 @@ void Hierarchy::readFromStream(
             else
                 pLayers[l][v] = nullptr;
         }
-
-        readBufferFromStream(is, &hiddenCsPrev[l]);
     }
 }
