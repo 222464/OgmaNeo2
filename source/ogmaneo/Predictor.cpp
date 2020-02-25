@@ -16,6 +16,8 @@ void Predictor::forward(
     const IntBuffer* goalCs,
     const IntBuffer* inputCs
 ) {
+    int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
+
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
@@ -23,7 +25,8 @@ void Predictor::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) +
+            (hc == hiddenCs[hiddenColumnIndex] ? 0.001f : 0.0f); // Small boost for non-changing inputs
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -31,7 +34,7 @@ void Predictor::forward(
         }
     }
 
-    hiddenCs[address2(pos, Int2(hiddenSize.x, hiddenSize.y))] = maxIndex;
+    hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void Predictor::learn(
@@ -71,7 +74,7 @@ void Predictor::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create weight matrix for this visible layer and initialize randomly
     initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weights);
