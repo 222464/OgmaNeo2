@@ -131,11 +131,9 @@ void Predictor::learn(
     {
         HistorySample &s = *historySamples[historySize - 1];
 
-        // Copy visible Cs
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs, &s.inputCs), inputCs->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
-
-        // Copy hidden Cs
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenTargetCs, &s.hiddenTargetCs), hiddenTargetCs->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs, &s.inputCs), inputCs->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
     }
 
     if (historySize > 1) {
