@@ -43,7 +43,7 @@ void Predictor::learn(
     const IntBuffer* hiddenTargetCs,
     const IntBuffer* inputCs,
     const IntBuffer* inputCsPrev,
-    float dist
+    float scale
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
@@ -54,7 +54,7 @@ void Predictor::learn(
     float sum = weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) -
         weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
-    float delta = alpha * (dist - sum);
+    float delta = alpha * (scale - sum);
 
     weights.deltaOHVs(*inputCs, delta, hiddenIndex, visibleLayerDesc.size.z);
     weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
@@ -139,18 +139,23 @@ void Predictor::learn(
     }
 
     if (historySize > 1) {
-        std::uniform_int_distribution<int> historyDist(1, historySize - 1);
+        std::uniform_int_distribution<int> historyDist(0, historySize - 2);
 
         for (int it = 0; it < historyIters; it++) {
             int t = historyDist(cs.rng);
 
-            const HistorySample &s = *historySamples[t];
-            const HistorySample &sPrev = *historySamples[t - 1];
+            std::uniform_int_distribution<int> distDist(1, std::min(historySize - 1 - t, maxDistance));
 
-            float dist = static_cast<float>(historySize - 1 - t) / static_cast<float>(historySize - 1);
+            int dist = distDist(cs.rng);
+
+            const HistorySample &sDist = *historySamples[t + dist];
+            const HistorySample &s = *historySamples[t + 1];
+            const HistorySample &sPrev = *historySamples[t];
+
+            float scale = static_cast<float>(historySize - 1 - t) / static_cast<float>(historySize - 1);
 
             // Learn kernel
-            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &historySamples[historySize - 1]->inputCs, &sPrev.inputCs, dist), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &sPrev.inputCs, scale), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 }
