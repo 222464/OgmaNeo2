@@ -87,7 +87,7 @@ void Hierarchy::initRandom(
             if (l < scLayers.size() - 1)
                 pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
-            // Create actors
+            // Create predictors
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::prediction) {
                     pLayers[l][p] = std::make_unique<Predictor>();
@@ -123,7 +123,7 @@ void Hierarchy::initRandom(
             if (l < scLayers.size() - 1)
                 pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
-            // Create actors
+            // Create predictors
             for (int p = 0; p < pLayers[l].size(); p++) {
                 pLayers[l][p] = std::make_unique<Predictor>();
 

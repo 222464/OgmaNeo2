@@ -28,19 +28,22 @@ public:
         {}
     };
 
-    // Visible layer
-    struct VisibleLayer {
-        SparseMatrix weights; // Weight matrix
+    struct HistorySample {
+        IntBuffer inputCs;
+        IntBuffer hiddenTargetCs;
     };
 
 private:
     Int3 hiddenSize; // Size of the output/hidden/prediction
 
+    int historySize;
+
     IntBuffer hiddenCs; // Hidden state
 
-    // Visible layers and descs
-    std::vector<VisibleLayer> visibleLayers;
-    std::vector<VisibleLayerDesc> visibleLayerDescs;
+    SparseMatrix weights; // Weight matrix
+    VisibleLayerDesc visibleLayerDesc;
+
+    std::vector<HistorySample> historySamples;
 
     // --- Kernels ---
 
@@ -78,31 +81,34 @@ private:
 
 public:
     float alpha; // Learning rate
+    int historyIters;
 
     // Defaults
     Predictor()
     :
-    alpha(0.5f)
+    alpha(0.1f),
+    historyIters(4)
     {}
 
     // Create with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output/prediction size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+        const VisibleLayerDesc &visibleLayerDesc
     ); 
 
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction size
+        const IntBuffer* goalCs,
+        const IntBuffer* inputCs
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction size
+        const IntBuffer* inputCs
     );
 
     // Write to stream
@@ -115,23 +121,9 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get number of visible layers
-    int getNumVisibleLayers() const {
-        return visibleLayers.size();
-    }
-
-    // Get a visible layer
-    const VisibleLayer &getVisibleLayer(
-        int i // Index of visible layer
-    ) const {
-        return visibleLayers[i];
-    }
-
     // Get a visible layer descriptor
-    const VisibleLayerDesc &getVisibleLayerDesc(
-        int i // Index of visible layer
-    ) const {
-        return visibleLayerDescs[i];
+    const VisibleLayerDesc &getVisibleLayerDesc() const {
+        return visibleLayerDesc;
     }
 
     // Get the hidden activations (predictions)
@@ -142,13 +134,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return visibleLayers[i].weights;
     }
 };
 } // Namespace ogmaneo
