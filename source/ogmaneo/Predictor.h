@@ -43,30 +43,33 @@ private:
     SparseMatrix weights; // Weight matrix
     VisibleLayerDesc visibleLayerDesc;
 
-    std::vector<HistorySample> historySamples;
+    std::vector<std::shared_ptr<HistorySample>> historySamples;
 
     // --- Kernels ---
 
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const IntBuffer* goalCs,
+        const IntBuffer* inputCs
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const IntBuffer* inputCs,
+        const IntBuffer* inputCsPrev
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const std::vector<const IntBuffer*> &inputCs
+        const IntBuffer* goalCs,
+        const IntBuffer* inputCs
     ) {
-        p->forward(pos, rng, inputCs);
+        p->forward(pos, rng, goalCs, inputCs);
     }
 
     static void learnKernel(
@@ -74,9 +77,10 @@ private:
         std::mt19937 &rng,
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs
+        const IntBuffer* inputCs,
+        const IntBuffer* inputCsPrev
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCs);
+        p->learn(pos, rng, hiddenTargetCs, inputCs, inputCsPrev);
     }
 
 public:
@@ -94,6 +98,7 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output/prediction size
+        int historyCapacity,
         const VisibleLayerDesc &visibleLayerDesc
     ); 
 
