@@ -22,6 +22,7 @@ void Hierarchy::initRandom(
     // Create layers
     scLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
+    hiddenCsPrev.resize(layerDescs.size());
 
     ticks.assign(layerDescs.size(), 0);
 
@@ -76,7 +77,6 @@ void Hierarchy::initRandom(
 
             // Predictors
             pLayers[l].resize(inputSizes.size());
-            aLayers.resize(inputSizes.size());
 
             // Predictor visible layer descriptors
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
@@ -87,26 +87,12 @@ void Hierarchy::initRandom(
             if (l < scLayers.size() - 1)
                 pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
-            // Actor visible layer descriptors
-            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(1);
-
-            aVisibleLayerDescs[0].size = layerDescs[l].hiddenSize;
-            aVisibleLayerDescs[0].radius = layerDescs[l].aRadius;
-
-            if (l < scLayers.size() - 1)
-                aVisibleLayerDescs.push_back(aVisibleLayerDescs[0]);
-
             // Create actors
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::prediction) {
                     pLayers[l][p] = std::make_unique<Predictor>();
 
                     pLayers[l][p]->initRandom(cs, inputSizes[p], pVisibleLayerDescs);
-                }
-                else if (inputTypes[p] == InputType::action) {
-                    aLayers[p] = std::make_unique<Actor>();
-
-                    aLayers[p]->initRandom(cs, inputSizes[p], layerDescs[l].historyCapacity, aVisibleLayerDescs);
                 }
             }
         }
@@ -147,6 +133,8 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, scVisibleLayerDescs);
+
+        hiddenCsPrev[l].resize(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0);
     }
 }
 
@@ -187,26 +175,14 @@ const Hierarchy &Hierarchy::operator=(
         }
     }
 
-    aLayers.resize(inputSizes.size());
-    
-    for (int v = 0; v < aLayers.size(); v++) {
-        if (other.aLayers[v] != nullptr) {
-            aLayers[v] = std::make_unique<Actor>();
-
-            (*aLayers[v]) = (*other.aLayers[v]);
-        }
-        else
-            aLayers[v] = nullptr;
-    }
-
     return *this;
 }
 
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
-    bool learnEnabled,
-    float reward
+    const IntBuffer* goalCs,
+    bool learnEnabled
 ) {
     assert(inputCs.size() == inputSizes.size());
 
@@ -253,6 +229,9 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
+            // Copy
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &hiddenCsPrev[l]), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+
             // Activate sparse coder
             scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
 
@@ -281,7 +260,7 @@ void Hierarchy::step(
     for (int l = scLayers.size() - 1; l >= 0; l--) {
         if (updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCs(l < scLayers.size() - 1 ? 2 : 1);
+            std::vector<const IntBuffer*> feedBackCs(2);
 
             feedBackCs[0] = &scLayers[l].getHiddenCs();
 
@@ -290,22 +269,16 @@ void Hierarchy::step(
 
                 feedBackCs[1] = &pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]]->getHiddenCs();
             }
+            else
+                feedBackCs[1] = goalCs;
 
             // Step actor layers
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get());
+                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get(), std::vector<const IntBuffer*>{ &scLayers[l].getHiddenCs(), &hiddenCsPrev[l] });
 
                     pLayers[l][p]->activate(cs, feedBackCs);
-                }
-            }
-
-            if (l == 0) {
-                // Step actors
-                for (int p = 0; p < aLayers.size(); p++) {
-                    if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled);
                 }
             }
         }
@@ -350,16 +323,8 @@ void Hierarchy::writeToStream(
             if (exists)
                 pLayers[l][v]->writeToStream(os);
         }
-    }
 
-    // Actors
-    for (int v = 0; v < aLayers.size(); v++) {
-        char exists = aLayers[v] != nullptr;
-
-        os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
-
-        if (exists)
-            aLayers[v]->writeToStream(os);
+        writeBufferToStream(os, &hiddenCsPrev[l]);
     }
 }
 
@@ -379,6 +344,7 @@ void Hierarchy::readFromStream(
 
     scLayers.resize(numLayers);
     pLayers.resize(numLayers);
+    hiddenCsPrev.resize(numLayers);
 
     ticks.resize(numLayers);
 
@@ -425,21 +391,7 @@ void Hierarchy::readFromStream(
             else
                 pLayers[l][v] = nullptr;
         }
-    }
 
-    // Actors
-    aLayers.resize(inputSizes.size());
-
-    for (int v = 0; v < aLayers.size(); v++) {
-        char exists;
-
-        is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-        if (exists) {
-            aLayers[v] = std::make_unique<Actor>();
-            aLayers[v]->readFromStream(is);
-        }
-        else
-            aLayers[v] = nullptr;
+        readBufferFromStream(is, &hiddenCsPrev[l]);
     }
 }

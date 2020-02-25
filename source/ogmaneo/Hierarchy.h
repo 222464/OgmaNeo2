@@ -10,7 +10,6 @@
 
 #include "SparseCoder.h"
 #include "Predictor.h"
-#include "Actor.h"
 
 #include <memory>
 
@@ -18,8 +17,7 @@ namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
     none = 0,
-    prediction = 1,
-    action = 2
+    prediction = 1
 };
 
 // A SPH
@@ -55,7 +53,7 @@ private:
     // Layers
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
-    std::vector<std::unique_ptr<Actor>> aLayers;
+    std::vector<IntBuffer> hiddenCsPrev;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
@@ -98,8 +96,8 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
+        const IntBuffer* goalCs,
+        bool learnEnabled = true // Whether learning is enabled
     );
 
     // Write to stream
@@ -121,9 +119,6 @@ public:
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        if (aLayers[i] != nullptr) // If is an action layer
-            return aLayers[i]->getHiddenCs();
-
         return pLayers.front()[i]->getHiddenCs();
     }
 
@@ -179,16 +174,6 @@ public:
         int l // Layer index
     ) const {
         return pLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Actor>> &getALayers() {
-        return aLayers;
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
-        return aLayers;
     }
 };
 } // namespace ogmaneo
