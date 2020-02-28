@@ -19,15 +19,14 @@ void Predictor::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int maxIndex = 0;
+    int maxIndex = hiddenCs[hiddenColumnIndex];
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) +
-            (hc == hiddenCs[hiddenColumnIndex] ? 0.0001f : 0.0f); // Small bias for non-changing inputs
+            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z;
 
         sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
 
