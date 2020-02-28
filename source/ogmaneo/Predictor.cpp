@@ -66,8 +66,6 @@ void Predictor::learn(
         nextQ = std::max(nextQ, sum);
     }
 
-    float decay = 1.0f / maxDistance;
-
     int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
 
     float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
@@ -173,7 +171,7 @@ void Predictor::learn(
             const HistorySample &s = *historySamples[t + 1];
             const HistorySample &sPrev = *historySamples[t];
 
-            float reward = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance);
+            float reward = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance - 1);
 
             // Learn kernel
             runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, reward), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
