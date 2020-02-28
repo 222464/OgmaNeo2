@@ -96,7 +96,7 @@ public:
     Predictor()
     :
     alpha(0.01f),
-    historyIters(32),
+    historyIters(8),
     maxDistance(8)
     {}
 
