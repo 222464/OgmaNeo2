@@ -58,9 +58,6 @@ void Predictor::learn(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        if (hc == targetC) // Small optization
-            continue;
-
         float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
             weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
