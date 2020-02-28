@@ -47,13 +47,13 @@ void Predictor::learn(
     const IntBuffer* inputCsGoal,
     const IntBuffer* inputCs,
     const IntBuffer* inputCsPrev,
-    float scale
+    float reward
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
-    float nextScale = 0.0f;
+    float nextQ = 0.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
@@ -63,10 +63,8 @@ void Predictor::learn(
 
         sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
         
-        nextScale = std::max(nextScale, sum);
+        nextQ = std::max(nextQ, sum);
     }
-
-    nextScale = std::min(1.0f, nextScale);
 
     float decay = 1.0f / maxDistance;
 
@@ -77,7 +75,7 @@ void Predictor::learn(
 
     sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
         
-    float delta = alpha * (std::max(scale, nextScale - decay) - sum);
+    float delta = alpha * (reward + gamma * nextQ - sum);
 
     weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
     weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
@@ -175,10 +173,10 @@ void Predictor::learn(
             const HistorySample &s = *historySamples[t + 1];
             const HistorySample &sPrev = *historySamples[t];
 
-            float scale = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance);
+            float reward = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance);
 
             // Learn kernel
-            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, scale), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, reward), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 }
@@ -192,6 +190,7 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
 
@@ -222,6 +221,7 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
 

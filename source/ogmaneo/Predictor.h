@@ -61,7 +61,7 @@ private:
         const IntBuffer* inputCsGoal,
         const IntBuffer* inputCs,
         const IntBuffer* inputCsPrev,
-        float scale
+        float reward
     );
 
     static void forwardKernel(
@@ -82,13 +82,14 @@ private:
         const IntBuffer* inputCsGoal,
         const IntBuffer* inputCs,
         const IntBuffer* inputCsPrev,
-        float scale
+        float reward
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCsGoal, inputCs, inputCsPrev, scale);
+        p->learn(pos, rng, hiddenTargetCs, inputCsGoal, inputCs, inputCsPrev, reward);
     }
 
 public:
     float alpha; // Learning rate
+    float gamma; // Discount
     int historyIters;
     int maxDistance;
 
@@ -96,6 +97,7 @@ public:
     Predictor()
     :
     alpha(0.01f),
+    gamma(0.9f),
     historyIters(8),
     maxDistance(8)
     {}
