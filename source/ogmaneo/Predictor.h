@@ -58,6 +58,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
+        const IntBuffer* inputCsGoal,
         const IntBuffer* inputCs,
         const IntBuffer* inputCsPrev,
         float scale
@@ -78,11 +79,12 @@ private:
         std::mt19937 &rng,
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
+        const IntBuffer* inputCsGoal,
         const IntBuffer* inputCs,
         const IntBuffer* inputCsPrev,
         float scale
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCs, inputCsPrev, scale);
+        p->learn(pos, rng, hiddenTargetCs, inputCsGoal, inputCs, inputCsPrev, scale);
     }
 
 public:

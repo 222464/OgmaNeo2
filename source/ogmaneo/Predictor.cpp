@@ -44,6 +44,7 @@ void Predictor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs,
+    const IntBuffer* inputCsGoal,
     const IntBuffer* inputCs,
     const IntBuffer* inputCsPrev,
     float scale
@@ -60,7 +61,8 @@ void Predictor::learn(
         if (hc == targetC) // Small optization
             continue;
 
-        float sum = weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+        float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
+            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
         sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
         
@@ -73,14 +75,14 @@ void Predictor::learn(
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
 
-    float sum = weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z) -
+    float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
         weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
     sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
         
     float delta = alpha * (std::max(scale, nextScale - decay) - sum);
 
-    weights.deltaOHVs(*inputCs, delta, hiddenIndex, visibleLayerDesc.size.z);
+    weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
     weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
 }
 
@@ -179,7 +181,7 @@ void Predictor::learn(
             float scale = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance);
 
             // Learn kernel
-            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &sPrev.inputCs, scale), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, scale), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 }
