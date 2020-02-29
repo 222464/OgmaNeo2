@@ -67,7 +67,15 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void learn(
+    void learnValue(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCsPrev,
+        float q,
+        float g
+    );
+
+    void learnAction(
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
@@ -86,7 +94,18 @@ private:
         a->forward(pos, rng, inputCs);
     }
 
-    static void learnKernel(
+    static void learnValueKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        Actor* a,
+        const std::vector<const IntBuffer*> &inputCsPrev,
+        float q,
+        float g
+    ) {
+        a->learnValue(pos, rng, inputCsPrev, q, g);
+    }
+
+    static void learnActionKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
@@ -96,7 +115,7 @@ private:
         float q,
         float g
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        a->learnAction(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
     }
 
 public:
@@ -110,7 +129,7 @@ public:
     Actor()
     :
     alpha(0.01f),
-    beta(0.01f),
+    beta(0.1f),
     gamma(0.99f),
     historyIters(8)
     {}

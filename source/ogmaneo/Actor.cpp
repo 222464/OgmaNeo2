@@ -86,20 +86,18 @@ void Actor::forward(
     hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
-void Actor::learn(
+void Actor::learnValue(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCsPrev,
-    const IntBuffer* hiddenCsPrev,
-    const FloatBuffer* hiddenValuesPrev,
     float q,
     float g
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    // --- Value Prev ---
-
     float newValue = q + g * hiddenValues[hiddenColumnIndex];
+
+    // --- Value Prev ---
 
     float value = 0.0f;
     int count = 0;
@@ -116,7 +114,6 @@ void Actor::learn(
     value /= std::max(1, count);
 
     float tdErrorValue = newValue - value;
-    float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
 
     float deltaValue = alpha * tdErrorValue;
 
@@ -127,8 +124,24 @@ void Actor::learn(
 
         vl.valueWeights.deltaOHVs(*inputCsPrev[vli], deltaValue, hiddenColumnIndex, vld.size.z);
     }
+}
+
+void Actor::learnAction(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const std::vector<const IntBuffer*> &inputCsPrev,
+    const IntBuffer* hiddenCsPrev,
+    const FloatBuffer* hiddenValuesPrev,
+    float q,
+    float g
+) {
+    int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
+
+    float newValue = q + g * hiddenValues[hiddenColumnIndex];
 
     // --- Action ---
+
+    float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
 
     int targetC = (*hiddenCsPrev)[address2(pos, Int2(hiddenSize.x, hiddenSize.y))];
 
@@ -139,6 +152,7 @@ void Actor::learn(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -146,6 +160,7 @@ void Actor::learn(
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
             sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
+            count += vl.actionWeights.count(hiddenIndex) / vld.size.z;
         }
 
         sum /= std::max(1, count);
@@ -331,7 +346,6 @@ void Actor::step(
             int historyIndex = historyDist(cs.rng);
 
             const HistorySample &sPrev = *historySamples[historyIndex - 1];
-            const HistorySample &s = *historySamples[historyIndex];
 
             // Compute (partial) values, rest is completed in the kernel
             float q = 0.0f;
@@ -344,8 +358,23 @@ void Actor::step(
             }
 
             // Learn kernel
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValues, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(Actor::learnValueKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
+
+        const HistorySample &sPrev = *historySamples[0];
+        const HistorySample &s = *historySamples[1];
+
+        // Compute (partial) values, rest is completed in the kernel
+        float q = 0.0f;
+        float g = 1.0f;
+
+        for (int t = 1; t < historySize; t++) {
+            q += historySamples[t]->reward * g;
+
+            g *= gamma;
+        }
+
+        runKernel2(cs, std::bind(Actor::learnActionKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValues, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
     }
 }
 
