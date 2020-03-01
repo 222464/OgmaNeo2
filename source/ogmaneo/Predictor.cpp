@@ -52,19 +52,30 @@ void Predictor::learn(
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
+    float nextQ = 0.0f;
+
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
+            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
         sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
-            
-        float delta = alpha * closeness * closeness * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
-
-        weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
-        weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
+        
+        nextQ = std::max(nextQ, sum);
     }
+
+    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
+
+    float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
+        weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
+
+    sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
+        
+    float delta = alpha * (closeness + gamma * nextQ - sum);
+
+    weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
+    weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
 }
 
 void Predictor::initRandom(
@@ -113,6 +124,11 @@ const Predictor &Predictor::operator=(
     visibleLayerDesc = other.visibleLayerDesc;
     
     hiddenSize = other.hiddenSize;
+
+    alpha = other.alpha;
+    gamma = other.gamma;
+    historyIters = other.historyIters;
+    maxDistance = other.maxDistance;
 
     weights = other.weights;
 
@@ -200,6 +216,7 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
     os.write(reinterpret_cast<const char*>(&maxDistance), sizeof(int));
 
@@ -232,6 +249,7 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
     is.read(reinterpret_cast<char*>(&maxDistance), sizeof(int));
 

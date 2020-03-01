@@ -89,6 +89,7 @@ private:
 
 public:
     float alpha; // Learning rate
+    float gamma; // Discount
     int historyIters;
     int maxDistance;
 
@@ -96,6 +97,7 @@ public:
     Predictor()
     :
     alpha(0.01f),
+    gamma(0.9f),
     historyIters(16),
     maxDistance(8)
     {}
