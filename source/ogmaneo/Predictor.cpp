@@ -127,6 +127,8 @@ const Predictor &Predictor::operator=(
 
         *historySamples[i] = *other.historySamples[i];
     }
+
+    return *this;
 }
 
 void Predictor::activate(

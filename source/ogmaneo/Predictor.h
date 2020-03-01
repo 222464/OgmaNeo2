@@ -102,7 +102,7 @@ public:
 
     // Copy
     Predictor(
-        const Hierarchy &other // Predictor to copy from
+        const Predictor &other // Predictor to copy from
     ) {
         *this = other;
     }
