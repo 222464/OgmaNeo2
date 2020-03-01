@@ -98,7 +98,7 @@ public:
     :
     alpha(0.01f),
     gamma(0.9f),
-    historyIters(16),
+    historyIters(3),
     maxDistance(8)
     {}
 
