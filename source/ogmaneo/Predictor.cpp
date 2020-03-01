@@ -26,7 +26,7 @@ void Predictor::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z;
+            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
         sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
 
@@ -52,30 +52,19 @@ void Predictor::learn(
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
-    float nextQ = 0.0f;
-
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+            weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
         sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
-        
-        nextQ = std::max(nextQ, sum);
+            
+        float delta = alpha * reward * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+
+        weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
+        weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
     }
-
-    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
-
-    float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
-        weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
-
-    sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
-        
-    float delta = alpha * (reward + gamma * nextQ - sum);
-
-    weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
-    weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
 }
 
 void Predictor::initRandom(
@@ -115,6 +104,28 @@ void Predictor::initRandom(
         historySamples[i]->inputCs = IntBuffer(numVisibleColumns);
 
         historySamples[i]->hiddenTargetCs = IntBuffer(numHiddenColumns);
+    }
+}
+
+const Predictor &Predictor::operator=(
+    const Predictor &other
+) {
+    visibleLayerDesc = other.visibleLayerDesc;
+    
+    hiddenSize = other.hiddenSize;
+
+    weights = other.weights;
+
+    hiddenCs = other.hiddenCs;
+
+    historySize = other.historySize;
+
+    historySamples.resize(other.historySamples.size());
+
+    for (int i = 0; i < historySamples.size(); i++) {
+        historySamples[i] = std::make_shared<HistorySample>();
+
+        *historySamples[i] = *other.historySamples[i];
     }
 }
 
@@ -187,7 +198,8 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&maxDistance), sizeof(int));
 
     writeBufferToStream(os, &hiddenCs);
 
@@ -218,7 +230,8 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
+    is.read(reinterpret_cast<char*>(&maxDistance), sizeof(int));
 
     readBufferFromStream(is, &hiddenCs);
 

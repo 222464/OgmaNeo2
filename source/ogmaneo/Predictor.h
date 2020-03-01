@@ -89,18 +89,28 @@ private:
 
 public:
     float alpha; // Learning rate
-    float gamma; // Discount
     int historyIters;
     int maxDistance;
 
     // Defaults
     Predictor()
     :
-    alpha(0.001f),
-    gamma(0.9f),
+    alpha(0.1f),
     historyIters(8),
     maxDistance(8)
     {}
+
+    // Copy
+    Predictor(
+        const Hierarchy &other // Predictor to copy from
+    ) {
+        *this = other;
+    }
+
+    // Assignment
+    const Predictor &operator=(
+        const Predictor &other // Predictor to assign from
+    );
 
     // Create with random initialization
     void initRandom(
