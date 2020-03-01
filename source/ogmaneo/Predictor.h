@@ -95,7 +95,7 @@ public:
     // Defaults
     Predictor()
     :
-    alpha(0.5f),
+    alpha(0.1f),
     historyIters(16),
     maxDistance(8)
     {}
