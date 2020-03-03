@@ -22,14 +22,14 @@ void SparseCoder::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = hiddenBiases[hiddenIndex];
+        float sum = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.weights.multiplyOHVs(vl.inputCs, hiddenIndex, vld.size.z);
+            sum += vl.weights.multiplyOHVs(vl.inputCs, hiddenIndex, vld.size.z) / std::max(1, vl.weights.count(hiddenIndex));
         }
 
         if (sum > maxActivation) {
@@ -57,13 +57,7 @@ void SparseCoder::learnForward(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.weights.deltaOHVs(vl.inputCsPrev, delta, hiddenIndexMax, vld.size.z);
-    }
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
-
-        hiddenBiases[hiddenIndex] += gamma * (1.0f / hiddenSize.z - (hc == hiddenCsPrev[hiddenColumnIndex] ? 1.0f : 0.0f));
+        vl.weights.deltaOHVs(vl.inputCsPrev, delta / std::max(1, vl.weights.count(hiddenIndexMax)), hiddenIndexMax, vld.size.z);
     }
 }
 
@@ -155,7 +149,6 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
     writeBufferToStream(os, &hiddenCsPrev);
@@ -188,7 +181,6 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
     readBufferFromStream(is, &hiddenCsPrev);
