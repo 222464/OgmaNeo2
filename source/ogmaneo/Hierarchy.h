@@ -30,11 +30,8 @@ public:
         Int3 hiddenSize; // Size of hidden layer
 
         int ffRadius; // Feed forward radius
+        int rRadius; // Recurrent radius
         int pRadius; // Prediction radius
-
-        int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
-
-        int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
 
         // If there is an actor (only valid for first layer)
         int aRadius;
@@ -44,9 +41,8 @@ public:
         :
         hiddenSize(4, 4, 16),
         ffRadius(2),
+        rRadius(2),
         pRadius(2),
-        ticksPerUpdate(2),
-        temporalHorizon(2),
         aRadius(2),
         historyCapacity(32)
         {}
@@ -56,16 +52,7 @@ private:
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
     std::vector<std::unique_ptr<Actor>> aLayers;
-
-    // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
-    std::vector<std::vector<int>> historySizes;
-
-    // Per-layer values
-    std::vector<char> updates;
-
-    std::vector<int> ticks;
-    std::vector<int> ticksPerUpdate;
+    std::vector<IntBuffer> hiddenCsPrev;
 
     // Input dimensions
     std::vector<Int3> inputSizes;
@@ -125,27 +112,6 @@ public:
             return aLayers[i]->getHiddenCs();
 
         return pLayers.front()[i]->getHiddenCs();
-    }
-
-    // Whether this layer received on update this timestep
-    bool getUpdate(
-        int l // Layer index
-    ) const {
-        return updates[l];
-    }
-
-    // Get current layer ticks, relative to previous layer
-    int getTicks(
-        int l // Layer Index
-    ) const {
-        return ticks[l];
-    }
-
-    // Get layer ticks per update, relative to previous layer
-    int getTicksPerUpdate(
-        int l // Layer Index
-    ) const {
-        return ticksPerUpdate[l];
     }
 
     // Get input sizes
