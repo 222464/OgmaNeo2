@@ -108,7 +108,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> forwardWeightDist(0.0f, 1.0f);
+    std::uniform_real_distribution<float> forwardWeightDist(0.0f, 0.1f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
