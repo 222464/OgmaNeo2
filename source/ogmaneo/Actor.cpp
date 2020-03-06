@@ -109,7 +109,7 @@ void Actor::learn(
 
     int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
 
-    float deltaAction = beta * std::tanh(tdErrorAction);
+    float deltaAction = beta * tdErrorAction;
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
