@@ -62,6 +62,7 @@ void Hierarchy::initRandom(
 
                     scVisibleLayerDescs[index].size = inputSizes[i];
                     scVisibleLayerDescs[index].radius = layerDescs[l].ffRadius;
+                    scVisibleLayerDescs[index].noDiagonal = false;
                 }
             }
             
@@ -118,6 +119,7 @@ void Hierarchy::initRandom(
             for (int t = 0; t < layerDescs[l].temporalHorizon; t++) {
                 scVisibleLayerDescs[t].size = layerDescs[l - 1].hiddenSize;
                 scVisibleLayerDescs[t].radius = layerDescs[l].ffRadius;
+                scVisibleLayerDescs[t].noDiagonal = false;
             }
 
             int inSize = layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y;
@@ -152,6 +154,7 @@ void Hierarchy::initRandom(
 
             vld.size = layerDescs[l].hiddenSize;
             vld.radius = layerDescs[l].rRadius;
+            vld.noDiagonal = true;
 
             scVisibleLayerDescs.push_back(vld);
 
