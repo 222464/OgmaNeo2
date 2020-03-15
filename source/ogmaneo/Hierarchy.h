@@ -38,6 +38,7 @@ public:
 
         // If there is an actor (only valid for first layer)
         int aRadius;
+        int numEstimators;
         int historyCapacity;
 
         LayerDesc()
@@ -48,6 +49,7 @@ public:
         ticksPerUpdate(2),
         temporalHorizon(2),
         aRadius(2),
+        numEstimators(3),
         historyCapacity(64)
         {}
     };

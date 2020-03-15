@@ -60,6 +60,16 @@ void Actor::learn(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
+    float rewardSum = 0.0f;
+    float g = 1.0f;
+
+    for (int n = 0; n < qSteps; n++) {
+        rewardSum += historySamples[t + n]->reward * g;
+
+        g *= gamma;
+    }
+    
+    const HistorySample &sAhead = *historySamples[t + qSteps - 1];
     const HistorySample &s = *historySamples[t];
     const HistorySample &sPrev = *historySamples[t - 1];
 
@@ -79,7 +89,7 @@ void Actor::learn(
                 VisibleLayer &vl = visibleLayers[vli];
                 const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-                sum += vl.weights[n].multiplyOHVs(s.inputCs[vli], hiddenIndex, vld.size.z);
+                sum += vl.weights[n].multiplyOHVs(sAhead.inputCs[vli], hiddenIndex, vld.size.z);
                 count += vl.weights[n].count(hiddenIndex) / vld.size.z;
             }
 
@@ -111,7 +121,7 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float delta = alpha * (s.reward + gamma * maxQ - sum);
+    float delta = alpha * (rewardSum + g * maxQ - sum);
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -202,6 +212,7 @@ const Actor &Actor::operator=(
 
     alpha = other.alpha;
     gamma = other.gamma;
+    qSteps = other.qSteps;
     historyIters = other.historyIters;
 
     historySamples.resize(other.historySamples.size());
@@ -247,29 +258,29 @@ void Actor::step(
             int numVisibleColumns = vld.size.x * vld.size.y;
 
             // Copy visible Cs
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s.inputCs[vli]), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s.inputCs[vli]), numVisibleColumns, cs.rng, cs.batchSize1);
         }
 
         // Copy hidden Cs
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 
         s.reward = reward;
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > 2) {
-        std::uniform_int_distribution<int> sampleDist(1, historySize - 1);
+    if (learnEnabled && historySize > qSteps) {
+        std::uniform_int_distribution<int> sampleDist(1, historySize - qSteps);
 
         for (int it = 0; it < historyIters; it++) {
             int t = sampleDist(cs.rng);
 
             // Learn kernel
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, t), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, t), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
 
     // Forward kernel
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 }
 
 void Actor::writeToStream(
@@ -282,6 +293,7 @@ void Actor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&qSteps), sizeof(int));
     os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(&numEstimators), sizeof(int));
@@ -332,6 +344,7 @@ void Actor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&qSteps), sizeof(int));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
     is.read(reinterpret_cast<char*>(&numEstimators), sizeof(int));

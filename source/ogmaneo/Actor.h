@@ -92,13 +92,15 @@ private:
 public:
     float alpha; // Learning rate
     float gamma; // Discount factor (multiplicative)
+    int qSteps; // N steps ahead
     int historyIters; // Number of update iterations on history
 
     // Defaults
     Actor()
     :
-    alpha(0.1f),
+    alpha(0.01f),
     gamma(0.99f),
+    qSteps(4),
     historyIters(8)
     {}
 
