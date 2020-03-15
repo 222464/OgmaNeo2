@@ -49,7 +49,7 @@ public:
         ticksPerUpdate(2),
         temporalHorizon(2),
         aRadius(2),
-        numEstimators(3),
+        numEstimators(2),
         historyCapacity(64)
         {}
     };
