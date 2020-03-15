@@ -101,9 +101,7 @@ void Actor::learn(
         maxQ = std::max(maxQ, q);
     }
 
-    std::uniform_int_distribution<int> estimatorDist(0, numEstimators - 1);
-
-    int n = estimatorDist(rng);
+    int n = sPrev.n;
 
     int hiddenIndexPrev = address3(Int3(pos.x, pos.y, s.hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
@@ -265,6 +263,10 @@ void Actor::step(
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 
         s.reward = reward;
+
+        std::uniform_int_distribution<int> estimatorDist(0, numEstimators - 1);
+
+        s.n = estimatorDist(cs.rng);
     }
 
     // Learn (if have sufficient samples)
