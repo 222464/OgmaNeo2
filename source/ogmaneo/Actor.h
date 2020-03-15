@@ -30,7 +30,7 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix weights;
+        std::vector<SparseMatrix> weights;
     };
 
     // History sample for delayed updates
@@ -43,6 +43,8 @@ public:
 
 private:
     Int3 hiddenSize; // Hidden/output/action size
+
+    int numEstimators;
 
     // Current history size - fixed after initialization. Determines length of wait before updating
     int historySize;
@@ -90,7 +92,6 @@ private:
 public:
     float alpha; // Learning rate
     float gamma; // Discount factor (multiplicative)
-    int qSteps; // N steps ahead
     int historyIters; // Number of update iterations on history
 
     // Defaults
@@ -98,8 +99,7 @@ public:
     :
     alpha(0.1f),
     gamma(0.99f),
-    qSteps(6),
-    historyIters(16)
+    historyIters(8)
     {}
 
     Actor(
@@ -116,6 +116,7 @@ public:
     void initRandom(
         ComputeSystem &cs,
         const Int3 &hiddenSize,
+        int numEstimators,
         int historyCapacity,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs
     );
