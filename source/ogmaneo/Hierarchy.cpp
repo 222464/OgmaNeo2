@@ -22,6 +22,7 @@ void Hierarchy::initRandom(
     // Create layers
     scLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
+    hiddenCsPrev.resize(layerDescs.size());
 
     ticks.assign(layerDescs.size(), 0);
 
@@ -145,6 +146,17 @@ void Hierarchy::initRandom(
             }
         }
 		
+        if (layerDescs[l].rRadius >= 0) {
+            SparseCoder::VisibleLayerDesc vld;
+
+            vld.size = layerDescs[l].hiddenSize;
+            vld.radius = layerDescs[l].rRadius;
+
+            scVisibleLayerDescs.push_back(vld);
+
+            hiddenCsPrev[l] = IntBuffer(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0);
+        }
+
         // Create the sparse coding layer
         scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, layerDescs[l].lRadius, scVisibleLayerDescs);
     }
@@ -253,8 +265,16 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
+            std::vector<const IntBuffer*> fullLayerInputCs = constGet(histories[l]);
+
+            if (fullLayerInputCs.size() < scLayers[l].getNumVisibleLayers())
+                fullLayerInputCs.push_back(&hiddenCsPrev[l]);
+
             // Activate sparse coder
-            scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
+            scLayers[l].step(cs, fullLayerInputCs, learnEnabled);
+
+            if (!hiddenCsPrev[l].empty())
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &hiddenCsPrev[l]), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
 
             // Add to next layer's history
             if (l < scLayers.size() - 1) {
@@ -341,6 +361,8 @@ void Hierarchy::writeToStream(
 
         scLayers[l].writeToStream(os);
 
+        writeBufferToStream(os, &hiddenCsPrev[l]);
+
         // Predictors
         for (int v = 0; v < pLayers[l].size(); v++) {
             char exists = pLayers[l][v] != nullptr;
@@ -379,6 +401,7 @@ void Hierarchy::readFromStream(
 
     scLayers.resize(numLayers);
     pLayers.resize(numLayers);
+    hiddenCsPrev.resize(numLayers);
 
     ticks.resize(numLayers);
 
@@ -409,6 +432,8 @@ void Hierarchy::readFromStream(
         }
 
         scLayers[l].readFromStream(is);
+
+        readBufferFromStream(is, &hiddenCsPrev[l]);
         
         pLayers[l].resize(l == 0 ? inputSizes.size() : ticksPerUpdate[l]);
 

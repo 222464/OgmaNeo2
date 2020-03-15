@@ -42,7 +42,7 @@ private:
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsTemp; // Temporaries for hidden state iteration
 
-    IntBuffer hiddenUsages; // Usage of hidden units
+    IntBuffer hiddenRefractories; // Usage of hidden units
 
     SparseMatrix laterals;
 
@@ -60,7 +60,8 @@ private:
 
     void inhibit(
         const Int2 &pos,
-        std::mt19937 &rng
+        std::mt19937 &rng,
+        int it
     );
 
     void learn(
@@ -81,9 +82,10 @@ private:
     static void inhibitKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc
+        SparseCoder* sc,
+        int it
     ) {
-        sc->inhibit(pos, rng);
+        sc->inhibit(pos, rng, it);
     }
 
     static void learnKernel(
@@ -97,6 +99,7 @@ private:
 
 public:
     int explainIters; // Explaining-away iterations
+    int refractoryTicks; // Time to refractor
     float alpha; // Learning decay
     float beta; // Lateral learning rate
 
@@ -104,8 +107,9 @@ public:
     SparseCoder()
     :
     explainIters(8),
-    alpha(0.5f),
-    beta(0.5f)
+    refractoryTicks(2),
+    alpha(0.01f),
+    beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
