@@ -243,7 +243,7 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > 1 + qSteps) {
+    if (learnEnabled && historySize > qSteps) {
         std::uniform_int_distribution<int> sampleDist(1, historySize - qSteps);
 
         for (int it = 0; it < historyIters; it++) {
