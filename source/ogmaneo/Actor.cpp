@@ -33,7 +33,6 @@ void Actor::forward(
 
     hiddenValues[hiddenColumnIndex] = value / std::max(1, count);
 
-
     // --- Action ---
 
     int maxIndex = 0;
