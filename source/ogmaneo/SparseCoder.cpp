@@ -32,9 +32,9 @@ void SparseCoder::forward(
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
             if (it == 0)
-                sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+                sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z) / std::max(1, vl.weights.count(hiddenIndex) / vld.size.z);
             else
-                sum += vl.weights.multiplyOHVs(*inputCs[vli], vl.inputErrors, hiddenIndex, vld.size.z);
+                sum += vl.weights.multiplyOHVs(*inputCs[vli], vl.inputErrors, hiddenIndex, vld.size.z) / std::max(1, vl.weights.count(hiddenIndex) / vld.size.z);
         }
 
         if (it == 0)
@@ -84,14 +84,32 @@ void SparseCoder::learn(
 
     int targetC = (*inputCs)[visibleColumnIndex];
 
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
+    std::vector<float> activations(vld.size.z);
+
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
         float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
-        float delta = alpha * ((vc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+        activations[vc] = sum;
 
-        vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
+        if (sum > maxActivation) {
+            maxActivation = sum;
+
+            maxIndex = vc;
+        }
+    }
+
+    if (maxIndex != targetC) {
+        for (int vc = 0; vc < vld.size.z; vc++) {
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
+
+            float delta = alpha * ((vc == targetC ? 1.0f : -1.0f) - std::tanh(activations[vc]));
+
+            vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
+        }
     }
 }
 
@@ -147,14 +165,14 @@ void SparseCoder::step(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     for (int it = 0; it < explainIters; it++) {
-        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, it), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, it), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 
         if (it < explainIters - 1) {
             for (int vli = 0; vli < visibleLayers.size(); vli++) {
                 VisibleLayer &vl = visibleLayers[vli];
                 VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-                runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+                runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
             }
         }
     }
@@ -164,7 +182,7 @@ void SparseCoder::step(
             VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
         }
     }
 }
