@@ -28,8 +28,6 @@ void Predictor::forward(
         float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
             weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
-        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
-
         if (sum > maxActivation) {
             maxActivation = sum;
             maxIndex = hc;
