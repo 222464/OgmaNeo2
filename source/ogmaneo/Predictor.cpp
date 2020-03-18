@@ -153,7 +153,7 @@ void Predictor::activate(
     const IntBuffer* inputCs
 ) {
     // Forward kernel
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, goalCs, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, goalCs, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 }
 
 void Predictor::learn(
@@ -180,9 +180,9 @@ void Predictor::learn(
     {
         HistorySample &s = *historySamples[historySize - 1];
 
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenTargetCs, &s.hiddenTargetCs), hiddenTargetCs->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenTargetCs, &s.hiddenTargetCs), hiddenTargetCs->size(), cs.rng, cs.batchSize1);
 
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs, &s.inputCs), inputCs->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs, &s.inputCs), inputCs->size(), cs.rng, cs.batchSize1);
     }
 
     if (historySize > 1 + maxDistance) {
@@ -199,7 +199,7 @@ void Predictor::learn(
                 float closeness = static_cast<float>(maxDistance - d + 1) / static_cast<float>(maxDistance);
 
                 // Learn kernel
-                runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, closeness), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
+                runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, closeness), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
             }
         }
     }
