@@ -25,10 +25,10 @@ void Predictor::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+        float sum = weightsGoal.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) +
+            weightsInput.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
-        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
+        sum /= std::max(1, weightsGoal.count(hiddenIndex) / visibleLayerDesc.size.z + weightsInput.count(hiddenIndex) / visibleLayerDesc.size.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -57,25 +57,25 @@ void Predictor::learn(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+        float sum = weightsGoal.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) +
+            weightsInput.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
-        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
-        
+        sum /= std::max(1, weightsGoal.count(hiddenIndex) / visibleLayerDesc.size.z + weightsInput.count(hiddenIndex) / visibleLayerDesc.size.z);
+      
         nextQ = std::max(nextQ, sum);
     }
 
     int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
 
-    float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
-        weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
+    float sum = weightsGoal.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) +
+        weightsInput.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
-    sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
+    sum /= std::max(1, weightsGoal.count(hiddenIndex) / visibleLayerDesc.size.z + weightsInput.count(hiddenIndex) / visibleLayerDesc.size.z);
         
     float delta = alpha * std::tanh(closeness + gamma * nextQ - sum); // Tanh for soft clip
 
-    weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
-    weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
+    weightsGoal.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
+    weightsInput.deltaOHVs(*inputCsPrev, delta, hiddenIndex, visibleLayerDesc.size.z);
 }
 
 void Predictor::initRandom(
@@ -95,10 +95,14 @@ void Predictor::initRandom(
     std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create weight matrix for this visible layer and initialize randomly
-    initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weights);
+    initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weightsGoal);
 
-    for (int i = 0; i < weights.nonZeroValues.size(); i++)
-        weights.nonZeroValues[i] = weightDist(cs.rng);
+    weightsInput = weightsGoal;
+
+    for (int i = 0; i < weightsGoal.nonZeroValues.size(); i++) {
+        weightsGoal.nonZeroValues[i] = weightDist(cs.rng);
+        weightsInput.nonZeroValues[i] = weightDist(cs.rng);
+    }
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
@@ -130,7 +134,8 @@ const Predictor &Predictor::operator=(
     historyIters = other.historyIters;
     maxDistance = other.maxDistance;
 
-    weights = other.weights;
+    weightsGoal = other.weightsGoal;
+    weightsInput = other.weightsInput;
 
     hiddenCs = other.hiddenCs;
 
@@ -222,7 +227,8 @@ void Predictor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    writeSMToStream(os, weights);
+    writeSMToStream(os, weightsGoal);
+    writeSMToStream(os, weightsInput);
 
     os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
@@ -259,7 +265,8 @@ void Predictor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    readSMFromStream(is, weights);
+    readSMFromStream(is, weightsGoal);
+    readSMFromStream(is, weightsInput);
 
     is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 

@@ -40,7 +40,8 @@ private:
 
     IntBuffer hiddenCs; // Hidden state
 
-    SparseMatrix weights; // Weight matrix
+    SparseMatrix weightsGoal;
+    SparseMatrix weightsInput;
     VisibleLayerDesc visibleLayerDesc;
 
     std::vector<std::shared_ptr<HistorySample>> historySamples;
