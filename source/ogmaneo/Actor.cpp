@@ -119,7 +119,7 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float delta = alpha * (rewardSum + g * maxQ - sum);
+    float delta = alpha * std::tanh(rewardSum + g * maxQ - sum);
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
