@@ -72,7 +72,7 @@ void Predictor::learn(
 
     sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
         
-    float delta = alpha * (closeness + gamma * nextQ - sum);
+    float delta = alpha * std::tanh(closeness + gamma * nextQ - sum); // Tanh for soft clip
 
     weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
     weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
