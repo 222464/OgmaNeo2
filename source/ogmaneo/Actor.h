@@ -98,7 +98,7 @@ public:
     :
     alpha(0.1f),
     gamma(0.99f),
-    qSteps(3),
+    qSteps(5),
     historyIters(16)
     {}
 
