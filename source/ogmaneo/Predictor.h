@@ -40,8 +40,7 @@ private:
 
     IntBuffer hiddenCs; // Hidden state
 
-    SparseMatrix weightsGoal;
-    SparseMatrix weightsInput;
+    SparseMatrix weights; // Weight matrix
     VisibleLayerDesc visibleLayerDesc;
 
     std::vector<std::shared_ptr<HistorySample>> historySamples;
@@ -90,16 +89,14 @@ private:
 
 public:
     float alpha; // Learning rate
-    float gamma; // Discount
     int historyIters;
     int maxDistance;
 
     // Defaults
     Predictor()
     :
-    alpha(0.1f),
-    gamma(0.9f),
-    historyIters(3),
+    alpha(0.01f),
+    historyIters(16),
     maxDistance(8)
     {}
 

@@ -25,10 +25,10 @@ void Predictor::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = weightsGoal.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) +
-            weightsInput.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+        float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
+            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
-        sum /= std::max(1, weightsGoal.count(hiddenIndex) / visibleLayerDesc.size.z + weightsInput.count(hiddenIndex) / visibleLayerDesc.size.z);
+        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -52,30 +52,19 @@ void Predictor::learn(
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
-    float nextQ = 0.0f;
-
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = weightsGoal.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) +
-            weightsInput.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+        float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
+            weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
-        sum /= std::max(1, weightsGoal.count(hiddenIndex) / visibleLayerDesc.size.z + weightsInput.count(hiddenIndex) / visibleLayerDesc.size.z);
-      
-        nextQ = std::max(nextQ, sum);
+        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
+            
+        float delta = alpha * closeness * closeness * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+
+        weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
+        weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
     }
-
-    int hiddenIndex = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
-
-    float sum = weightsGoal.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) +
-        weightsInput.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
-
-    sum /= std::max(1, weightsGoal.count(hiddenIndex) / visibleLayerDesc.size.z + weightsInput.count(hiddenIndex) / visibleLayerDesc.size.z);
-        
-    float delta = alpha * std::tanh(closeness + gamma * nextQ - sum); // Tanh for soft clip
-
-    weightsGoal.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
-    weightsInput.deltaOHVs(*inputCsPrev, delta, hiddenIndex, visibleLayerDesc.size.z);
 }
 
 void Predictor::initRandom(
@@ -95,14 +84,10 @@ void Predictor::initRandom(
     std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create weight matrix for this visible layer and initialize randomly
-    initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weightsGoal);
+    initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weights);
 
-    weightsInput = weightsGoal;
-
-    for (int i = 0; i < weightsGoal.nonZeroValues.size(); i++) {
-        weightsGoal.nonZeroValues[i] = weightDist(cs.rng);
-        weightsInput.nonZeroValues[i] = weightDist(cs.rng);
-    }
+    for (int i = 0; i < weights.nonZeroValues.size(); i++)
+        weights.nonZeroValues[i] = weightDist(cs.rng);
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
@@ -130,12 +115,10 @@ const Predictor &Predictor::operator=(
     hiddenSize = other.hiddenSize;
 
     alpha = other.alpha;
-    gamma = other.gamma;
     historyIters = other.historyIters;
     maxDistance = other.maxDistance;
 
-    weightsGoal = other.weightsGoal;
-    weightsInput = other.weightsInput;
+    weights = other.weights;
 
     hiddenCs = other.hiddenCs;
 
@@ -190,22 +173,24 @@ void Predictor::learn(
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs, &s.inputCs), inputCs->size(), cs.rng, cs.batchSize1);
     }
 
-    if (historySize > 1 + maxDistance) {
-        std::uniform_int_distribution<int> historyDist(0, historySize - 1 - maxDistance);
+    if (historySize > 1) {
+        std::uniform_int_distribution<int> historyDist(0, historySize - 2);
 
         for (int it = 0; it < historyIters; it++) {
             int t = historyDist(cs.rng);
 
-            for (int d = maxDistance; d >= 1; d--) {
-                const HistorySample &sDist = *historySamples[t + d];
-                const HistorySample &s = *historySamples[t + 1];
-                const HistorySample &sPrev = *historySamples[t];
+            std::uniform_int_distribution<int> distDist(1, std::min(historySize - 1 - t, maxDistance));
 
-                float closeness = static_cast<float>(maxDistance - d + 1) / static_cast<float>(maxDistance);
+            int dist = distDist(cs.rng);
 
-                // Learn kernel
-                runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, closeness), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-            }
+            const HistorySample &sDist = *historySamples[t + dist];
+            const HistorySample &s = *historySamples[t + 1];
+            const HistorySample &sPrev = *historySamples[t];
+
+            float closeness = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance - 1);
+
+            // Learn kernel
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, closeness), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
 }
@@ -219,7 +204,6 @@ void Predictor::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
     os.write(reinterpret_cast<const char*>(&maxDistance), sizeof(int));
 
@@ -227,8 +211,7 @@ void Predictor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    writeSMToStream(os, weightsGoal);
-    writeSMToStream(os, weightsInput);
+    writeSMToStream(os, weights);
 
     os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
@@ -253,7 +236,6 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
     is.read(reinterpret_cast<char*>(&maxDistance), sizeof(int));
 
@@ -265,8 +247,7 @@ void Predictor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    readSMFromStream(is, weightsGoal);
-    readSMFromStream(is, weightsInput);
+    readSMFromStream(is, weights);
 
     is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 
