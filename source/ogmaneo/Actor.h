@@ -37,7 +37,6 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
         IntBuffer hiddenCsPrev;
-        FloatBuffer qs;
         
         float reward;
     };
@@ -89,7 +88,8 @@ private:
     }
 
 public:
-    float alpha; // Learning rate
+    float alpha; // Action gap parameter
+    float beta; // Learning rate
     float gamma; // Discount factor (multiplicative)
     int qSteps; // N steps ahead
     int historyIters; // Number of update iterations on history
@@ -97,7 +97,8 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.1f),
+    alpha(0.4f),
+    beta(0.1f),
     gamma(0.99f),
     qSteps(3),
     historyIters(16)
