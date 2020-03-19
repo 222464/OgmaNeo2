@@ -11,7 +11,7 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// A reinforcement learning layer (Q learning)
+// A reinforcement learning layer
 class Actor {
 public:
     // Visible layer descriptor
@@ -30,7 +30,8 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix weights;
+        SparseMatrix valueWeights; // Value function weights
+        SparseMatrix actionWeights; // Action function weights
     };
 
     // History sample for delayed updates
@@ -48,7 +49,9 @@ private:
     int historySize;
 
     IntBuffer hiddenCs; // Hidden states
-        
+
+    FloatBuffer hiddenValues; // Hidden value function output buffer
+
     std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
 
     // Visible layers and descriptors
@@ -66,7 +69,10 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        int t
+        const std::vector<const IntBuffer*> &inputCsPrev,
+        const IntBuffer* hiddenCsPrev,
+        float q,
+        float g
     );
 
     static void forwardKernel(
@@ -82,25 +88,29 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
-        int t
+        const std::vector<const IntBuffer*> &inputCsPrev,
+        const IntBuffer* hiddenCsPrev,
+        float q,
+        float g
     ) {
-        a->learn(pos, rng, t);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
     }
 
 public:
-    float alpha; // Action gap parameter
-    float beta; // Learning rate
-    float gamma; // Discount factor (multiplicative)
-    int qSteps; // N steps ahead
-    int historyIters; // Number of update iterations on history
+    float alpha; // Value learning rate
+    float beta; // Action learning rate
+    float gamma; // Discount factor
+
+    int minSteps; // Minimum value steps
+    int historyIters; // Sample iters
 
     // Defaults
     Actor()
     :
-    alpha(0.5f),
+    alpha(0.01f),
     beta(0.01f),
     gamma(0.99f),
-    qSteps(3),
+    minSteps(8),
     historyIters(16)
     {}
 
@@ -126,7 +136,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCs, // Action taken
+        const IntBuffer* hiddenCsPrev,
         float reward,
         bool learnEnabled
     );
@@ -168,6 +178,20 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
+    }
+
+    // Get the value weights for a visible layer
+    const SparseMatrix &getValueWeights(
+        int i // Index of layer
+    ) {
+        return visibleLayers[i].valueWeights;
+    }
+
+    // Get the action weights for a visible layer
+    const SparseMatrix &getActionWeights(
+        int i // Index of layer
+    ) {
+        return visibleLayers[i].actionWeights;
     }
 };
 } // namespace ogmaneo
