@@ -37,10 +37,9 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
         IntBuffer hiddenCsPrev;
+        FloatBuffer qs;
         
         float reward;
-
-        float q;
     };
 
 private:
