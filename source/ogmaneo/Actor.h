@@ -39,6 +39,8 @@ public:
         IntBuffer hiddenCsPrev;
         
         float reward;
+
+        float q;
     };
 
 private:

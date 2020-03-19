@@ -61,9 +61,9 @@ void Actor::learn(
     
     const HistorySample &sAhead = *historySamples[t + qSteps - 1];
     const HistorySample &s = *historySamples[t];
-    const HistorySample &sPrev = *historySamples[t - 1];
+    HistorySample &sPrev = *historySamples[t - 1];
 
-    float maxQ = -999999.0f;
+    float maxQ = sAhead.q;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
@@ -101,7 +101,7 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float delta = alpha * std::tanh(rewardSum + g * maxQ - sum); // Tanh as soft clip
+    float delta = alpha * std::tanh(rewardSum + g * maxQ - std::max(sum, sPrev.q)); // Tanh as soft clip
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -110,6 +110,8 @@ void Actor::learn(
 
         vl.weights.deltaOHVs(sPrev.inputCs[vli], delta, hiddenIndexPrev, vld.size.z);
     }
+
+    sPrev.q = rewardSum + g * maxQ;
 }
 
 void Actor::initRandom(
@@ -236,6 +238,7 @@ void Actor::step(
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 
         s.reward = reward;
+        s.q = -999999.0f;
     }
 
     // Learn (if have sufficient samples)
@@ -300,6 +303,7 @@ void Actor::writeToStream(
         writeBufferToStream(os, &s.hiddenCsPrev);
 
         os.write(reinterpret_cast<const char*>(&s.reward), sizeof(float));
+        os.write(reinterpret_cast<const char*>(&s.q), sizeof(float));
     }
 }
 
@@ -358,5 +362,6 @@ void Actor::readFromStream(
         readBufferFromStream(is, &s.hiddenCsPrev);
  
         is.read(reinterpret_cast<char*>(&s.reward), sizeof(float));
+        is.read(reinterpret_cast<char*>(&s.q), sizeof(float));
     }
 }
