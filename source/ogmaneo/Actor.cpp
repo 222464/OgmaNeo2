@@ -45,8 +45,6 @@ void Actor::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
-
-    historySamples[historySize - 1]->qs[hiddenColumnIndex] = maxQ;
 }
 
 void Actor::learn(
@@ -244,11 +242,10 @@ void Actor::step(
         // Copy hidden Cs
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 
+        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &s.qs, -999999.0f), numHiddenColumns, cs.rng, cs.batchSize1);
+        
         s.reward = reward;
     }
-
-    // Forward kernel
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 
     // Learn (if have sufficient samples)
     if (learnEnabled && historySize > qSteps) {
@@ -261,6 +258,9 @@ void Actor::step(
             runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, t), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
+
+    // Forward kernel
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 }
 
 void Actor::writeToStream(
