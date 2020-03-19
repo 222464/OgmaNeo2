@@ -101,7 +101,7 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float delta = alpha * std::tanh(rewardSum + g * maxQ - std::max(sum, sPrev.q)); // Tanh as soft clip
+    float delta = alpha * (rewardSum + g * maxQ - std::max(sum, sPrev.q)); // Tanh as soft clip
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
