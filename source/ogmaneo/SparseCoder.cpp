@@ -143,7 +143,7 @@ void SparseCoder::initRandom(
     for (int i = 0; i < laterals.nonZeroValues.size(); i++)
         laterals.nonZeroValues[i] = lateralWeightDist(cs.rng);
 
-    laterals.initT();
+    //laterals.initT();
 }
 
 void SparseCoder::step(
