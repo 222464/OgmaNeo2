@@ -22,6 +22,7 @@ void Hierarchy::initRandom(
     // Create layers
     scLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
+    hiddenCsPrev.resize(layerDescs.size());
 
     ticks.assign(layerDescs.size(), 0);
 
@@ -123,9 +124,20 @@ void Hierarchy::initRandom(
                 pLayers[l][p]->initRandom(cs, layerDescs[l - 1].hiddenSize, layerDescs[l].historyCapacity, pVisibleLayerDesc);
             }
         }
+
+        if (layerDescs[l].rRadius >= 0) {
+            SparseCoder::VisibleLayerDesc vld;
+
+            vld.size = layerDescs[l].hiddenSize;
+            vld.radius = layerDescs[l].rRadius;
+
+            scVisibleLayerDescs.push_back(vld);
+
+            hiddenCsPrev[l] = IntBuffer(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0);
+        }
 		
         // Create the sparse coding layer
-        scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, scVisibleLayerDescs);
+        scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, layerDescs[l].lRadius, scVisibleLayerDescs);
     }
 }
 
@@ -134,6 +146,7 @@ const Hierarchy &Hierarchy::operator=(
 ) {
     // Layers
     scLayers = other.scLayers;
+    hiddenCsPrev = other.hiddenCsPrev;
 
     historySizes = other.historySizes;
     updates = other.updates;
@@ -220,8 +233,17 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
+            std::vector<const IntBuffer*> fullLayerInputCs = constGet(histories[l]);
+
+            if (fullLayerInputCs.size() < scLayers[l].getNumVisibleLayers())
+                fullLayerInputCs.push_back(&hiddenCsPrev[l]);
+
             // Activate sparse coder
-            scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
+            scLayers[l].step(cs, fullLayerInputCs, learnEnabled);
+
+            // Copy
+            if (!hiddenCsPrev[l].empty())
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &hiddenCsPrev[l]), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
 
             // Add to next layer's history
             if (l < scLayers.size() - 1) {
@@ -309,6 +331,8 @@ void Hierarchy::writeToStream(
             if (exists)
                 pLayers[l][v]->writeToStream(os);
         }
+
+        writeBufferToStream(os, &hiddenCsPrev[l]);
     }
 }
 
@@ -328,6 +352,7 @@ void Hierarchy::readFromStream(
 
     scLayers.resize(numLayers);
     pLayers.resize(numLayers);
+    hiddenCsPrev.resize(numLayers);
 
     ticks.resize(numLayers);
 
@@ -374,5 +399,7 @@ void Hierarchy::readFromStream(
             else
                 pLayers[l][v] = nullptr;
         }
+
+        readBufferFromStream(is, &hiddenCsPrev[l]);
     }
 }
