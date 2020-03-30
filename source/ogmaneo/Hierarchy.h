@@ -30,6 +30,7 @@ public:
         Int3 hiddenSize; // Size of hidden layer
 
         int ffRadius; // Feed forward radius
+        int rRadius; // Recurrent radius, set to -1 to disable
         int pRadius; // Prediction radius
 
         int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
@@ -44,9 +45,10 @@ public:
         :
         hiddenSize(4, 4, 16),
         ffRadius(2),
+        rRadius(2),
         pRadius(2),
-        ticksPerUpdate(2),
-        temporalHorizon(4),
+        ticksPerUpdate(1),
+        temporalHorizon(1),
         aRadius(2),
         historyCapacity(32)
         {}
@@ -56,6 +58,7 @@ private:
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
     std::vector<std::unique_ptr<Actor>> aLayers;
+    std::vector<IntBuffer> hiddenCsPrev;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
