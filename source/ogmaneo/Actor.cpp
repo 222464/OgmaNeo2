@@ -3,7 +3,7 @@
 //  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
-//  in the OGMANEO_LICENSE.md file included in this distribution.
+//  in the OGMANEOLICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
 #include "Actor.h"
@@ -17,26 +17,8 @@ void Actor::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    // --- Value ---
-
-    float value = 0.0f;
-    int count = 0;
-
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-        value += vl.valueWeights.multiplyOHVs(*inputCs[vli], hiddenColumnIndex, vld.size.z);
-        count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
-    }
-
-    hiddenValues[hiddenColumnIndex] = value / std::max(1, count);
-
-    // --- Action ---
-
-    std::vector<float> activations(hiddenSize.z);
-    float maxActivation = -999999.0f;
+    int maxIndex = 0;
+    float maxQ = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
@@ -48,131 +30,107 @@ void Actor::forward(
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
         }
 
-        sum /= std::max(1, count);
+        if (sum > maxQ) {
+            maxQ = sum;
 
-        activations[hc] = sum;
-
-        maxActivation = std::max(maxActivation, sum);
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-        
-        total += activations[hc];
-    }
-
-    std::uniform_real_distribution<float> cuspDist(0.0f, total);
-
-    float cusp = cuspDist(rng);
-
-    int selectIndex = 0;
-    float sumSoFar = 0.0f;
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        sumSoFar += activations[hc];
-
-        if (sumSoFar >= cusp) {
-            selectIndex = hc;
-
-            break;
+            maxIndex = hc;
         }
     }
-    
-    hiddenCs[hiddenColumnIndex] = selectIndex;
+
+    hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void Actor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCsPrev,
-    const IntBuffer* hiddenCsPrev,
-    float q,
-    float g
+    int t
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    // --- Value Prev ---
+    float rewardSum = 0.0f;
+    float g = 1.0f;
 
-    float newValue = q + g * hiddenValues[hiddenColumnIndex];
+    for (int n = 0; n < qSteps; n++) {
+        rewardSum += historySamples[t + n]->reward * g;
 
-    float value = 0.0f;
-    int count = 0;
-
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-        value += vl.valueWeights.multiplyOHVs(*inputCsPrev[vli], hiddenColumnIndex, vld.size.z);
-        count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
+        g *= gamma;
     }
+    
+    const HistorySample &sAhead = *historySamples[t + qSteps - 1];
+    const HistorySample &s = *historySamples[t];
+    HistorySample &sPrev = *historySamples[t - 1];
 
-    value /= std::max(1, count);
-
-    float tdErrorValue = newValue - value;
-
-    float deltaValue = alpha * std::tanh(tdErrorValue);
-
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-        vl.valueWeights.deltaOHVs(*inputCsPrev[vli], deltaValue, hiddenColumnIndex, vld.size.z);
-    }
-
-    // --- Action ---
-
-    int targetC = (*hiddenCsPrev)[address2(pos, Int2(hiddenSize.x, hiddenSize.y))];
-
-    std::vector<float> activations(hiddenSize.z);
-    float maxActivation = -999999.0f;
+    float qNext;
+    float maxQ = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
+            sum += vl.weights.multiplyOHVs(sAhead.inputCs[vli], hiddenIndex, vld.size.z);
+            count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
         sum /= std::max(1, count);
 
-        activations[hc] = sum;
+        maxQ = std::max(maxQ, sum);
 
-        maxActivation = std::max(maxActivation, sum);
+        if (hc == s.hiddenCsPrev[hiddenColumnIndex])
+            qNext = sum;
     }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-        
-        total += activations[hc];
-    }
+    
+    float qPrev;
+    float maxQPrev = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float deltaAction = (tdErrorValue > 0.0f ? beta : -beta) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            vl.actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld.size.z);
+            sum += vl.weights.multiplyOHVs(sPrev.inputCs[vli], hiddenIndex, vld.size.z);
+            count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
+
+        sum /= std::max(1, count);
+
+        maxQPrev = std::max(maxQPrev, sum);
+
+        if (hc == s.hiddenCsPrev[hiddenColumnIndex])
+            qPrev = sum;
+    }
+
+    float deltaQ = rewardSum + g * maxQ - qPrev;
+
+    float deltaAL = deltaQ - alpha * (maxQPrev - qPrev);
+
+    float deltaPAL = std::max(deltaAL, deltaQ - alpha * (maxQ - qNext));
+
+    float delta = beta * std::tanh(deltaPAL);
+
+    int hiddenIndexPrev = address3(Int3(pos.x, pos.y, s.hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+
+    // For each visible layer
+    for (int vli = 0; vli < visibleLayers.size(); vli++) {
+        VisibleLayer &vl = visibleLayers[vli];
+        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+        vl.weights.deltaOHVs(sPrev.inputCs[vli], delta, hiddenIndexPrev, vld.size.z);
     }
 }
 
@@ -192,7 +150,7 @@ void Actor::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
+    std::uniform_real_distribution<float> weightDist(-0.001f, 0.0f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -203,19 +161,14 @@ void Actor::initRandom(
         int numVisible = numVisibleColumns * vld.size.z;
 
         // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld.size, Int3(hiddenSize.x, hiddenSize.y, 1), vld.radius, vl.valueWeights);
-        initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.actionWeights);
+        initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.weights);
 
-        for (int i = 0; i < vl.valueWeights.nonZeroValues.size(); i++)
-            vl.valueWeights.nonZeroValues[i] = 0.0f;
-
-        for (int i = 0; i < vl.actionWeights.nonZeroValues.size(); i++)
-            vl.actionWeights.nonZeroValues[i] = weightDist(cs.rng);
+        for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
+            vl.weights.nonZeroValues[i] = weightDist(cs.rng);
     }
 
+    // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
 
     // Create (pre-allocated) history samples
     historySize = 0;
@@ -243,9 +196,9 @@ const Actor &Actor::operator=(
 ) {
     hiddenSize = other.hiddenSize;
 
-    hiddenCs = other.hiddenCs;
+    historySize = other.historySize;
 
-    hiddenValues = other.hiddenValues;
+    hiddenCs = other.hiddenCs;
 
     visibleLayerDescs = other.visibleLayerDescs;
     visibleLayers = other.visibleLayers;
@@ -253,16 +206,13 @@ const Actor &Actor::operator=(
     alpha = other.alpha;
     beta = other.beta;
     gamma = other.gamma;
-    minSteps = other.minSteps;
+    qSteps = other.qSteps;
     historyIters = other.historyIters;
-
-    historySize = other.historySize;
 
     historySamples.resize(other.historySamples.size());
 
     for (int t = 0; t < historySamples.size(); t++) {
-        if (historySamples[t] == nullptr)
-            historySamples[t] = std::make_shared<HistorySample>();
+        historySamples[t] = std::make_shared<HistorySample>();
 
         (*historySamples[t]) = (*other.historySamples[t]);
     }
@@ -280,10 +230,6 @@ void Actor::step(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    // Forward kernel
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-
-    // Add sample
     if (historySize == historySamples.size()) {
         // Circular buffer swap
         std::shared_ptr<HistorySample> temp = historySamples.front();
@@ -293,9 +239,7 @@ void Actor::step(
 
         historySamples.back() = temp;
     }
-
-    // If not at cap, increment
-    if (historySize < historySamples.size())
+    else
         historySize++;
     
     // Add new sample
@@ -318,29 +262,19 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > minSteps) {
-        std::uniform_int_distribution<int> historyDist(1, historySize - minSteps);
+    if (learnEnabled && historySize > qSteps) {
+        std::uniform_int_distribution<int> sampleDist(1, historySize - qSteps);
 
         for (int it = 0; it < historyIters; it++) {
-            int historyIndex = historyDist(cs.rng);
-
-            const HistorySample &sPrev = *historySamples[historyIndex - 1];
-            const HistorySample &s = *historySamples[historyIndex];
-
-            // Compute (partial) values, rest is completed in the kernel
-            float q = 0.0f;
-            float g = 1.0f;
-
-            for (int t = historyIndex; t < historySize; t++) {
-                q += historySamples[t]->reward * g;
-
-                g *= gamma;
-            }
+            int t = sampleDist(cs.rng);
 
             // Learn kernel
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, t), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
+
+    // Forward kernel
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 }
 
 void Actor::writeToStream(
@@ -354,12 +288,12 @@ void Actor::writeToStream(
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&minSteps), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&qSteps), sizeof(int));
     os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
 
-    writeBufferToStream(os, &hiddenCs);
+    os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
-    writeBufferToStream(os, &hiddenValues);
+    writeBufferToStream(os, &hiddenCs);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -374,11 +308,8 @@ void Actor::writeToStream(
 
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
-        writeSMToStream(os, vl.valueWeights);
-        writeSMToStream(os, vl.actionWeights);
+        writeSMToStream(os, vl.weights);
     }
-
-    os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
     int numHistorySamples = historySamples.size();
 
@@ -407,12 +338,12 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&minSteps), sizeof(int));
+    is.read(reinterpret_cast<char*>(&qSteps), sizeof(int));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
-    readBufferFromStream(is, &hiddenCs);
+    is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 
-    readBufferFromStream(is, &hiddenValues);
+    readBufferFromStream(is, &hiddenCs);
 
     int numVisibleLayers;
     
@@ -430,11 +361,8 @@ void Actor::readFromStream(
         int numVisibleColumns = vld.size.x * vld.size.y;
         int numVisible = numVisibleColumns * vld.size.z;
 
-        readSMFromStream(is, vl.valueWeights);
-        readSMFromStream(is, vl.actionWeights);
+        readSMFromStream(is, vl.weights);
     }
-
-    is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 
     int numHistorySamples;
 
@@ -453,7 +381,7 @@ void Actor::readFromStream(
             readBufferFromStream(is, &s.inputCs[vli]);
 
         readBufferFromStream(is, &s.hiddenCsPrev);
-
+ 
         is.read(reinterpret_cast<char*>(&s.reward), sizeof(float));
     }
 }
