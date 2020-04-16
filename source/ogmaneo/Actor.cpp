@@ -121,7 +121,7 @@ void Actor::learn(
 
     float deltaPAL = std::max(deltaAL, deltaQ - alpha * (maxQ - qNext));
 
-    float delta = beta * deltaQ;
+    float delta = beta * std::tanh(deltaPAL);
 
     int hiddenIndexPrev = address3(Int3(pos.x, pos.y, s.hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
