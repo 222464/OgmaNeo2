@@ -28,80 +28,110 @@ public:
         {}
     };
 
-    // Visible layer
-    struct VisibleLayer {
-        SparseMatrix weights; // Weight matrix
-
-        IntBuffer inputCsPrev; // Previous timestep (prev) input states
+    struct HistorySample {
+        IntBuffer inputCs;
+        IntBuffer hiddenTargetCs;
     };
 
 private:
     Int3 hiddenSize; // Size of the output/hidden/prediction
 
+    int historySize;
+
     IntBuffer hiddenCs; // Hidden state
 
-    // Visible layers and descs
-    std::vector<VisibleLayer> visibleLayers;
-    std::vector<VisibleLayerDesc> visibleLayerDescs;
+    SparseMatrix weights; // Weight matrix
+    VisibleLayerDesc visibleLayerDesc;
+
+    std::vector<std::shared_ptr<HistorySample>> historySamples;
 
     // --- Kernels ---
 
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const IntBuffer* goalCs,
+        const IntBuffer* inputCs
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenTargetCs
+        const IntBuffer* hiddenTargetCs,
+        const IntBuffer* inputCsGoal,
+        const IntBuffer* inputCs,
+        const IntBuffer* inputCsPrev,
+        float closeness
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const std::vector<const IntBuffer*> &inputCs
+        const IntBuffer* goalCs,
+        const IntBuffer* inputCs
     ) {
-        p->forward(pos, rng, inputCs);
+        p->forward(pos, rng, goalCs, inputCs);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Predictor* p,
-        const IntBuffer* hiddenTargetCs
+        const IntBuffer* hiddenTargetCs,
+        const IntBuffer* inputCsGoal,
+        const IntBuffer* inputCs,
+        const IntBuffer* inputCsPrev,
+        float closeness
     ) {
-        p->learn(pos, rng, hiddenTargetCs);
+        p->learn(pos, rng, hiddenTargetCs, inputCsGoal, inputCs, inputCsPrev, closeness);
     }
 
 public:
     float alpha; // Learning rate
+    int historyIters;
+    int maxDistance;
 
     // Defaults
     Predictor()
     :
-    alpha(0.5f)
+    alpha(0.01f),
+    historyIters(8),
+    maxDistance(8)
     {}
+
+    // Copy
+    Predictor(
+        const Predictor &other // Predictor to copy from
+    ) {
+        *this = other;
+    }
+
+    // Assignment
+    const Predictor &operator=(
+        const Predictor &other // Predictor to assign from
+    );
 
     // Create with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output/prediction size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+        int historyCapacity,
+        const VisibleLayerDesc &visibleLayerDesc
     ); 
 
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction size
+        const IntBuffer* goalCs,
+        const IntBuffer* inputCs
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
-        const IntBuffer* hiddenTargetCs
+        const IntBuffer* hiddenTargetCs,
+        const IntBuffer* inputCs
     );
 
     // Write to stream
@@ -114,23 +144,9 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get number of visible layers
-    int getNumVisibleLayers() const {
-        return visibleLayers.size();
-    }
-
-    // Get a visible layer
-    const VisibleLayer &getVisibleLayer(
-        int i // Index of visible layer
-    ) const {
-        return visibleLayers[i];
-    }
-
     // Get a visible layer descriptor
-    const VisibleLayerDesc &getVisibleLayerDesc(
-        int i // Index of visible layer
-    ) const {
-        return visibleLayerDescs[i];
+    const VisibleLayerDesc &getVisibleLayerDesc() const {
+        return visibleLayerDesc;
     }
 
     // Get the hidden activations (predictions)
@@ -141,13 +157,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return visibleLayers[i].weights;
     }
 
     friend class Hierarchy;

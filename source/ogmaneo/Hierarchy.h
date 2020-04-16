@@ -18,14 +18,12 @@ namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
     none = 0,
-    prediction = 1,
-    action = 2
+    prediction = 1
 };
 
 // State of hierarchy
 struct State {
     std::vector<IntBuffer> hiddenCs;
-    std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
 
     std::vector<std::vector<IntBuffer>> histories;
@@ -48,9 +46,7 @@ public:
 
         int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
 
-        // If there is an actor (only valid for first layer)
-        int aRadius;
-        int historyCapacity;
+        int historyCapacity; // History buffer capacity
 
         LayerDesc()
         :
@@ -59,7 +55,6 @@ public:
         pRadius(2),
         ticksPerUpdate(2),
         temporalHorizon(4),
-        aRadius(2),
         historyCapacity(32)
         {}
     };
@@ -67,7 +62,6 @@ private:
     // Layers
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
-    std::vector<std::unique_ptr<Actor>> aLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
@@ -110,8 +104,8 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
+        const IntBuffer* goalCs, // Goal state
+        bool learnEnabled = true // Whether learning is enabled
     );
 
     // State get
@@ -143,9 +137,6 @@ public:
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        if (aLayers[i] != nullptr) // If is an action layer
-            return aLayers[i]->getHiddenCs();
-
         return pLayers.front()[i]->getHiddenCs();
     }
 
@@ -201,16 +192,6 @@ public:
         int l // Layer index
     ) const {
         return pLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Actor>> &getALayers() {
-        return aLayers;
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
-        return aLayers;
     }
 };
 } // namespace ogmaneo
