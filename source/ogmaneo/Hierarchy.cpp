@@ -135,7 +135,7 @@ void Hierarchy::step(
 
     // Forward
     for (int l = 0; l < scLayers.size(); l++) {
-        std::vector<const IntBuffer*> fullLayerInputCs = inputCs;
+        std::vector<const IntBuffer*> fullLayerInputCs = (l == 0 ? inputCs : std::vector<const IntBuffer*>{ &scLayers[l - 1].getHiddenCs() });
 
         if (fullLayerInputCs.size() < scLayers[l].getNumVisibleLayers())
             fullLayerInputCs.push_back(&hiddenCsPrev[l]);
