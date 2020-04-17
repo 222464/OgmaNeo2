@@ -25,11 +25,6 @@ enum InputType {
 struct State {
     std::vector<IntBuffer> hiddenCs;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
-
-    std::vector<std::vector<IntBuffer>> histories;
-
-    std::vector<char> updates;
-    std::vector<int> ticks;
 };
 
 // A SPH
@@ -40,11 +35,8 @@ public:
         Int3 hiddenSize; // Size of hidden layer
 
         int ffRadius; // Feed forward radius
+        int rRadius; // Recurrent radius, set to -1 to disable
         int pRadius; // Prediction radius
-
-        int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
-
-        int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
 
         int historyCapacity; // History buffer capacity
 
@@ -52,9 +44,8 @@ public:
         :
         hiddenSize(4, 4, 16),
         ffRadius(2),
+        rRadius(2),
         pRadius(2),
-        ticksPerUpdate(2),
-        temporalHorizon(4),
         historyCapacity(32)
         {}
     };
@@ -62,16 +53,7 @@ private:
     // Layers
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
-
-    // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
-    std::vector<std::vector<int>> historySizes;
-
-    // Per-layer values
-    std::vector<char> updates;
-
-    std::vector<int> ticks;
-    std::vector<int> ticksPerUpdate;
+    std::vector<IntBuffer> hiddenCsPrev;
 
     // Input dimensions
     std::vector<Int3> inputSizes;
@@ -138,27 +120,6 @@ public:
         int i // Index of input layer to get predictions for
     ) const {
         return pLayers.front()[i]->getHiddenCs();
-    }
-
-    // Whether this layer received on update this timestep
-    bool getUpdate(
-        int l // Layer index
-    ) const {
-        return updates[l];
-    }
-
-    // Get current layer ticks, relative to previous layer
-    int getTicks(
-        int l // Layer Index
-    ) const {
-        return ticks[l];
-    }
-
-    // Get layer ticks per update, relative to previous layer
-    int getTicksPerUpdate(
-        int l // Layer Index
-    ) const {
-        return ticksPerUpdate[l];
     }
 
     // Get input sizes
