@@ -238,10 +238,6 @@ void Predictor::readFromStream(
 
     readBufferFromStream(is, &hiddenCs);
 
-    int numVisibleLayers;
-    
-    is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
-
     is.read(reinterpret_cast<char*>(&visibleLayerDesc), sizeof(VisibleLayerDesc));
 
     readSMFromStream(is, weights);

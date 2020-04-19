@@ -223,7 +223,7 @@ void Hierarchy::readFromStream(
 
         scLayers[l].readFromStream(is);
         
-        pLayers[l].resize(l == 0 ? inputSizes.size() : 1);
+        pLayers[l].resize(l == 0 ? numInputs : 1);
 
         // Predictors
         for (int v = 0; v < pLayers[l].size(); v++) {
