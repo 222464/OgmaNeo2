@@ -195,6 +195,8 @@ void Hierarchy::writeToStream(
             if (exists)
                 pLayers[l][v]->writeToStream(os);
         }
+
+        writeBufferToStream(os, &hiddenCsPrev[l]);
     }
 }
 
@@ -235,6 +237,8 @@ void Hierarchy::readFromStream(
             else
                 pLayers[l][v] = nullptr;
         }
+
+        readBufferFromStream(is, &hiddenCsPrev[l]);
     }
 }
 

@@ -10,7 +10,6 @@
 
 #include "SparseCoder.h"
 #include "Predictor.h"
-#include "Actor.h"
 
 #include <memory>
 
