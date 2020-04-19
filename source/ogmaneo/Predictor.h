@@ -93,9 +93,9 @@ public:
     // Defaults
     Predictor()
     :
-    alpha(0.01f),
+    alpha(0.5f),
     historyIters(8),
-    maxDistance(4)
+    maxDistance(6)
     {}
 
     // Copy

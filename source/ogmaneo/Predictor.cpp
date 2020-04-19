@@ -56,7 +56,7 @@ void Predictor::learn(
 
         sum /= std::max(1, 2 * weights[0].count(hiddenIndex) / visibleLayerDesc.size.z);
             
-        float delta = alpha * closeness * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+        float delta = alpha * closeness * closeness * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
 
         weights[1].deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
         weights[0].deltaOHVs(*inputCsPrev, delta, hiddenIndex, visibleLayerDesc.size.z);
