@@ -216,6 +216,7 @@ void Hierarchy::readFromStream(
 
     scLayers.resize(numLayers);
     pLayers.resize(numLayers);
+    hiddenCsPrev.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes;
