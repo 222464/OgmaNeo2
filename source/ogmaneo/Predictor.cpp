@@ -24,8 +24,8 @@ void Predictor::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = weights.multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
+        float sum = weights[1].multiplyOHVs(*goalCs, hiddenIndex, visibleLayerDesc.size.z) +
+            weights[0].multiplyOHVs(*inputCs, hiddenIndex, visibleLayerDesc.size.z);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -51,15 +51,15 @@ void Predictor::learn(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = weights.multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) -
-            weights.multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
+        float sum = weights[1].multiplyOHVs(*inputCsGoal, hiddenIndex, visibleLayerDesc.size.z) +
+            weights[0].multiplyOHVs(*inputCsPrev, hiddenIndex, visibleLayerDesc.size.z);
 
-        sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
+        sum /= std::max(1, 2 * weights[0].count(hiddenIndex) / visibleLayerDesc.size.z);
             
         float delta = alpha * closeness * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
 
-        weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
-        weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
+        weights[1].deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
+        weights[0].deltaOHVs(*inputCsPrev, delta, hiddenIndex, visibleLayerDesc.size.z);
     }
 }
 
@@ -80,10 +80,14 @@ void Predictor::initRandom(
     std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
     // Create weight matrix for this visible layer and initialize randomly
-    initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weights);
+    initSMLocalRF(visibleLayerDesc.size, hiddenSize, visibleLayerDesc.radius, weights[0]);
 
-    for (int i = 0; i < weights.nonZeroValues.size(); i++)
-        weights.nonZeroValues[i] = weightDist(cs.rng);
+    weights[1] = weights[0];
+
+    for (int i = 0; i < weights[0].nonZeroValues.size(); i++) {
+        weights[0].nonZeroValues[i] = weightDist(cs.rng);
+        weights[1].nonZeroValues[i] = weightDist(cs.rng);
+    }
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
@@ -207,7 +211,8 @@ void Predictor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    writeSMToStream(os, weights);
+    writeSMToStream(os, weights[0]);
+    writeSMToStream(os, weights[1]);
 
     os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
@@ -239,7 +244,8 @@ void Predictor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&visibleLayerDesc), sizeof(VisibleLayerDesc));
 
-    readSMFromStream(is, weights);
+    readSMFromStream(is, weights[0]);
+    readSMFromStream(is, weights[1]);
 
     is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 
