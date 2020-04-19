@@ -41,7 +41,6 @@ void Predictor::learn(
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs,
     const IntBuffer* inputCsGoal,
-    const IntBuffer* inputCs,
     const IntBuffer* inputCsPrev,
     float closeness
 ) {
@@ -57,7 +56,7 @@ void Predictor::learn(
 
         sum /= std::max(1, weights.count(hiddenIndex) / visibleLayerDesc.size.z);
             
-        float delta = alpha * closeness * closeness * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+        float delta = alpha * closeness * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
 
         weights.deltaOHVs(*inputCsGoal, delta, hiddenIndex, visibleLayerDesc.size.z);
         weights.deltaOHVs(*inputCsPrev, -delta, hiddenIndex, visibleLayerDesc.size.z);
@@ -187,7 +186,7 @@ void Predictor::learn(
             float closeness = static_cast<float>(maxDistance - dist) / static_cast<float>(maxDistance - 1);
 
             // Learn kernel
-            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &s.inputCs, &sPrev.inputCs, closeness), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, &s.hiddenTargetCs, &sDist.inputCs, &sPrev.inputCs, closeness), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
 }

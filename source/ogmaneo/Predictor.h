@@ -59,7 +59,6 @@ private:
         std::mt19937 &rng,
         const IntBuffer* hiddenTargetCs,
         const IntBuffer* inputCsGoal,
-        const IntBuffer* inputCs,
         const IntBuffer* inputCsPrev,
         float closeness
     );
@@ -80,11 +79,10 @@ private:
         Predictor* p,
         const IntBuffer* hiddenTargetCs,
         const IntBuffer* inputCsGoal,
-        const IntBuffer* inputCs,
         const IntBuffer* inputCsPrev,
         float closeness
     ) {
-        p->learn(pos, rng, hiddenTargetCs, inputCsGoal, inputCs, inputCsPrev, closeness);
+        p->learn(pos, rng, hiddenTargetCs, inputCsGoal, inputCsPrev, closeness);
     }
 
 public:
@@ -95,9 +93,9 @@ public:
     // Defaults
     Predictor()
     :
-    alpha(0.1f),
+    alpha(0.5f),
     historyIters(8),
-    maxDistance(8)
+    maxDistance(4)
     {}
 
     // Copy
