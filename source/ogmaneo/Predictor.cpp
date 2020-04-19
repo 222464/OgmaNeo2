@@ -63,15 +63,17 @@ void Predictor::learn(
         }
     }
 
-    int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
-    int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), hiddenSize);
+    if (maxIndex != targetC) {
+        int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
+        int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), hiddenSize);
 
-    float delta = alpha * closeness;
+        float delta = alpha * closeness;
 
-    weights[1].deltaOHVs(*inputCsGoal, delta, hiddenIndexTarget, visibleLayerDesc.size.z);
-    weights[0].deltaOHVs(*inputCsPrev, delta, hiddenIndexTarget, visibleLayerDesc.size.z);
-    weights[1].deltaOHVs(*inputCsGoal, -delta, hiddenIndexMax, visibleLayerDesc.size.z);
-    weights[0].deltaOHVs(*inputCsPrev, -delta, hiddenIndexMax, visibleLayerDesc.size.z);
+        weights[1].deltaOHVs(*inputCsGoal, delta, hiddenIndexTarget, visibleLayerDesc.size.z);
+        weights[0].deltaOHVs(*inputCsPrev, delta, hiddenIndexTarget, visibleLayerDesc.size.z);
+        weights[1].deltaOHVs(*inputCsGoal, -delta, hiddenIndexMax, visibleLayerDesc.size.z);
+        weights[0].deltaOHVs(*inputCsPrev, -delta, hiddenIndexMax, visibleLayerDesc.size.z);
+    }
 }
 
 void Predictor::initRandom(
