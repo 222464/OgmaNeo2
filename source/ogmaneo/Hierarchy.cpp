@@ -16,14 +16,12 @@ using namespace ogmaneo;
 void Hierarchy::initRandom(
     ComputeSystem &cs,
     const std::vector<Int3> &inputSizes,
-    const std::vector<InputType> &inputTypes,
     const std::vector<LayerDesc> &layerDescs
 ) {
     // Create layers
-    scLayers.resize(layerDescs.size());
-    pLayers.resize(layerDescs.size());
+    layers.resize(layerDescs.size());
 
-    ticks.assign(layerDescs.size(), 0);
+    ticks.resize(layerDescs.size(), 0);
 
     histories.resize(layerDescs.size());
     historySizes.resize(layerDescs.size());
@@ -32,6 +30,9 @@ void Hierarchy::initRandom(
 
     // Default update state is no update
     updates.resize(layerDescs.size(), false);
+
+    rewardAccums.resize(layerDescs.size(), 0.0f);
+    rewardCounts.resize(layerDescs.size(), 0.0f);
 
     // Cache input sizes
     this->inputSizes = inputSizes;
@@ -48,18 +49,18 @@ void Hierarchy::initRandom(
         historySizes[l].resize(histories[l].size());
 		
         // Create sparse coder visible layer descriptors
-        std::vector<SparseCoder::VisibleLayerDesc> scVisibleLayerDescs;
+        std::vector<Layer::VisibleLayerDesc> lVisibleLayerDescs;
 
         // If first layer
         if (l == 0) {
-            scVisibleLayerDescs.resize(inputSizes.size() * layerDescs[l].temporalHorizon);
+            lVisibleLayerDescs.resize(inputSizes.size() * layerDescs[l].temporalHorizon);
 
             for (int i = 0; i < inputSizes.size(); i++) {
                 for (int t = 0; t < layerDescs[l].temporalHorizon; t++) {
                     int index = t + layerDescs[l].temporalHorizon * i;
 
-                    scVisibleLayerDescs[index].size = inputSizes[i];
-                    scVisibleLayerDescs[index].radius = layerDescs[l].ffRadius;
+                    lVisibleLayerDescs[index].size = inputSizes[i];
+                    lVisibleLayerDescs[index].radius = layerDescs[l].mRadius;
                 }
             }
             
@@ -73,49 +74,13 @@ void Hierarchy::initRandom(
 
                 historySizes[l][v] = inSize;
 			}
-
-            // Predictors
-            pLayers[l].resize(inputSizes.size());
-            aLayers.resize(inputSizes.size());
-
-            // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
-
-            pVisibleLayerDescs[0].size = layerDescs[l].hiddenSize;
-            pVisibleLayerDescs[0].radius = layerDescs[l].pRadius;
-
-            if (l < scLayers.size() - 1)
-                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
-
-            // Actor visible layer descriptors
-            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(1);
-
-            aVisibleLayerDescs[0].size = layerDescs[l].hiddenSize;
-            aVisibleLayerDescs[0].radius = layerDescs[l].aRadius;
-
-            if (l < scLayers.size() - 1)
-                aVisibleLayerDescs.push_back(aVisibleLayerDescs[0]);
-
-            // Create actors
-            for (int p = 0; p < pLayers[l].size(); p++) {
-                if (inputTypes[p] == InputType::prediction) {
-                    pLayers[l][p] = std::make_unique<Predictor>();
-
-                    pLayers[l][p]->initRandom(cs, inputSizes[p], pVisibleLayerDescs);
-                }
-                else if (inputTypes[p] == InputType::action) {
-                    aLayers[p] = std::make_unique<Actor>();
-
-                    aLayers[p]->initRandom(cs, inputSizes[p], layerDescs[l].historyCapacity, aVisibleLayerDescs);
-                }
-            }
         }
         else {
-            scVisibleLayerDescs.resize(layerDescs[l].temporalHorizon);
+            lVisibleLayerDescs.resize(layerDescs[l].temporalHorizon);
 
             for (int t = 0; t < layerDescs[l].temporalHorizon; t++) {
-                scVisibleLayerDescs[t].size = layerDescs[l - 1].hiddenSize;
-                scVisibleLayerDescs[t].radius = layerDescs[l].ffRadius;
+                lVisibleLayerDescs[t].size = layerDescs[l - 1].hiddenSize;
+                lVisibleLayerDescs[t].radius = layerDescs[l].mRadius;
             }
 
             int inSize = layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y;
@@ -125,28 +90,10 @@ void Hierarchy::initRandom(
 
                 historySizes[l][v] = inSize;
             }
-
-            pLayers[l].resize(layerDescs[l].ticksPerUpdate);
-
-            // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
-
-            pVisibleLayerDescs[0].size = layerDescs[l].hiddenSize;
-            pVisibleLayerDescs[0].radius = layerDescs[l].pRadius;
-
-            if (l < scLayers.size() - 1)
-                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
-
-            // Create actors
-            for (int p = 0; p < pLayers[l].size(); p++) {
-                pLayers[l][p] = std::make_unique<Predictor>();
-
-                pLayers[l][p]->initRandom(cs, layerDescs[l - 1].hiddenSize, pVisibleLayerDescs);
-            }
         }
 		
         // Create the sparse coding layer
-        scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, scVisibleLayerDescs);
+        layers[l].initRandom(cs, layerDescs[l].hiddenSize, layerDescs[l].lRadius, lVisibleLayerDescs, l < layerDescs.size() - 1);
     }
 }
 
@@ -154,30 +101,19 @@ const Hierarchy &Hierarchy::operator=(
     const Hierarchy &other
 ) {
     // Layers
-    scLayers = other.scLayers;
+    layers = other.layers;
 
+    inputSizes = other.inputSizes;
     historySizes = other.historySizes;
-    updates = other.updates;
     ticks = other.ticks;
     ticksPerUpdate = other.ticksPerUpdate;
-    inputSizes = other.inputSizes;
+    updates = other.updates;
+    rewardAccums = other.rewardAccums;
+    rewardCounts = other.rewardCounts;
 
-    pLayers.resize(other.pLayers.size());
     histories.resize(other.histories.size());
 
-    for (int l = 0; l < scLayers.size(); l++) {
-        pLayers[l].resize(other.pLayers[l].size());
-
-        for (int v = 0; v < pLayers[l].size(); v++) {
-            if (other.pLayers[l][v] != nullptr) {
-                pLayers[l][v] = std::make_unique<Predictor>();
-
-                (*pLayers[l][v]) = (*other.pLayers[l][v]);
-            }
-            else
-                pLayers[l][v] = nullptr;
-        }
-
+    for (int l = 0; l < layers.size(); l++) {
         histories[l].resize(other.histories[l].size());
 
         for (int v = 0; v < histories[l].size(); v++) {
@@ -185,18 +121,6 @@ const Hierarchy &Hierarchy::operator=(
             
             (*histories[l][v]) = (*other.histories[l][v]);
         }
-    }
-
-    aLayers.resize(inputSizes.size());
-    
-    for (int v = 0; v < aLayers.size(); v++) {
-        if (other.aLayers[v] != nullptr) {
-            aLayers[v] = std::make_unique<Actor>();
-
-            (*aLayers[v]) = (*other.aLayers[v]);
-        }
-        else
-            aLayers[v] = nullptr;
     }
 
     return *this;
@@ -241,10 +165,10 @@ void Hierarchy::step(
 
     // Set all updates to no update, will be set to true if an update occurred later
     updates.clear();
-    updates.resize(scLayers.size(), false);
+    updates.resize(layers.size(), false);
 
     // Forward
-    for (int l = 0; l < scLayers.size(); l++) {
+    for (int l = 0; l < layers.size(); l++) {
         // If is time for layer to tick
         if (l == 0 || ticks[l] >= ticksPerUpdate[l]) {
             // Reset tick
@@ -254,10 +178,10 @@ void Hierarchy::step(
             updates[l] = true;
 
             // Activate sparse coder
-            scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
+            layers[l].stepForward(cs, constGet(histories[l]), learnEnabled);
 
             // Add to next layer's history
-            if (l < scLayers.size() - 1) {
+            if (l < layers.size() - 1) {
                 int lNext = l + 1;
 
                 int temporalHorizon = histories[lNext].size();
@@ -268,7 +192,7 @@ void Hierarchy::step(
                     histories[lNext][t] = histories[lNext][t - 1];
 
                 // Copy
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), last.get()), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &layers[l].getHiddenCs(), last.get()), layers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
 
                 histories[lNext].front() = last;
 
@@ -278,36 +202,18 @@ void Hierarchy::step(
     }
 
     // Backward
-    for (int l = scLayers.size() - 1; l >= 0; l--) {
+    for (int l = layers.size() - 1; l >= 0; l--) {
         if (updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCs(l < scLayers.size() - 1 ? 2 : 1);
+            const IntBuffer* feedBackCs;
 
-            feedBackCs[0] = &scLayers[l].getHiddenCs();
-
-            if (l < scLayers.size() - 1) {
-                assert(pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]] != nullptr);
-
-                feedBackCs[1] = &pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]]->getHiddenCs();
+            if (l < layers.size() - 1) {
+                feedBackCs = &layers[l + 1].getVisibleLayer(ticksPerUpdate[l + 1] - 1 - ticks[l + 1]).reconCs;
             }
+            else
+                feedBackCs = nullptr;
 
-            // Step actor layers
-            for (int p = 0; p < pLayers[l].size(); p++) {
-                if (pLayers[l][p] != nullptr) {
-                    if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get());
-
-                    pLayers[l][p]->activate(cs, feedBackCs);
-                }
-            }
-
-            if (l == 0) {
-                // Step actors
-                for (int p = 0; p < aLayers.size(); p++) {
-                    if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled);
-                }
-            }
+            layers[l].stepBackward(cs, feedBackCs, learnEnabled, reward);
         }
     }
 }
@@ -315,7 +221,7 @@ void Hierarchy::step(
 void Hierarchy::writeToStream(
     std::ostream &os
 ) const {
-    int numLayers = scLayers.size();
+    int numLayers = layers.size();
 
     os.write(reinterpret_cast<const char*>(&numLayers), sizeof(int));
 
@@ -328,6 +234,8 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(updates.data()), updates.size() * sizeof(char));
     os.write(reinterpret_cast<const char*>(ticks.data()), ticks.size() * sizeof(int));
     os.write(reinterpret_cast<const char*>(ticksPerUpdate.data()), ticksPerUpdate.size() * sizeof(int));
+    os.write(reinterpret_cast<const char*>(rewardAccums.data()), rewardAccums.size() * sizeof(float));
+    os.write(reinterpret_cast<const char*>(rewardCounts.data()), rewardCounts.size() * sizeof(float));
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes = historySizes[l].size();
@@ -339,27 +247,7 @@ void Hierarchy::writeToStream(
         for (int i = 0; i < historySizes[l].size(); i++)
             writeBufferToStream(os, histories[l][i].get());
 
-        scLayers[l].writeToStream(os);
-
-        // Predictors
-        for (int v = 0; v < pLayers[l].size(); v++) {
-            char exists = pLayers[l][v] != nullptr;
-
-            os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
-
-            if (exists)
-                pLayers[l][v]->writeToStream(os);
-        }
-    }
-
-    // Actors
-    for (int v = 0; v < aLayers.size(); v++) {
-        char exists = aLayers[v] != nullptr;
-
-        os.write(reinterpret_cast<const char*>(&exists), sizeof(char));
-
-        if (exists)
-            aLayers[v]->writeToStream(os);
+        layers[l].writeToStream(os);
     }
 }
 
@@ -377,8 +265,7 @@ void Hierarchy::readFromStream(
 
     is.read(reinterpret_cast<char*>(inputSizes.data()), numInputs * sizeof(Int3));
 
-    scLayers.resize(numLayers);
-    pLayers.resize(numLayers);
+    layers.resize(numLayers);
 
     ticks.resize(numLayers);
 
@@ -389,9 +276,14 @@ void Hierarchy::readFromStream(
 
     updates.resize(numLayers);
 
+    rewardAccums.resize(numLayers);
+    rewardCounts.resize(numLayers);
+
     is.read(reinterpret_cast<char*>(updates.data()), updates.size() * sizeof(char));
     is.read(reinterpret_cast<char*>(ticks.data()), ticks.size() * sizeof(int));
     is.read(reinterpret_cast<char*>(ticksPerUpdate.data()), ticksPerUpdate.size() * sizeof(int));
+    is.read(reinterpret_cast<char*>(rewardAccums.data()), rewardAccums.size() * sizeof(float));
+    is.read(reinterpret_cast<char*>(rewardCounts.data()), rewardCounts.size() * sizeof(float));
     
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes;
@@ -408,96 +300,6 @@ void Hierarchy::readFromStream(
             readBufferFromStream(is, histories[l][i].get());
         }
 
-        scLayers[l].readFromStream(is);
-        
-        pLayers[l].resize(l == 0 ? inputSizes.size() : ticksPerUpdate[l]);
-
-        // Predictors
-        for (int v = 0; v < pLayers[l].size(); v++) {
-            char exists;
-
-            is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-            if (exists) {
-                pLayers[l][v] = std::make_unique<Predictor>();
-                pLayers[l][v]->readFromStream(is);
-            }
-            else
-                pLayers[l][v] = nullptr;
-        }
+        layers[l].readFromStream(is);
     }
-
-    // Actors
-    aLayers.resize(inputSizes.size());
-
-    for (int v = 0; v < aLayers.size(); v++) {
-        char exists;
-
-        is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-        if (exists) {
-            aLayers[v] = std::make_unique<Actor>();
-            aLayers[v]->readFromStream(is);
-        }
-        else
-            aLayers[v] = nullptr;
-    }
-}
-
-void Hierarchy::getState(
-    State &state
-) const {
-    int numLayers = scLayers.size();
-
-    state.hiddenCs.resize(numLayers);
-    state.histories.resize(numLayers);
-    state.predHiddenCs.resize(numLayers);
-    state.predInputCsPrev.resize(numLayers);
-
-    for (int l = 0; l < numLayers; l++) {
-        state.hiddenCs[l] = scLayers[l].getHiddenCs();
-
-        state.histories[l].resize(historySizes[l].size());
-
-        for (int i = 0; i < historySizes[l].size(); i++)
-            state.histories[l][i] = *histories[l][i];
-
-        state.predHiddenCs[l].resize(pLayers[l].size());
-        state.predInputCsPrev[l].resize(pLayers[l].size());
-
-        for (int j = 0; j < pLayers[l].size(); j++) {
-            state.predHiddenCs[l][j] = pLayers[l][j]->getHiddenCs();
-
-            state.predInputCsPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
-
-            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
-                state.predInputCsPrev[l][j][v] = pLayers[l][j]->getVisibleLayer(v).inputCsPrev;
-        }
-    }
-
-    state.ticks = ticks;
-    state.updates = updates;
-}
-
-void Hierarchy::setState(
-    const State &state
-) {
-    int numLayers = scLayers.size();
-
-    for (int l = 0; l < numLayers; l++) {
-        scLayers[l].hiddenCs = state.hiddenCs[l];
-
-        for (int i = 0; i < historySizes[l].size(); i++)
-            *histories[l][i] = state.histories[l][i];
-
-        for (int j = 0; j < pLayers[l].size(); j++) {
-            pLayers[l][j]->hiddenCs = state.predHiddenCs[l][j];
-
-            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
-                pLayers[l][j]->visibleLayers[v].inputCsPrev = state.predInputCsPrev[l][j][v];
-        }
-    }
-
-    ticks = state.ticks;
-    updates = state.updates;
 }

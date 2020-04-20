@@ -114,13 +114,22 @@ void Layer::backwardMapping(
 
 void Layer::learnTransition(
     const Int2 &pos,
-    std::mt19937 &rng
+    std::mt19937 &rng,
+    const IntBuffer* feedBackCs
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+    int hiddenIndexTransition = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
-    transitionWeights.hebbOHVsT(hiddenCs, hiddenIndex, hiddenSize.z, beta);
+    transitionWeights.hebbOHVsT(hiddenCs, hiddenIndexTransition, hiddenSize.z, beta);
+
+    if (!feedBackWeights.nonZeroValues.empty()) {
+        assert(feedBackCs != nullptr);
+
+        int hiddenIndexFeedBack = address3(Int3(pos.x, pos.y, (*feedBackCs)[hiddenColumnIndex]), hiddenSize);
+
+        feedBackWeights.hebbOHVsT(hiddenCs, hiddenIndexFeedBack, hiddenSize.z, beta);
+    }
 }
 
 void Layer::setReward(
@@ -149,7 +158,8 @@ void Layer::valueIteration(
 
 void Layer::determinePolicy(
     const Int2 &pos,
-    std::mt19937 &rng
+    std::mt19937 &rng,
+    const IntBuffer* feedBackCs
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
@@ -159,20 +169,31 @@ void Layer::determinePolicy(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = transitionWeights.multiplyOHVs(hiddenCs, hiddenValues, hiddenIndex, hiddenSize.z) / std::max(1, transitionWeights.countT(hiddenIndex) / hiddenSize.z);
+        float sum;
+        
+        if (feedBackWeights.nonZeroValues.empty())
+            sum = transitionWeights.multiplyOHVs(hiddenCs, hiddenValues, hiddenIndex, hiddenSize.z) / std::max(1, transitionWeights.countT(hiddenIndex) / hiddenSize.z);
+        else {
+            assert(feedBackCs != nullptr);
+
+            sum = (transitionWeights.multiplyOHVs(hiddenCs, hiddenValues, hiddenIndex, hiddenSize.z) + feedBackWeights.multiplyOHVs(*feedBackCs, hiddenValues, hiddenIndex, hiddenSize.z)) / std::max(1, transitionWeights.countT(hiddenIndex) / hiddenSize.z + feedBackWeights.countT(hiddenIndex) / hiddenSize.z);
+        }
 
         if (sum > maxActivation) {
             maxActivation = sum;
             maxIndex = hc;
         }
     }
+
+    hiddenCsNext[hiddenColumnIndex] = maxIndex;
 }
 
 void Layer::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
     int lateralRadius,
-    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+    const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+    bool hasFeedBack
 ) {
     this->visibleLayerDescs = visibleLayerDescs;
 
@@ -213,6 +234,13 @@ void Layer::initRandom(
 
     transitionWeights.initT();
 
+    if (hasFeedBack) {
+        feedBackWeights = transitionWeights;
+
+        for (int i = 0; i < feedBackWeights.nonZeroValues.size(); i++)
+            feedBackWeights.nonZeroValues[i] = dist01(cs.rng);
+    }
+
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
@@ -246,20 +274,25 @@ void Layer::stepForward(
 
 void Layer::stepBackward(
     ComputeSystem &cs,
+    const IntBuffer* feedBackCs,
     bool learnEnabled,
     float reward
 ) {
+    runKernel2(cs, std::bind(Layer::learnTransitionKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+    
     runKernel2(cs, std::bind(Layer::setRewardKernel, std::placeholders::_1, std::placeholders::_2, this, reward), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
     
     // Value iteration
     for (int it = 0; it < valueIters; it++)
         runKernel2(cs, std::bind(Layer::valueIterationKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 
+    runKernel2(cs, std::bind(Layer::determinePolicyKernel, std::placeholders::_1, std::placeholders::_2, this, feedBackCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+    
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
         VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        runKernel2(cs, std::bind(Layer::backwardMappingKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCs, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
+        runKernel2(cs, std::bind(Layer::backwardMappingKernel, std::placeholders::_1, std::placeholders::_2, this, &hiddenCsNext, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
     }
 }
 

@@ -8,32 +8,11 @@
 
 #pragma once
 
-#include "SparseCoder.h"
-#include "Predictor.h"
-#include "Actor.h"
+#include "Layer.h"
 
 #include <memory>
 
 namespace ogmaneo {
-// Type of hierarchy input layer
-enum InputType {
-    none = 0,
-    prediction = 1,
-    action = 2
-};
-
-// State of hierarchy
-struct State {
-    std::vector<IntBuffer> hiddenCs;
-    std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
-    std::vector<std::vector<IntBuffer>> predHiddenCs;
-
-    std::vector<std::vector<IntBuffer>> histories;
-
-    std::vector<char> updates;
-    std::vector<int> ticks;
-};
-
 // A SPH
 class Hierarchy {
 public:
@@ -41,33 +20,25 @@ public:
     struct LayerDesc {
         Int3 hiddenSize; // Size of hidden layer
 
-        int ffRadius; // Feed forward radius
-        int pRadius; // Prediction radius
+        int mRadius; // Feed forward radius
+        int lRadius; // Prediction radius
 
         int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
-
         int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
-
-        // If there is an actor (only valid for first layer)
-        int aRadius;
-        int historyCapacity;
 
         LayerDesc()
         :
         hiddenSize(4, 4, 16),
-        ffRadius(2),
-        pRadius(2),
+        mRadius(2),
+        lRadius(2),
         ticksPerUpdate(2),
-        temporalHorizon(4),
-        aRadius(2),
-        historyCapacity(32)
+        temporalHorizon(4)
         {}
     };
+
 private:
     // Layers
-    std::vector<SparseCoder> scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
-    std::vector<std::unique_ptr<Actor>> aLayers;
+    std::vector<Layer> layers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
@@ -78,6 +49,9 @@ private:
 
     std::vector<int> ticks;
     std::vector<int> ticksPerUpdate;
+
+    std::vector<float> rewardAccums;
+    std::vector<float> rewardCounts;
 
     // Input dimensions
     std::vector<Int3> inputSizes;
@@ -102,7 +76,6 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const std::vector<Int3> &inputSizes, // Sizes of input layers
-        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
         const std::vector<LayerDesc> &layerDescs // Descriptors for layers
     );
 
@@ -111,17 +84,7 @@ public:
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
         bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
-    );
-
-    // State get
-    void getState(
-        State &state
-    ) const;
-
-    // State set
-    void setState(
-        const State &state
+        float reward = 1.0f // Optional reward for actor layers
     );
 
     // Write to stream
@@ -134,19 +97,18 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get the number of layers (scLayers)
+    // Get the number of layers (layers)
     int getNumLayers() const {
-        return scLayers.size();
+        return layers.size();
     }
 
     // Retrieve predictions
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        if (aLayers[i] != nullptr) // If is an action layer
-            return aLayers[i]->getHiddenCs();
+        int temporalHorizon = layers.front().getNumVisibleLayers() / inputSizes.size();
 
-        return pLayers.front()[i]->getHiddenCs();
+        return layers.front().getVisibleLayer(i * temporalHorizon + 0).reconCs;
     }
 
     // Whether this layer received on update this timestep
@@ -176,41 +138,17 @@ public:
     }
 
     // Retrieve a sparse coding layer
-    SparseCoder &getSCLayer(
+    Layer &getLayer(
         int l // Layer index
     ) {
-        return scLayers[l];
+        return layers[l];
     }
 
     // Retrieve a sparse coding layer, const version
-    const SparseCoder &getSCLayer(
+    const Layer &getLayer(
         int l // Layer index
     ) const {
-        return scLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayers(
-        int l // Layer index
-    ) {
-        return pLayers[l];
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayers(
-        int l // Layer index
-    ) const {
-        return pLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Actor>> &getALayers() {
-        return aLayers;
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
-        return aLayers;
+        return layers[l];
     }
 };
 } // namespace ogmaneo

@@ -46,6 +46,7 @@ private:
     FloatBuffer hiddenValues;
 
     SparseMatrix transitionWeights;
+    SparseMatrix feedBackWeights;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -75,7 +76,8 @@ private:
 
     void learnTransition(
         const Int2 &pos,
-        std::mt19937 &rng
+        std::mt19937 &rng,
+        const IntBuffer* feedBackCs
     );
 
     void setReward(
@@ -91,7 +93,8 @@ private:
 
     void determinePolicy(
         const Int2 &pos,
-        std::mt19937 &rng
+        std::mt19937 &rng,
+        const IntBuffer* feedBackCs
     );
 
     static void forwardMappingKernel(
@@ -126,9 +129,10 @@ private:
     static void learnTransitionKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Layer* l
+        Layer* l,
+        const IntBuffer* feedBackCs
     ) {
-        l->learnTransition(pos, rng);
+        l->learnTransition(pos, rng, feedBackCs);
     }
 
     static void setRewardKernel(
@@ -151,9 +155,10 @@ private:
     static void determinePolicyKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Layer* l
+        Layer* l,
+        const IntBuffer* feedBackCs
     ) {
-        l->determinePolicy(pos, rng);
+        l->determinePolicy(pos, rng, feedBackCs);
     }
 
 public:
@@ -176,7 +181,8 @@ public:
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
         int lateralRadius,
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs, // Descriptors for visible layers
+        bool hasFeedBack // Is this not the topmost layer?
     );
 
     // Activate the sparse coder (perform sparse coding)
@@ -188,6 +194,7 @@ public:
 
     void stepBackward(
         ComputeSystem &cs, // Compute system
+        const IntBuffer* feedBackCs, // Feed back
         bool learnEnabled, // Whether to learn
         float reward // Reward for state
     );
