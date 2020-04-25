@@ -92,6 +92,8 @@ void Actor::learn(
         g *= gamma;
     }
     
+    rewardSum /= std::max(1, qSteps);
+    
     const HistorySample &sAhead = *historySamples[t + qSteps - 1];
     const HistorySample &s = *historySamples[t];
     HistorySample &sPrev = *historySamples[t - 1];
