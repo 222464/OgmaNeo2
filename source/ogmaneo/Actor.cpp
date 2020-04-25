@@ -386,6 +386,7 @@ void Actor::writeToStream(
     os.write(reinterpret_cast<const char*>(&qSteps), sizeof(int));
     os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
 
+    os.write(reinterpret_cast<const char*>(&supportSize), sizeof(int));
     os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
     writeBufferToStream(os, &hiddenCs);
@@ -435,6 +436,7 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&qSteps), sizeof(int));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
+    is.read(reinterpret_cast<char*>(&supportSize), sizeof(int));
     is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 
     readBufferFromStream(is, &hiddenCs);

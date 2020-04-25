@@ -61,7 +61,7 @@ public:
         ticksPerUpdate(2),
         temporalHorizon(4),
         aRadius(2),
-        supportSize(64),
+        supportSize(32),
         historyCapacity(64)
         {}
     };
