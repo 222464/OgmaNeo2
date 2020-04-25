@@ -98,7 +98,6 @@ void Actor::learn(
     const HistorySample &s = *historySamples[t];
     HistorySample &sPrev = *historySamples[t - 1];
 
-    int maxIndex = 0;
     float maxQ = -999999.0f;
     std::vector<float> maxProbs;
 
@@ -151,7 +150,6 @@ void Actor::learn(
 
         if (q > maxQ) {
             maxQ = q;
-            maxIndex = hc;
             maxProbs = probs;
         }
     }
