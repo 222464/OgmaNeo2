@@ -47,6 +47,8 @@ private:
     // Current history size - fixed after initialization. Determines length of wait before updating
     int historySize;
 
+    int supportSize; // Size of support of return distribution
+
     IntBuffer hiddenCs; // Hidden states
         
     std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
@@ -88,8 +90,7 @@ private:
     }
 
 public:
-    float alpha; // Action gap parameter
-    float beta; // Learning rate
+    float alpha; // Learning rate
     float gamma; // Discount factor (multiplicative)
     int qSteps; // N steps ahead
     int historyIters; // Number of update iterations on history
@@ -97,8 +98,7 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.3f),
-    beta(0.01f),
+    alpha(0.01f),
     gamma(0.99f),
     qSteps(3),
     historyIters(16)
@@ -118,6 +118,7 @@ public:
     void initRandom(
         ComputeSystem &cs,
         const Int3 &hiddenSize,
+        int supportSize,
         int historyCapacity,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs
     );
