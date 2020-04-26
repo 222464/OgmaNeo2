@@ -112,7 +112,7 @@ public:
     Actor()
     :
     alpha(0.5f),
-    beta(0.5f),
+    beta(0.05f),
     gamma(0.98f),
     minSteps(8),
     historyIters(4)
