@@ -441,6 +441,8 @@ void Actor::step(
                 g *= gamma;
             }
 
+            q /= (historySize - historyIndex);
+
             // Learn kernel
             runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g, mimic), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
