@@ -106,7 +106,7 @@ void Hierarchy::initRandom(
                 else if (inputTypes[p] == InputType::action) {
                     aLayers[p] = std::make_unique<Actor>();
 
-                    aLayers[p]->initRandom(cs, inputSizes[p], layerDescs[l].historyCapacity, aVisibleLayerDescs);
+                    aLayers[p]->initRandom(cs, inputSizes[p], layerDescs[l].supportSize, layerDescs[l].historyCapacity, aVisibleLayerDescs);
                 }
             }
         }

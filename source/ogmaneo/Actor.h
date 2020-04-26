@@ -38,8 +38,6 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
         IntBuffer hiddenCsPrev;
-
-        FloatBuffer hiddenValuesPrev;
         
         float reward;
     };
@@ -50,9 +48,11 @@ private:
     // Current history size - fixed after initialization. Determines length of wait before updating
     int historySize;
 
+    int supportSize;
+
     IntBuffer hiddenCs; // Hidden states
 
-    FloatBuffer hiddenValues; // Hidden value function output buffer
+    FloatBuffer hiddenProbs; // Hidden value probabilities
 
     std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
 
@@ -73,7 +73,6 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g,
         bool mimic
@@ -94,12 +93,11 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g,
         bool mimic
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g, mimic);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g, mimic);
     }
 
 public:
@@ -134,6 +132,7 @@ public:
     void initRandom(
         ComputeSystem &cs,
         const Int3 &hiddenSize,
+        int supportSize,
         int historyCapacity,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs
     );
@@ -185,6 +184,10 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
+    }
+
+    const FloatBuffer &getHiddenProbs() const {
+        return hiddenProbs;
     }
 
     // Get the value weights for a visible layer
