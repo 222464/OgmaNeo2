@@ -111,11 +111,11 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.02f),
-    beta(0.03f),
-    gamma(0.99f),
+    alpha(0.5f),
+    beta(0.5f),
+    gamma(0.98f),
     minSteps(8),
-    historyIters(8)
+    historyIters(4)
     {}
 
     Actor(
