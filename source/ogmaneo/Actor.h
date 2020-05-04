@@ -100,7 +100,7 @@ public:
     alpha(0.3f),
     beta(0.01f),
     gamma(0.99f),
-    qSteps(5),
+    qSteps(8),
     historyIters(16)
     {}
 
