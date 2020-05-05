@@ -35,7 +35,6 @@ void Actor::forward(
 
         if (sum > maxQ) {
             maxQ = sum;
-
             maxIndex = hc;
         }
     }
