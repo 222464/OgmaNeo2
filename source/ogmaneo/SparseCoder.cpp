@@ -17,16 +17,13 @@ void SparseCoder::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
+    hiddenRefractories[address3(Int3(pos.x, pos.y, hiddenCs[hiddenColumnIndex]), hiddenSize)] = refractoryTicks;
+
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
-
-        if (hiddenRefractories[hiddenIndex] > 0) {
-            hiddenRefractories[hiddenIndex]--;
-            continue;
-        }
 
         float sum = 0.0f;
 
@@ -45,8 +42,6 @@ void SparseCoder::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
-
-    hiddenRefractories[address3(Int3(pos.x, pos.y, maxIndex), hiddenSize)] = refractoryTicks;
 }
 
 void SparseCoder::learn(
@@ -62,32 +57,14 @@ void SparseCoder::learn(
 
     int targetC = (*inputCs)[visibleColumnIndex];
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-    std::vector<float> activations(vld.size.z);
-
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
         float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
-        activations[vc] = sum;
+        float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - sum);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
-
-            maxIndex = vc;
-        }
-    }
-
-    if (maxIndex != targetC) {
-        for (int vc = 0; vc < vld.size.z; vc++) {
-            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
-
-            float delta = alpha * ((vc == targetC ? 1.0f : -1.0f) - std::tanh(activations[vc]));
-
-            vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
-        }
+        vl.weights.deltaConditionalOHVsT(hiddenCs, hiddenRefractories, delta, visibleIndex, hiddenSize.z);
     }
 }
 

@@ -97,7 +97,7 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.3f),
+    alpha(0.2f),
     beta(0.01f),
     gamma(0.99f),
     qSteps(8),
