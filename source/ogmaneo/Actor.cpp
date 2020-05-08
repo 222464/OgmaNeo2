@@ -39,7 +39,6 @@ void Actor::forward(
 
         if (sum > maxQ) {
             maxQ = sum;
-
             maxIndex = hc;
         }
     }
@@ -76,7 +75,7 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float delta = alpha * (q + g * hiddenValues[hiddenColumnIndex] - sum);
+    float delta = alpha * std::tanh(q + g * hiddenValues[hiddenColumnIndex] - sum);
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
