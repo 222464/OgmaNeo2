@@ -211,22 +211,6 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	void deltaConditionalOHVs(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<int> &conditions,
-		float delta,
-		int row,
-		int oneHotSize
-	);
-
-	void deltaConditionalOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<int> &conditions,
-		float delta,
-		int column,
-		int oneHotSize
-	);
-
 	// --- Hebb Rules ---
 
 	void hebb(

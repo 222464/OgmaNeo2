@@ -467,46 +467,6 @@ void SparseMatrix::deltaOHVsT(
 	}
 }
 
-void SparseMatrix::deltaConditionalOHVs(
-	const std::vector<int> &nonZeroIndices,
-	const std::vector<int> &conditions,
-	float delta,
-	int row,
-	int oneHotSize
-) {
-	int nextIndex = row + 1;
-
-	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
-		int i = columnIndices[jj] / oneHotSize;
-
-		if (conditions[i]) {
-			int j = jj + nonZeroIndices[i];
-
-			nonZeroValues[j] += delta;
-		}
-	}
-}
-
-void SparseMatrix::deltaConditionalOHVsT(
-	const std::vector<int> &nonZeroIndices,
-	const std::vector<int> &conditions,
-	float delta,
-	int column,
-	int oneHotSize
-) {
-	int nextIndex = column + 1;
-
-	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
-		int i = rowIndices[jj] / oneHotSize;
-
-		if (conditions[i]) {
-			int j = jj + nonZeroIndices[i];
-
-			nonZeroValues[nonZeroValueIndices[j]] += delta;
-		}
-	}
-}
-
 void SparseMatrix::hebb(
 	const std::vector<float> &in,
 	int row,

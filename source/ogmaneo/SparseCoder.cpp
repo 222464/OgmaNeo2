@@ -17,8 +17,6 @@ void SparseCoder::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    hiddenRefractories[address3(Int3(pos.x, pos.y, hiddenCs[hiddenColumnIndex]), hiddenSize)] = refractoryTicks;
-
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
@@ -64,7 +62,7 @@ void SparseCoder::learn(
 
         float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - sum);
 
-        vl.weights.deltaConditionalOHVsT(hiddenCs, hiddenRefractories, delta, visibleIndex, hiddenSize.z);
+        vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
     }
 }
 
@@ -105,8 +103,6 @@ void SparseCoder::initRandom(
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    hiddenRefractories = IntBuffer(numHidden, 0);
 }
 
 void SparseCoder::step(
@@ -138,10 +134,8 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&refractoryTicks), sizeof(int));
 
     writeBufferToStream(os, &hiddenCs);
-    writeBufferToStream(os, &hiddenRefractories);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -166,10 +160,8 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&refractoryTicks), sizeof(int));
 
     readBufferFromStream(is, &hiddenCs);
-    readBufferFromStream(is, &hiddenRefractories);
 
     int numVisibleLayers;
     
