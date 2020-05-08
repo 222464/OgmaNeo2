@@ -48,6 +48,7 @@ private:
     int historySize;
 
     IntBuffer hiddenCs; // Hidden states
+    FloatBuffer hiddenValues; // Latest values
         
     std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
 
@@ -66,7 +67,9 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        int t
+        int t,
+        float q,
+        float g
     );
 
     static void forwardKernel(
@@ -82,26 +85,26 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
-        int t
+        int t,
+        float q,
+        float g
     ) {
-        a->learn(pos, rng, t);
+        a->learn(pos, rng, t, q, g);
     }
 
 public:
     float alpha; // Action gap parameter
-    float beta; // Learning rate
     float gamma; // Discount factor (multiplicative)
-    int qSteps; // N steps ahead
+    int minSteps; // Minimum number of steps ahead
     int historyIters; // Number of update iterations on history
 
     // Defaults
     Actor()
     :
-    alpha(0.2f),
-    beta(0.01f),
+    alpha(0.01f),
     gamma(0.99f),
-    qSteps(8),
-    historyIters(16)
+    minSteps(16),
+    historyIters(8)
     {}
 
     Actor(
