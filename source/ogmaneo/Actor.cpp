@@ -62,6 +62,7 @@ void Actor::learn(
     const HistorySample &s = *historySamples[t];
     HistorySample &sPrev = *historySamples[t - 1];
 
+    float qNext;
     float maxQ = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
@@ -82,28 +83,47 @@ void Actor::learn(
         sum /= std::max(1, count);
 
         maxQ = std::max(maxQ, sum);
+
+        if (hc == s.hiddenCsPrev[hiddenColumnIndex])
+            qNext = sum;
     }
     
-    int hiddenIndexPrev = address3(Int3(pos.x, pos.y, s.hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+    float qPrev;
+    float maxQPrev = -999999.0f;
 
-    float qPrev = 0.0f;
-    int count = 0;
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+        float sum = 0.0f;
+        int count = 0;
 
-        qPrev += vl.weights.multiplyOHVs(sPrev.inputCs[vli], hiddenIndexPrev, vld.size.z);
-        count += vl.weights.count(hiddenIndexPrev) / vld.size.z;
+        // For each visible layer
+        for (int vli = 0; vli < visibleLayers.size(); vli++) {
+            VisibleLayer &vl = visibleLayers[vli];
+            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+            sum += vl.weights.multiplyOHVs(sPrev.inputCs[vli], hiddenIndex, vld.size.z);
+            count += vl.weights.count(hiddenIndex) / vld.size.z;
+        }
+
+        sum /= std::max(1, count);
+
+        maxQPrev = std::max(maxQPrev, sum);
+
+        if (hc == s.hiddenCsPrev[hiddenColumnIndex])
+            qPrev = sum;
     }
-
-    qPrev /= std::max(1, count);
 
     float deltaQ = rewardSum + g * maxQ - qPrev;
 
-    float delta = alpha * deltaQ;
-    
+    float deltaAL = deltaQ - alpha * (maxQPrev - qPrev);
+
+    float deltaPAL = std::max(deltaAL, deltaQ - alpha * (maxQ - qNext));
+
+    float delta = beta * deltaPAL;
+
+    int hiddenIndexPrev = address3(Int3(pos.x, pos.y, s.hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
@@ -183,6 +203,7 @@ const Actor &Actor::operator=(
     visibleLayers = other.visibleLayers;
 
     alpha = other.alpha;
+    beta = other.beta;
     gamma = other.gamma;
     qSteps = other.qSteps;
     historyIters = other.historyIters;
@@ -264,6 +285,7 @@ void Actor::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&qSteps), sizeof(int));
     os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
@@ -313,6 +335,7 @@ void Actor::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&qSteps), sizeof(int));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));

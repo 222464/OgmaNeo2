@@ -88,7 +88,8 @@ private:
     }
 
 public:
-    float alpha; // Learning rate
+    float alpha; // Action gap parameter
+    float beta; // Learning rate
     float gamma; // Discount factor (multiplicative)
     int qSteps; // N steps ahead
     int historyIters; // Number of update iterations on history
@@ -96,7 +97,8 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.01f),
+    alpha(0.2f),
+    beta(0.01f),
     gamma(0.99f),
     qSteps(8),
     historyIters(16)
