@@ -86,10 +86,10 @@ void SparseCoder::learn(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.weights.ojaOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, hiddenActivations[hiddenIndexMax], alpha);
+        vl.weights.hebbBoundBottomOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, alpha);
     }
 
-    laterals.ojaOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, hiddenActivations[hiddenIndexMax], beta);
+    laterals.hebbBoundTopOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
 void SparseCoder::initRandom(

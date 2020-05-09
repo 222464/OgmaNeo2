@@ -245,19 +245,31 @@ struct SparseMatrix {
 		float alpha
 	);
 
-	void ojaOHVs(
+	void hebbBoundTopOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize,
-		float act,
 		float alpha
 	);
 
-	void ojaOHVsT(
+	void hebbBoundTopOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize,
-		float act,
+		float alpha
+	);
+
+	void hebbBoundBottomOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
+	void hebbBoundBottomOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
 		float alpha
 	);
 };
