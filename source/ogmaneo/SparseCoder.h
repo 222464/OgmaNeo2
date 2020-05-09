@@ -166,5 +166,7 @@ public:
     ) const {
         return visibleLayers[i].weights;
     }
+
+    friend class Hierarchy;
 };
 } // namespace ogmaneo

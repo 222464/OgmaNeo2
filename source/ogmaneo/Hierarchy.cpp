@@ -22,9 +22,8 @@ void Hierarchy::initRandom(
     // Create layers
     scLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
-    hiddenCsPrev.resize(layerDescs.size());
 
-    ticks.assign(layerDescs.size(), 0);
+    ticks.resize(layerDescs.size(), 0);
 
     histories.resize(layerDescs.size());
     historySizes.resize(layerDescs.size());
@@ -146,17 +145,6 @@ void Hierarchy::initRandom(
             }
         }
 		
-        if (layerDescs[l].rRadius >= 0) {
-            SparseCoder::VisibleLayerDesc vld;
-
-            vld.size = layerDescs[l].hiddenSize;
-            vld.radius = layerDescs[l].rRadius;
-
-            scVisibleLayerDescs.push_back(vld);
-
-            hiddenCsPrev[l] = IntBuffer(layerDescs[l].hiddenSize.x * layerDescs[l].hiddenSize.y, 0);
-        }
-
         // Create the sparse coding layer
         scLayers[l].initRandom(cs, layerDescs[l].hiddenSize, layerDescs[l].lRadius, scVisibleLayerDescs);
     }
@@ -218,7 +206,8 @@ void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
     bool learnEnabled,
-    float reward
+    float reward,
+    bool mimic
 ) {
     assert(inputCs.size() == inputSizes.size());
 
@@ -265,16 +254,8 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
-            std::vector<const IntBuffer*> fullLayerInputCs = constGet(histories[l]);
-
-            if (fullLayerInputCs.size() < scLayers[l].getNumVisibleLayers())
-                fullLayerInputCs.push_back(&hiddenCsPrev[l]);
-
             // Activate sparse coder
-            scLayers[l].step(cs, fullLayerInputCs, learnEnabled);
-
-            if (!hiddenCsPrev[l].empty())
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &hiddenCsPrev[l]), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
+            scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
 
             // Add to next layer's history
             if (l < scLayers.size() - 1) {
@@ -325,7 +306,7 @@ void Hierarchy::step(
                 // Step actors
                 for (int p = 0; p < aLayers.size(); p++) {
                     if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled);
+                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled, mimic);
                 }
             }
         }
@@ -360,8 +341,6 @@ void Hierarchy::writeToStream(
             writeBufferToStream(os, histories[l][i].get());
 
         scLayers[l].writeToStream(os);
-
-        writeBufferToStream(os, &hiddenCsPrev[l]);
 
         // Predictors
         for (int v = 0; v < pLayers[l].size(); v++) {
@@ -401,7 +380,6 @@ void Hierarchy::readFromStream(
 
     scLayers.resize(numLayers);
     pLayers.resize(numLayers);
-    hiddenCsPrev.resize(numLayers);
 
     ticks.resize(numLayers);
 
@@ -432,8 +410,6 @@ void Hierarchy::readFromStream(
         }
 
         scLayers[l].readFromStream(is);
-
-        readBufferFromStream(is, &hiddenCsPrev[l]);
         
         pLayers[l].resize(l == 0 ? inputSizes.size() : ticksPerUpdate[l]);
 
@@ -467,4 +443,62 @@ void Hierarchy::readFromStream(
         else
             aLayers[v] = nullptr;
     }
+}
+
+void Hierarchy::getState(
+    State &state
+) const {
+    int numLayers = scLayers.size();
+
+    state.hiddenCs.resize(numLayers);
+    state.histories.resize(numLayers);
+    state.predHiddenCs.resize(numLayers);
+    state.predInputCsPrev.resize(numLayers);
+
+    for (int l = 0; l < numLayers; l++) {
+        state.hiddenCs[l] = scLayers[l].getHiddenCs();
+
+        state.histories[l].resize(historySizes[l].size());
+
+        for (int i = 0; i < historySizes[l].size(); i++)
+            state.histories[l][i] = *histories[l][i];
+
+        state.predHiddenCs[l].resize(pLayers[l].size());
+        state.predInputCsPrev[l].resize(pLayers[l].size());
+
+        for (int j = 0; j < pLayers[l].size(); j++) {
+            state.predHiddenCs[l][j] = pLayers[l][j]->getHiddenCs();
+
+            state.predInputCsPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
+
+            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
+                state.predInputCsPrev[l][j][v] = pLayers[l][j]->getVisibleLayer(v).inputCsPrev;
+        }
+    }
+
+    state.ticks = ticks;
+    state.updates = updates;
+}
+
+void Hierarchy::setState(
+    const State &state
+) {
+    int numLayers = scLayers.size();
+
+    for (int l = 0; l < numLayers; l++) {
+        scLayers[l].hiddenCs = state.hiddenCs[l];
+
+        for (int i = 0; i < historySizes[l].size(); i++)
+            *histories[l][i] = state.histories[l][i];
+
+        for (int j = 0; j < pLayers[l].size(); j++) {
+            pLayers[l][j]->hiddenCs = state.predHiddenCs[l][j];
+
+            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
+                pLayers[l][j]->visibleLayers[v].inputCsPrev = state.predInputCsPrev[l][j][v];
+        }
+    }
+
+    ticks = state.ticks;
+    updates = state.updates;
 }
