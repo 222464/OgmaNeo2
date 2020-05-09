@@ -22,6 +22,18 @@ enum InputType {
     action = 2
 };
 
+// State of hierarchy
+struct State {
+    std::vector<IntBuffer> hiddenCs;
+    std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
+    std::vector<std::vector<IntBuffer>> predHiddenCs;
+
+    std::vector<std::vector<IntBuffer>> histories;
+
+    std::vector<char> updates;
+    std::vector<int> ticks;
+};
+
 // A SPH
 class Hierarchy {
 public:
@@ -30,8 +42,6 @@ public:
         Int3 hiddenSize; // Size of hidden layer
 
         int ffRadius; // Feed forward radius
-        int rRadius; // Recurrent radius, set to -1 to disable
-        int lRadius; // Lateral radius
         int pRadius; // Prediction radius
 
         int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
@@ -46,11 +56,9 @@ public:
         :
         hiddenSize(4, 4, 16),
         ffRadius(2),
-        rRadius(-1),
-        lRadius(2),
         pRadius(2),
         ticksPerUpdate(2),
-        temporalHorizon(2),
+        temporalHorizon(4),
         aRadius(2),
         historyCapacity(32)
         {}
@@ -60,7 +68,6 @@ private:
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
     std::vector<std::unique_ptr<Actor>> aLayers;
-    std::vector<IntBuffer> hiddenCsPrev;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
@@ -102,9 +109,20 @@ public:
     // Simulation step/tick
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
         bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
+        float reward = 0.0f, // Optional reward for actor layers
+        bool mimic = false
+    );
+
+    // State get
+    void getState(
+        State &state
+    ) const;
+
+    // State set
+    void setState(
+        const State &state
     );
 
     // Write to stream

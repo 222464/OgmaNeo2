@@ -86,10 +86,10 @@ void SparseCoder::learn(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.weights.ojaOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, hiddenActivations[hiddenIndexMax], alpha);
+        vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, alpha);
     }
 
-    laterals.ojaOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, hiddenActivations[hiddenIndexMax], beta);
+    laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
 void SparseCoder::initRandom(
@@ -108,7 +108,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> forwardWeightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> forwardWeightDist(0.0f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
