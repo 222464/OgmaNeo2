@@ -95,7 +95,16 @@ struct SparseMatrix {
         float value
     );
 
+	void scale(
+        int row,
+        float value
+    );
+
     float total(
+        int row
+    );
+
+	float total2(
         int row
     );
 
@@ -123,7 +132,16 @@ struct SparseMatrix {
         float value
     );
 
+	void scaleT(
+        int column,
+        float value
+    );
+
     float totalT(
+        int column
+    );
+
+	float total2T(
         int column
     );
 
@@ -239,34 +257,6 @@ struct SparseMatrix {
 	);
 
 	void hebbOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize,
-		float alpha
-	);
-
-	void hebbBoundTopOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float alpha
-	);
-
-	void hebbBoundTopOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize,
-		float alpha
-	);
-
-	void hebbBoundBottomOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float alpha
-	);
-
-	void hebbBoundBottomOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize,
