@@ -93,7 +93,7 @@ private:
     }
 
 public:
-    float alpha; // Action gap parameter
+    float alpha; // Learning rate
     float gamma; // Discount factor (multiplicative)
 
     // Defaults
