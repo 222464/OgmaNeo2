@@ -23,7 +23,7 @@ void Hierarchy::initRandom(
     scLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
 
-    ticks.assign(layerDescs.size(), 0);
+    ticks.resize(layerDescs.size(), 0);
 
     histories.resize(layerDescs.size());
     historySizes.resize(layerDescs.size());
@@ -450,12 +450,14 @@ void Hierarchy::getState(
     int numLayers = scLayers.size();
 
     state.hiddenCs.resize(numLayers);
+    state.hiddenCsPrev.resize(numLayers);
     state.histories.resize(numLayers);
     state.predHiddenCs.resize(numLayers);
     state.predInputCsPrev.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         state.hiddenCs[l] = scLayers[l].getHiddenCs();
+        state.hiddenCsPrev[l] = scLayers[l].getHiddenCsPrev();
 
         state.histories[l].resize(historySizes[l].size());
 
@@ -486,6 +488,7 @@ void Hierarchy::setState(
 
     for (int l = 0; l < numLayers; l++) {
         scLayers[l].hiddenCs = state.hiddenCs[l];
+        scLayers[l].hiddenCsPrev = state.hiddenCsPrev[l];
 
         for (int i = 0; i < historySizes[l].size(); i++)
             *histories[l][i] = state.histories[l][i];

@@ -25,6 +25,7 @@ enum InputType {
 // State of hierarchy
 struct State {
     std::vector<IntBuffer> hiddenCs;
+    std::vector<IntBuffer> hiddenCsPrev;
     std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
 
@@ -60,7 +61,7 @@ public:
         ticksPerUpdate(2),
         temporalHorizon(4),
         aRadius(2),
-        historyCapacity(64)
+        historyCapacity(32)
         {}
     };
 private:
@@ -109,7 +110,7 @@ public:
     // Simulation step/tick
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
         bool learnEnabled = true, // Whether learning is enabled
         float reward = 0.0f // Optional reward for actor layers
     );
