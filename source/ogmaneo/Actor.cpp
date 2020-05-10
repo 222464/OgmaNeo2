@@ -57,7 +57,8 @@ void Actor::learn(
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
     
     const HistorySample &s = *historySamples[t];
-    HistorySample &sPrev = *historySamples[t - 1];
+    const HistorySample &sPrev = *historySamples[t - 1];
+    const HistorySample &sPrevPrev = *historySamples[t - 2];
 
     int hiddenIndexPrev = address3(Int3(pos.x, pos.y, s.hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
@@ -75,14 +76,14 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float delta = alpha * std::tanh(q + g * hiddenValues[hiddenColumnIndex] - sum);
+    float delta = alpha * (q + g * hiddenValues[hiddenColumnIndex] - sum);
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.weights.deltaOHVs(sPrev.inputCs[vli], delta, hiddenIndexPrev, vld.size.z);
+        vl.weights.deltaChangedOHVs(sPrev.inputCs[vli], sPrevPrev.inputCs[vli], delta, hiddenIndexPrev, vld.size.z);
     }
 }
 
@@ -215,24 +216,20 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > minSteps) {
-        std::uniform_int_distribution<int> sampleDist(1, historySize - minSteps);
+    if (learnEnabled && historySize > 2) {
+        const int t = 2;
 
-        for (int it = 0; it < historyIters; it++) {
-            int t = sampleDist(cs.rng);
+        float q = 0.0f;
+        float g = 1.0f;
 
-            float q = 0.0f;
-            float g = 1.0f;
+        for (int t2 = t; t2 < historySize; t2++) {
+            q += historySamples[t2]->reward * g;
 
-            for (int t2 = t; t2 < historySize; t2++) {
-                q += historySamples[t2]->reward * g;
-
-                g *= gamma;
-            }
-
-            // Learn kernel
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, t, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+            g *= gamma;
         }
+
+        // Learn kernel
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, t, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
     }
 
     // Forward kernel

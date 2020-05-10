@@ -95,16 +95,12 @@ private:
 public:
     float alpha; // Action gap parameter
     float gamma; // Discount factor (multiplicative)
-    int minSteps; // Minimum number of steps ahead
-    int historyIters; // Number of update iterations on history
 
     // Defaults
     Actor()
     :
     alpha(0.1f),
-    gamma(0.99f),
-    minSteps(16),
-    historyIters(8)
+    gamma(0.99f)
     {}
 
     Actor(
