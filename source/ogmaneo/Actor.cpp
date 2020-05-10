@@ -160,8 +160,6 @@ const Actor &Actor::operator=(
 
     alpha = other.alpha;
     gamma = other.gamma;
-    minSteps = other.minSteps;
-    historyIters = other.historyIters;
 
     historySamples.resize(other.historySamples.size());
 
@@ -246,8 +244,6 @@ void Actor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&minSteps), sizeof(int));
-    os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
 
     os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
@@ -295,8 +291,6 @@ void Actor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&minSteps), sizeof(int));
-    is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
     is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 
