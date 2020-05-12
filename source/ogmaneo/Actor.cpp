@@ -69,7 +69,7 @@ void Actor::forward(
                 VisibleLayer &vl = visibleLayers[vli];
                 const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-                vl.weights.deltaTracedOHVs(vl.traces, delta, hiddenIndex, gamma);
+                vl.weights.deltaTracedOHVs(vl.traces, delta, hiddenIndex, traceDecay);
             }
         }
     }
@@ -103,8 +103,12 @@ void Actor::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.weights);
 
-        for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
+        vl.traces = vl.weights;
+
+        for (int i = 0; i < vl.weights.nonZeroValues.size(); i++) {
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
+            vl.traces.nonZeroValues[i] = 0.0f;
+        }
 
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
         vl.inputCsPrevPrev = IntBuffer(numVisibleColumns, 0);
@@ -148,6 +152,7 @@ void Actor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&traceDecay), sizeof(float));
 
     os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
@@ -183,6 +188,7 @@ void Actor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&traceDecay), sizeof(float));
 
     is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 

@@ -635,13 +635,13 @@ void SparseMatrix::deltaTracedOHVs(
 	SparseMatrix &traces,
 	float delta,
 	int row,
-	float gamma
+	float traceDecay
 ) {
 	int nextIndex = row + 1;
 
 	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++) {
 		nonZeroValues[j] += delta * traces.nonZeroValues[j];
-		traces.nonZeroValues[j] *= gamma;
+		traces.nonZeroValues[j] *= traceDecay;
 	}
 }
 
@@ -649,13 +649,13 @@ void SparseMatrix::deltaTracedOHVsT(
 	SparseMatrix &traces,
 	float delta,
 	int column,
-	float gamma
+	float traceDecay
 ) {
 	int nextIndex = column + 1;
 
 	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++) {
 		nonZeroValues[nonZeroValueIndices[j]] += delta * traces.nonZeroValues[nonZeroValueIndices[j]];
-		traces.nonZeroValues[nonZeroValueIndices[j]] *= gamma;
+		traces.nonZeroValues[nonZeroValueIndices[j]] *= traceDecay;
 	}
 }
 

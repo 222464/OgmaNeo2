@@ -76,23 +76,15 @@ private:
 public:
     float alpha; // Learning rate
     float gamma; // Discount factor (multiplicative)
+    float traceDecay; // Trace decay rate (multiplicative)
 
     // Defaults
     Actor()
     :
     alpha(0.01f),
-    gamma(0.99f)
+    gamma(0.99f),
+    traceDecay(0.98f)
     {}
-
-    Actor(
-        const Actor &other
-    ) {
-        *this = other;
-    }
-
-    const Actor &operator=(
-        const Actor &other
-    );
 
     // Initialized randomly
     void initRandom(

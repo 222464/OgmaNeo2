@@ -273,14 +273,14 @@ struct SparseMatrix {
 		SparseMatrix &traces,
 		float delta,
 		int row,
-		float gamma
+		float traceDecay
 	);
 
 	void deltaTracedOHVsT(
 		SparseMatrix &traces,
 		float delta,
 		int column,
-		float gamma
+		float traceDecay
 	);
 
 	// --- Hebb Rules ---
