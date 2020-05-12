@@ -21,7 +21,7 @@ void Actor::forward(
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
     int hiddenTargetCPrev = (*hiddenTargetCsPrev)[hiddenColumnIndex];
-    int hiddenIndexTargetPrev = address3(Int3(pos.x, pos.y, hiddenIndexTargetPrev), hiddenSize);
+    int hiddenIndexTargetPrev = address3(Int3(pos.x, pos.y, hiddenTargetCPrev), hiddenSize);
 
     float qPrev = hiddenValues[hiddenIndexTargetPrev];
 
