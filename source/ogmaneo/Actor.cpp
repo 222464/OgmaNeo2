@@ -176,6 +176,7 @@ void Actor::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl.weights);
+        writeSMToStream(os, vl.traces);
 
         writeBufferToStream(os, &vl.inputCsPrev);
         writeBufferToStream(os, &vl.inputCsPrevPrev);
@@ -217,6 +218,7 @@ void Actor::readFromStream(
         int numVisible = numVisibleColumns * vld.size.z;
 
         readSMFromStream(is, vl.weights);
+        readSMFromStream(is, vl.traces);
 
         readBufferFromStream(is, &vl.inputCsPrev);
         readBufferFromStream(is, &vl.inputCsPrevPrev);
