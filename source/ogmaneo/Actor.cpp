@@ -160,6 +160,8 @@ void Actor::writeToStream(
 
     writeBufferToStream(os, &hiddenCs);
 
+    writeBufferToStream(os, &hiddenValues);
+
     int numVisibleLayers = visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -196,7 +198,7 @@ void Actor::readFromStream(
 
     readBufferFromStream(is, &hiddenCs);
 
-    hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
+    readBufferFromStream(is, &hiddenValues);
 
     int numVisibleLayers;
     
