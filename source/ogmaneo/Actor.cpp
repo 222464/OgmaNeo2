@@ -20,7 +20,9 @@ void Actor::forward(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    float qPrev = hiddenValues[hiddenColumnIndex];
+    int hiddenIndexTargetPrev = (*hiddenTargetCsPrev)[hiddenColumnIndex];
+
+    float qPrev = hiddenValues[hiddenIndexTargetPrev];
 
     int maxIndex = 0;
     float maxQ = -999999.0f;
@@ -41,6 +43,8 @@ void Actor::forward(
 
         sum /= std::max(1, count);
 
+        hiddenValues[hiddenIndex] = sum;
+
         if (sum > maxQ) {
             maxQ = sum;
             maxIndex = hc;
@@ -48,12 +52,9 @@ void Actor::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
-    hiddenValues[hiddenColumnIndex] = maxQ;
 
     if (learnEnabled) {
         float delta = alpha * (reward + gamma * maxQ - qPrev);
-
-        int hiddenIndexTargetPrev = (*hiddenTargetCsPrev)[hiddenColumnIndex];
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
@@ -117,7 +118,7 @@ void Actor::initRandom(
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
 
-    hiddenValues = FloatBuffer(numHiddenColumns, 0.0f);
+    hiddenValues = FloatBuffer(numHidden, 0.0f);
 }
 
 void Actor::step(
