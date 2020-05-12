@@ -31,14 +31,10 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix weights;
-    };
+        SparseMatrix traces;
 
-    // History sample for delayed updates
-    struct HistorySample {
-        std::vector<IntBuffer> inputCs;
-        IntBuffer hiddenCsPrev;
-        
-        float reward;
+        IntBuffer inputCsPrev;
+        IntBuffer inputCsPrevPrev;
     };
 
 private:
@@ -50,8 +46,6 @@ private:
     IntBuffer hiddenCs; // Hidden states
     FloatBuffer hiddenValues; // Latest values
         
-    std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
-
     // Visible layers and descriptors
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -61,35 +55,22 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        int t,
-        float q,
-        float g
+        const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenTargetCsPrev,
+        float reward,
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenTargetCsPrev,
+        float reward,
+        bool learnEnabled
     ) {
-        a->forward(pos, rng, inputCs);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        Actor* a,
-        int t,
-        float q,
-        float g
-    ) {
-        a->learn(pos, rng, t, q, g);
+        a->forward(pos, rng, inputCs, hiddenTargetCsPrev, reward, learnEnabled);
     }
 
 public:
@@ -99,7 +80,7 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.1f),
+    alpha(0.01f),
     gamma(0.99f)
     {}
 
@@ -117,7 +98,6 @@ public:
     void initRandom(
         ComputeSystem &cs,
         const Int3 &hiddenSize,
-        int historyCapacity,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs
     );
 
@@ -125,7 +105,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCs, // Action taken
+        const IntBuffer* hiddenTargetCsPrev, // Action taken
         float reward,
         bool learnEnabled
     );
