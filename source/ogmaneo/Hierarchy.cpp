@@ -106,7 +106,7 @@ void Hierarchy::initRandom(
                 else if (inputTypes[p] == InputType::action) {
                     aLayers[p] = std::make_unique<Actor>();
 
-                    aLayers[p]->initRandom(cs, inputSizes[p], aVisibleLayerDescs);
+                    aLayers[p]->initRandom(cs, inputSizes[p], layerDescs[l].historyCapacity, aVisibleLayerDescs);
                 }
             }
         }
@@ -206,7 +206,8 @@ void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
     bool learnEnabled,
-    float reward
+    float reward,
+    bool mimic
 ) {
     assert(inputCs.size() == inputSizes.size());
 
@@ -305,7 +306,7 @@ void Hierarchy::step(
                 // Step actors
                 for (int p = 0; p < aLayers.size(); p++) {
                     if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled);
+                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled, mimic);
                 }
             }
         }
@@ -454,6 +455,7 @@ void Hierarchy::getState(
     state.histories.resize(numLayers);
     state.predHiddenCs.resize(numLayers);
     state.predInputCsPrev.resize(numLayers);
+    state.predInputCsPrevPrev.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         state.hiddenCs[l] = scLayers[l].getHiddenCs();
@@ -466,14 +468,18 @@ void Hierarchy::getState(
 
         state.predHiddenCs[l].resize(pLayers[l].size());
         state.predInputCsPrev[l].resize(pLayers[l].size());
+        state.predInputCsPrevPrev[l].resize(pLayers[l].size());
 
         for (int j = 0; j < pLayers[l].size(); j++) {
             state.predHiddenCs[l][j] = pLayers[l][j]->getHiddenCs();
 
             state.predInputCsPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
+            state.predInputCsPrevPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
 
-            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
+            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++) {
                 state.predInputCsPrev[l][j][v] = pLayers[l][j]->getVisibleLayer(v).inputCsPrev;
+                state.predInputCsPrevPrev[l][j][v] = pLayers[l][j]->getVisibleLayer(v).inputCsPrevPrev;
+            }
         }
     }
 
@@ -496,8 +502,10 @@ void Hierarchy::setState(
         for (int j = 0; j < pLayers[l].size(); j++) {
             pLayers[l][j]->hiddenCs = state.predHiddenCs[l][j];
 
-            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
+            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++) {
                 pLayers[l][j]->visibleLayers[v].inputCsPrev = state.predInputCsPrev[l][j][v];
+                pLayers[l][j]->visibleLayers[v].inputCsPrevPrev = state.predInputCsPrevPrev[l][j][v];
+            }
         }
     }
 
