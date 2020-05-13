@@ -113,8 +113,7 @@ public:
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
         bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f, // Optional reward for actor layers
-        bool mimic = false
+        float reward = 0.0f // Optional reward for actor layers
     );
 
     // State get
