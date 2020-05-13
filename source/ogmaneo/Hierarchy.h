@@ -51,7 +51,6 @@ public:
 
         // If there is an actor (only valid for first layer)
         int aRadius;
-        int historyCapacity;
 
         LayerDesc()
         :
@@ -61,8 +60,7 @@ public:
         pRadius(2),
         ticksPerUpdate(2),
         temporalHorizon(4),
-        aRadius(2),
-        historyCapacity(32)
+        aRadius(2)
         {}
     };
 private:
@@ -113,8 +111,7 @@ public:
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
         bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f, // Optional reward for actor layers
-        bool mimic = false
+        float reward = 0.0f // Optional reward for actor layers
     );
 
     // State get

@@ -95,16 +95,7 @@ struct SparseMatrix {
         float value
     );
 
-	void scale(
-        int row,
-        float value
-    );
-
     float total(
-        int row
-    );
-
-	float total2(
         int row
     );
 
@@ -132,16 +123,7 @@ struct SparseMatrix {
         float value
     );
 
-	void scaleT(
-        int column,
-        float value
-    );
-
     float totalT(
-        int column
-    );
-
-	float total2T(
         int column
     );
 
@@ -181,6 +163,34 @@ struct SparseMatrix {
 
 	float distance2OHVsT(
 		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	int countChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int row,
+		int oneHotSize
+	);
+
+	int countChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int column,
+		int oneHotSize
+	);
+
+	float multiplyChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int row,
+		int oneHotSize
+	);
+
+	float multiplyChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
 		int column,
 		int oneHotSize
 	);
@@ -233,6 +243,48 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void deltaChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		float delta,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		float delta,
+		int column,
+		int oneHotSize
+	);
+
+	void setTraceOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	void setTraceOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	void deltaTracedOHVs(
+		SparseMatrix &traces,
+		float delta,
+		int row,
+		float traceDecay
+	);
+
+	void deltaTracedOHVsT(
+		SparseMatrix &traces,
+		float delta,
+		int column,
+		float traceDecay
 	);
 
 	// --- Hebb Rules ---

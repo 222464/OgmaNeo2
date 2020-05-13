@@ -36,7 +36,7 @@ void SparseCoder::forward(
         sum /= visibleLayers.size();
 
         hiddenStimuli[hiddenIndex] = sum;
-        hiddenActivations[hiddenIndex] = sum;
+        hiddenActivations[hiddenIndex] = 0.0f;
 
         if (sum > maxActivation) {
             maxActivation = sum;

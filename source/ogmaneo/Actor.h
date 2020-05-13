@@ -11,7 +11,7 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// A reinforcement learning layer
+// A reinforcement learning layer (Q learning)
 class Actor {
 public:
     // Visible layer descriptor
@@ -30,18 +30,10 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix valueWeights; // Value function weights
-        SparseMatrix actionWeights; // Action function weights
-    };
+        SparseMatrix weights;
+        SparseMatrix traces;
 
-    // History sample for delayed updates
-    struct HistorySample {
-        std::vector<IntBuffer> inputCs;
-        IntBuffer hiddenCsPrev;
-
-        FloatBuffer hiddenValuesPrev;
-        
-        float reward;
+        IntBuffer inputCsPrev;
     };
 
 private:
@@ -51,11 +43,8 @@ private:
     int historySize;
 
     IntBuffer hiddenCs; // Hidden states
-
-    FloatBuffer hiddenValues; // Hidden value function output buffer
-
-    std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
-
+    FloatBuffer hiddenValues; // Latest values
+        
     // Visible layers and descriptors
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -65,76 +54,41 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCsPrev,
-        const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
-        float q,
-        float g,
-        bool mimic
+        const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenTargetCsPrev,
+        float reward,
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         Actor* a,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        const IntBuffer* hiddenTargetCsPrev,
+        float reward,
+        bool learnEnabled
     ) {
-        a->forward(pos, rng, inputCs);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        Actor* a,
-        const std::vector<const IntBuffer*> &inputCsPrev,
-        const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
-        float q,
-        float g,
-        bool mimic
-    ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g, mimic);
+        a->forward(pos, rng, inputCs, hiddenTargetCsPrev, reward, learnEnabled);
     }
 
 public:
-    float alpha; // Value learning rate
-    float beta; // Action learning rate
-    float gamma; // Discount factor
-
-    int minSteps; // Minimum value steps
-    int historyIters; // Sample iters
+    float alpha; // Learning rate
+    float gamma; // Discount factor (multiplicative)
+    float traceDecay; // Trace decay rate (multiplicative)
 
     // Defaults
     Actor()
     :
-    alpha(0.02f),
-    beta(0.02f),
-    gamma(0.99f),
-    minSteps(8),
-    historyIters(8)
+    alpha(0.1f),
+    gamma(0.98f),
+    traceDecay(0.97f)
     {}
-
-    Actor(
-        const Actor &other
-    ) {
-        *this = other;
-    }
-
-    const Actor &operator=(
-        const Actor &other
-    );
 
     // Initialized randomly
     void initRandom(
         ComputeSystem &cs,
         const Int3 &hiddenSize,
-        int historyCapacity,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs
     );
 
@@ -142,10 +96,9 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenTargetCsPrev, // Action taken
         float reward,
-        bool learnEnabled,
-        bool mimic
+        bool learnEnabled
     );
 
     // Write to stream
@@ -185,20 +138,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
-    }
-
-    // Get the value weights for a visible layer
-    const SparseMatrix &getValueWeights(
-        int i // Index of layer
-    ) {
-        return visibleLayers[i].valueWeights;
-    }
-
-    // Get the action weights for a visible layer
-    const SparseMatrix &getActionWeights(
-        int i // Index of layer
-    ) {
-        return visibleLayers[i].actionWeights;
     }
 };
 } // namespace ogmaneo

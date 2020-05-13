@@ -106,7 +106,7 @@ void Hierarchy::initRandom(
                 else if (inputTypes[p] == InputType::action) {
                     aLayers[p] = std::make_unique<Actor>();
 
-                    aLayers[p]->initRandom(cs, inputSizes[p], layerDescs[l].historyCapacity, aVisibleLayerDescs);
+                    aLayers[p]->initRandom(cs, inputSizes[p], aVisibleLayerDescs);
                 }
             }
         }
@@ -206,8 +206,7 @@ void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
     bool learnEnabled,
-    float reward,
-    bool mimic
+    float reward
 ) {
     assert(inputCs.size() == inputSizes.size());
 
@@ -306,7 +305,7 @@ void Hierarchy::step(
                 // Step actors
                 for (int p = 0; p < aLayers.size(); p++) {
                     if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled, mimic);
+                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled);
                 }
             }
         }
