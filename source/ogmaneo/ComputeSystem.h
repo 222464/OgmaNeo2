@@ -31,7 +31,9 @@ public:
 	batchSize3(2, 2, 2)
 	{}
 
-	static void setNumThreads(int numThreads) {
+	static void setNumThreads(
+		int numThreads
+	) {
 		omp_set_num_threads(numThreads);
 	}
 

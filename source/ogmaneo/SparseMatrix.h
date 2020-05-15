@@ -267,16 +267,18 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	void setTraceOHVs(
+	void fillOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
-		int oneHotSize
+		int oneHotSize,
+		float value
 	);
 
-	void setTraceOHVsT(
+	void fillOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
-		int oneHotSize
+		int oneHotSize,
+		float value
 	);
 
 	void deltaTracedOHVs(

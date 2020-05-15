@@ -629,31 +629,33 @@ void SparseMatrix::deltaChangedOHVsT(
 	}
 }
 
-void SparseMatrix::setTraceOHVs(
+void SparseMatrix::fillOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
-	int oneHotSize
+	int oneHotSize,
+	float value
 ) {
 	int nextIndex = row + 1;
 
 	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
 		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
 
-		nonZeroValues[j] = 1.0f;
+		nonZeroValues[j] = value;
 	}
 }
 
-void SparseMatrix::setTraceOHVsT(
+void SparseMatrix::fillOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	int column,
-	int oneHotSize
+	int oneHotSize,
+	float value
 ) {
 	int nextIndex = column + 1;
 
 	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
 		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
 
-		nonZeroValues[nonZeroValueIndices[j]] = 1.0f;
+		nonZeroValues[nonZeroValueIndices[j]] = value;
 	}
 }
 

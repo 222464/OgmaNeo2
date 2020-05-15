@@ -55,13 +55,13 @@ void Actor::forward(
     hiddenCs[hiddenColumnIndex] = maxIndex;
 
     if (learnEnabled) {
-        float delta = alpha * std::tanh(reward + gamma * maxQ - qPrev);
+        float delta = alpha * (reward + gamma * maxQ - qPrev);
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            vl.traces.setTraceOHVs(vl.inputCsPrev, hiddenIndexTargetPrev, vld.size.z);
+            vl.traces.fillOHVs(vl.inputCsPrev, hiddenIndexTargetPrev, vld.size.z, 1.0f);
         }
 
         for (int hc = 0; hc < hiddenSize.z; hc++) {
