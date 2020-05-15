@@ -55,7 +55,7 @@ void Actor::forward(
     hiddenCs[hiddenColumnIndex] = maxIndex;
 
     if (learnEnabled) {
-        float delta = alpha * (reward + gamma * maxQ - qPrev);
+        float delta = alpha * std::tanh(reward + gamma * maxQ - qPrev);
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
