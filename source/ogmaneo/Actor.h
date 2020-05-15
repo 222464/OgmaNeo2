@@ -34,7 +34,6 @@ public:
         SparseMatrix traces;
 
         IntBuffer inputCsPrev;
-        IntBuffer inputCsPrevPrev;
     };
 
 private:

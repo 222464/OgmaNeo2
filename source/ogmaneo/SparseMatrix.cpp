@@ -629,41 +629,31 @@ void SparseMatrix::deltaChangedOHVsT(
 	}
 }
 
-void SparseMatrix::setTraceChangedOHVs(
+void SparseMatrix::setTraceOHVs(
 	const std::vector<int> &nonZeroIndices,
-	const std::vector<int> &nonZeroIndicesPrev,
 	int row,
 	int oneHotSize
 ) {
 	int nextIndex = row + 1;
 
 	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
-		int i = columnIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
 
-		if (nonZeroIndices[i] != nonZeroIndicesPrev[i]) {
-			int j = jj + nonZeroIndices[i];
-
-			nonZeroValues[j] = 1.0f;
-		}
+		nonZeroValues[j] = 1.0f;
 	}
 }
 
-void SparseMatrix::setTraceChangedOHVsT(
+void SparseMatrix::setTraceOHVsT(
 	const std::vector<int> &nonZeroIndices,
-	const std::vector<int> &nonZeroIndicesPrev,
 	int column,
 	int oneHotSize
 ) {
 	int nextIndex = column + 1;
 
 	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
-		int i = rowIndices[jj] / oneHotSize;
+		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
 
-		if (nonZeroIndices[i] != nonZeroIndicesPrev[i]) {
-			int j = jj + nonZeroIndices[i];
-
-			nonZeroValues[nonZeroValueIndices[j]] = 1.0f;
-		}
+		nonZeroValues[nonZeroValueIndices[j]] = 1.0f;
 	}
 }
 

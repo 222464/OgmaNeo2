@@ -61,7 +61,7 @@ void Actor::forward(
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            vl.traces.setTraceChangedOHVs(vl.inputCsPrev, vl.inputCsPrevPrev, hiddenIndexTargetPrev, vld.size.z);
+            vl.traces.setTraceOHVs(vl.inputCsPrev, hiddenIndexTargetPrev, vld.size.z);
         }
 
         for (int hc = 0; hc < hiddenSize.z; hc++) {
@@ -113,7 +113,6 @@ void Actor::initRandom(
         }
 
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
-        vl.inputCsPrevPrev = IntBuffer(numVisibleColumns, 0);
     }
 
     // Hidden Cs
@@ -139,7 +138,6 @@ void Actor::step(
 
         int numVisibleColumns = vld.size.x * vld.size.y;
 
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &vl.inputCsPrev, &vl.inputCsPrevPrev), numVisibleColumns, cs.rng, cs.batchSize1);
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1);
     }
 }
@@ -179,7 +177,6 @@ void Actor::writeToStream(
         writeSMToStream(os, vl.traces);
 
         writeBufferToStream(os, &vl.inputCsPrev);
-        writeBufferToStream(os, &vl.inputCsPrevPrev);
     }
 }
 
@@ -221,6 +218,5 @@ void Actor::readFromStream(
         readSMFromStream(is, vl.traces);
 
         readBufferFromStream(is, &vl.inputCsPrev);
-        readBufferFromStream(is, &vl.inputCsPrevPrev);
     }
 }
