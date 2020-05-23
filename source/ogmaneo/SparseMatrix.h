@@ -213,7 +213,6 @@ struct SparseMatrix {
 
 	void deltaUsageOHVs(
 		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
 		const std::vector<float> &usages,
 		float delta,
 		int row,
@@ -222,7 +221,6 @@ struct SparseMatrix {
 
 	void deltaUsageOHVsT(
 		const std::vector<int> &nonZeroIndices,
-		const std::vector<float> &nonZeroScalars,
 		const std::vector<float> &usages,
 		float delta,
 		int column,

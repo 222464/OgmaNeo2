@@ -43,7 +43,6 @@ void SparseCoder::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
-    hiddenActivations[hiddenColumnIndex] = maxActivation;
 
     if (learnEnabled) {
         int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), hiddenSize);
@@ -68,11 +67,11 @@ void SparseCoder::learn(
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
-        float sum = vl.weights.multiplyOHVsT(hiddenCs, hiddenActivations, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
+        float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
         float delta = ((vc == targetC ? 1.0f : 0.0f) - sum);
 
-        vl.weights.deltaUsageOHVsT(hiddenCs, hiddenActivations, hiddenUsages, delta, visibleIndex, hiddenSize.z);
+        vl.weights.deltaUsageOHVsT(hiddenCs, hiddenUsages, delta, visibleIndex, hiddenSize.z);
     }
 }
 
@@ -113,8 +112,6 @@ void SparseCoder::initRandom(
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    hiddenActivations = FloatBuffer(numHiddenColumns, 0.0f);
 
     hiddenUsages = FloatBuffer(numHidden, 1.0f);
 }
@@ -178,8 +175,6 @@ void SparseCoder::readFromStream(
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
-
-    hiddenActivations = FloatBuffer(numHiddenColumns, 0.0f);
 
     readBufferFromStream(is, &hiddenUsages);
 

@@ -38,8 +38,6 @@ private:
 
     IntBuffer hiddenCs; // Hidden states
 
-    FloatBuffer hiddenActivations;
-
     FloatBuffer hiddenUsages;
 
     // Visible layers and associated descriptors
