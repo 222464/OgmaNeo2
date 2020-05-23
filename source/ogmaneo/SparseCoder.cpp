@@ -48,7 +48,7 @@ void SparseCoder::forward(
     if (learnEnabled) {
         int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), hiddenSize);
 
-        hiddenUsages[hiddenIndexMax] = std::min(999999.0f, hiddenUsages[hiddenIndexMax] + alpha);
+        hiddenUsages[hiddenIndexMax] -= alpha * std::max(0.0f, maxActivation) * hiddenUsages[hiddenIndexMax];
     }
 }
 
@@ -116,7 +116,7 @@ void SparseCoder::initRandom(
 
     hiddenActivations = FloatBuffer(numHiddenColumns, 0.0f);
 
-    hiddenUsages = FloatBuffer(numHidden, 0.0f);
+    hiddenUsages = FloatBuffer(numHidden, 1.0f);
 }
 
 void SparseCoder::step(
