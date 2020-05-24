@@ -261,8 +261,8 @@ void Hierarchy::step(
 
             scLayers[l].optimize(cs, feedBackRewards);
 
-            std::vector<const IntBuffer*> feedBackCs = { &scLayers[l].getHiddenCsSelect() };
             std::vector<const IntBuffer*> actualCs = { &scLayers[l].getHiddenCs() };
+            std::vector<const IntBuffer*> feedBackCs = { &scLayers[l].getHiddenCsSelect() };
 
             // Step actor layers
             for (int p = 0; p < pLayers[l].size(); p++) {
