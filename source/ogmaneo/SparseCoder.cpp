@@ -39,11 +39,6 @@ void SparseCoder::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
-
-    // Learn transitions
-    int hiddenIndexMax = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
-
-    transitions.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
 void SparseCoder::learnTransition(
@@ -53,9 +48,9 @@ void SparseCoder::learnTransition(
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
     // Learn transitions
-    int hiddenIndexMax = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+    int hiddenIndexPrev = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
 
-    transitions.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
+    transitions.hebbOHVsT(hiddenCs, hiddenIndexPrev, hiddenSize.z, beta);
 }
 
 void SparseCoder::learnFeedForward(
