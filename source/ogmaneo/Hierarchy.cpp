@@ -262,12 +262,13 @@ void Hierarchy::step(
             scLayers[l].optimize(cs, feedBackRewards);
 
             std::vector<const IntBuffer*> feedBackCs = { &scLayers[l].getHiddenCsSelect() };
+            std::vector<const IntBuffer*> actualCs = { &scLayers[l].getHiddenCs() };
 
             // Step actor layers
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get());
+                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get(), actualCs);
 
                     pLayers[l][p]->activate(cs, feedBackCs);
                 }
