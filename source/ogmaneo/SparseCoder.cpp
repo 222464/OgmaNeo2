@@ -100,6 +100,48 @@ void SparseCoder::learnFeedForward(
     }
 }
 
+void SparseCoder::randomState(
+    const Int2 &pos,
+    std::mt19937 &rng
+) {
+    int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
+
+    // Random state
+    std::uniform_int_distribution<int> columnDist(0, hiddenSize.z - 1);
+
+    hiddenCsRandom[hiddenColumnIndex] = columnDist(rng);
+}
+
+void SparseCoder::valueIter(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const FloatBuffer* rewards
+) {
+    int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
+
+    int randomC = hiddenCsRandom[hiddenColumnIndex];
+
+    int maxIndex = 0;
+    float maxValue = -999999.0f;
+
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+        // Transition probability
+        float prob = transitions.multiplyOHVs(hiddenCsRandom, hiddenIndex, hiddenSize.z) / hiddenSize.z;
+
+        float value = prob * ((*rewards)[hiddenIndex] + gamma * hiddenValues[hiddenIndex]);
+
+        if (value > maxValue) {
+            maxValue = value;
+            maxIndex = hc;
+        }
+    }
+    
+    hiddenCsSelect[hiddenColumnIndex] = maxIndex;
+    hiddenValues[address3(Int3(pos.x, pos.y, randomC), hiddenSize)] = maxValue;
+}
+
 void SparseCoder::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
@@ -147,7 +189,10 @@ void SparseCoder::initRandom(
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 
-    iterRewards = FloatBuffer(numHidden, 0.0f);
+    hiddenCsRandom = IntBuffer(numHiddenColumns, 0);
+    hiddenCsSelect = IntBuffer(numHiddenColumns, 0);
+
+    hiddenValues = FloatBuffer(numHidden, 0.0f);
 }
 
 void SparseCoder::step(
@@ -175,6 +220,24 @@ void SparseCoder::step(
     runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &hiddenCs, &hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 }
 
+void SparseCoder::optimize(
+    ComputeSystem &cs,
+    const FloatBuffer* rewards
+) {
+    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
+    
+    for (int it = 0; it < valueIters; it++) {
+        runKernel2(cs, std::bind(SparseCoder::randomStateKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+
+        runKernel2(cs, std::bind(SparseCoder::valueIterKernel, std::placeholders::_1, std::placeholders::_2, this, rewards), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+    }
+
+    // Optimize current step to get final selected action (and a free update)
+    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &hiddenCs, &hiddenCsRandom), numHiddenColumns, cs.rng, cs.batchSize1);
+    
+    runKernel2(cs, std::bind(SparseCoder::valueIterKernel, std::placeholders::_1, std::placeholders::_2, this, rewards), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+}
+
 void SparseCoder::writeToStream(
     std::ostream &os
 ) const {
@@ -184,9 +247,15 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&beta), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
     writeBufferToStream(os, &hiddenCsPrev);
+    
+    writeBufferToStream(os, &hiddenCsSelect);
+
+    writeBufferToStream(os, &hiddenValues);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -200,6 +269,8 @@ void SparseCoder::writeToStream(
 
         writeSMToStream(os, vl.weights);
     }
+
+    writeSMToStream(os, transitions);
 }
 
 void SparseCoder::readFromStream(
@@ -211,9 +282,17 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&beta), sizeof(float));
+    is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
     readBufferFromStream(is, &hiddenCsPrev);
+
+    hiddenCsRandom = IntBuffer(numHiddenColumns, 0);
+
+    readBufferFromStream(is, &hiddenCsSelect);
+
+    readBufferFromStream(is, &hiddenValues);
 
     int numVisibleLayers;
     
@@ -233,4 +312,6 @@ void SparseCoder::readFromStream(
 
         readSMFromStream(is, vl.weights);
     }
+
+    readSMFromStream(is, transitions);
 }

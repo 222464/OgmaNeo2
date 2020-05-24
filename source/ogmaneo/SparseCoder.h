@@ -39,9 +39,12 @@ private:
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsPrev; // Previous hidden states
 
+    IntBuffer hiddenCsRandom; // Random state for value iteration
+    IntBuffer hiddenCsSelect; // Hidden states selected by value iteration
+
     SparseMatrix transitions; // Transition probabilities
 
-    FloatBuffer iterRewards; // Rewards learned through value iteration
+    FloatBuffer hiddenValues; // Values learned through value iteration
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -66,6 +69,11 @@ private:
         const IntBuffer* inputCs,
         int vli
     );
+
+    void randomState(
+        const Int2 &pos,
+        std::mt19937 &rng
+    ); 
 
     void valueIter(
         const Int2 &pos,
@@ -100,15 +108,36 @@ private:
         sc->learnFeedForward(pos, rng, inputCs, vli);
     }
 
+    static void randomStateKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc
+    ) {
+        sc->randomState(pos, rng);
+    }
+
+    static void valueIterKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const FloatBuffer* rewards
+    ) {
+        sc->valueIter(pos, rng, rewards);
+    }
+
 public:
     float alpha; // Weight learning rate
     float beta; // Transition probability learning rate
+    float gamma; // Discount factor
+    int valueIters; // Number of value iterations
 
     // Defaults
     SparseCoder()
     :
     alpha(0.1f),
-    beta(0.01f)
+    beta(0.01f),
+    gamma(0.9f),
+    valueIters(16)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -129,8 +158,7 @@ public:
     // Optimize state 1 timestep ahead for path with most reward
     void optimize(
         ComputeSystem &cs,
-        const FloatBuffer* rewards,
-        bool learnEnabled
+        const FloatBuffer* rewards
     );
 
     // Write to stream
@@ -170,6 +198,11 @@ public:
     // Get the previous hidden states
     const IntBuffer &getHiddenCsPrev() const {
         return hiddenCsPrev;
+    }
+
+    // Get selected hidden states
+    const IntBuffer &getHiddenCsSelect() const {
+        return hiddenCsSelect;
     }
 
     // Get the hidden size

@@ -10,7 +10,6 @@
 
 #include "SparseCoder.h"
 #include "Predictor.h"
-#include "Actor.h"
 
 #include <memory>
 
@@ -18,21 +17,7 @@ namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
     none = 0,
-    prediction = 1,
-    action = 2
-};
-
-// State of hierarchy
-struct State {
-    std::vector<IntBuffer> hiddenCs;
-    std::vector<IntBuffer> hiddenCsPrev;
-    std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
-    std::vector<std::vector<IntBuffer>> predHiddenCs;
-
-    std::vector<std::vector<IntBuffer>> histories;
-
-    std::vector<char> updates;
-    std::vector<int> ticks;
+    prediction = 1
 };
 
 // A SPH
@@ -43,32 +28,27 @@ public:
         Int3 hiddenSize; // Size of hidden layer
 
         int ffRadius; // Feed forward radius
+        int tRadius; // Transition radius
         int pRadius; // Prediction radius
 
         int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
         int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
 
-        // If there is an actor (only valid for first layer)
-        int aRadius;
-        int historyCapacity;
-
         LayerDesc()
         :
         hiddenSize(4, 4, 16),
         ffRadius(2),
+        tRadius(2),
         pRadius(2),
         ticksPerUpdate(2),
-        temporalHorizon(4),
-        aRadius(2),
-        historyCapacity(32)
+        temporalHorizon(4)
         {}
     };
 private:
     // Layers
     std::vector<SparseCoder> scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
-    std::vector<std::unique_ptr<Actor>> aLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
@@ -111,18 +91,8 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
-        bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
-    );
-
-    // State get
-    void getState(
-        State &state
-    ) const;
-
-    // State set
-    void setState(
-        const State &state
+        const FloatBuffer* topRewards, // Topmost rewards
+        bool learnEnabled = true // Whether learning is enabled
     );
 
     // Write to stream
@@ -144,9 +114,6 @@ public:
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        if (aLayers[i] != nullptr) // If is an action layer
-            return aLayers[i]->getHiddenCs();
-
         return pLayers.front()[i]->getHiddenCs();
     }
 
@@ -202,16 +169,6 @@ public:
         int l // Layer index
     ) const {
         return pLayers[l];
-    }
-
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Actor>> &getALayers() {
-        return aLayers;
-    }
-
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
-        return aLayers;
     }
 };
 } // namespace ogmaneo

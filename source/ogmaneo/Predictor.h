@@ -39,6 +39,7 @@ private:
     Int3 hiddenSize; // Size of the output/hidden/prediction
 
     IntBuffer hiddenCs; // Hidden state
+    FloatBuffer hiddenActivations;
 
     // Visible layers and descs
     std::vector<VisibleLayer> visibleLayers;
@@ -133,9 +134,14 @@ public:
         return visibleLayerDescs[i];
     }
 
-    // Get the hidden activations (predictions)
+    // Get the hidden state (predictions)
     const IntBuffer &getHiddenCs() const {
         return hiddenCs;
+    }
+
+    // Get the hidden activations (predictions)
+    const FloatBuffer &getHiddenActivations() const {
+        return hiddenActivations;
     }
 
     // Get the hidden size
