@@ -39,6 +39,10 @@ private:
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsPrev; // Previous hidden states
 
+    SparseMatrix transitions; // Transition probabilities
+
+    FloatBuffer iterRewards; // Rewards learned through value iteration
+
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -51,11 +55,22 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
-    void learn(
+    void learnTransition(
+        const Int2 &pos,
+        std::mt19937 &rng
+    );
+
+    void learnFeedForward(
         const Int2 &pos,
         std::mt19937 &rng,
         const IntBuffer* inputCs,
         int vli
+    );
+
+    void valueIter(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const FloatBuffer* rewards
     );
 
     static void forwardKernel(
@@ -67,37 +82,55 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
-    static void learnKernel(
+    static void learnTransitionKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc
+    ) {
+        sc->learnTransition(pos, rng);
+    }
+
+    static void learnFeedForwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
         const IntBuffer* inputCs,
         int vli
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->learnFeedForward(pos, rng, inputCs, vli);
     }
 
 public:
     float alpha; // Weight learning rate
+    float beta; // Transition probability learning rate
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.1f)
+    alpha(0.1f),
+    beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
+        int transitionRadius, // Radius of transition probability matrix receptive fields
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
-    // Activate the sparse coder (perform sparse coding)
+    // Activate the sparse coder (perform sparse coding), and also remember transitions
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input states
         bool learnEnabled // Whether to learn
+    );
+
+    // Optimize state 1 timestep ahead for path with most reward
+    void optimize(
+        ComputeSystem &cs,
+        const FloatBuffer* rewards,
+        bool learnEnabled
     );
 
     // Write to stream

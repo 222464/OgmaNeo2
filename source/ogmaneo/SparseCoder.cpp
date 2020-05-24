@@ -25,7 +25,6 @@ void SparseCoder::forward(
 
         float sum = 0.0f;
 
-        // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
@@ -40,9 +39,26 @@ void SparseCoder::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
+
+    // Learn transitions
+    int hiddenIndexMax = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+
+    transitions.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
 }
 
-void SparseCoder::learn(
+void SparseCoder::learnTransition(
+    const Int2 &pos,
+    std::mt19937 &rng
+) {
+    int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
+
+    // Learn transitions
+    int hiddenIndexMax = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+
+    transitions.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, beta);
+}
+
+void SparseCoder::learnFeedForward(
     const Int2 &pos,
     std::mt19937 &rng,
     const IntBuffer* inputCs,
@@ -87,6 +103,7 @@ void SparseCoder::learn(
 void SparseCoder::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
+    int transitionRadius,
     const std::vector<VisibleLayerDesc> &visibleLayerDescs
 ) {
     this->visibleLayerDescs = visibleLayerDescs;
@@ -119,9 +136,18 @@ void SparseCoder::initRandom(
         vl.weights.initT();
     }
 
+    initSMLocalRF(hiddenSize, hiddenSize, transitionRadius, transitions);
+
+    for (int i = 0; i < transitions.nonZeroValues.size(); i++)
+        transitions.nonZeroValues[i] = 0.0f;
+
+    transitions.initT();
+
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
+
+    iterRewards = FloatBuffer(numHidden, 0.0f);
 }
 
 void SparseCoder::step(
@@ -135,11 +161,13 @@ void SparseCoder::step(
     runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 
     if (learnEnabled) {
+        runKernel2(cs, std::bind(SparseCoder::learnTransitionKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
+            runKernel2(cs, std::bind(SparseCoder::learnFeedForwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
         }
     }
 
