@@ -137,7 +137,7 @@ public:
     alpha(0.1f),
     beta(0.2f),
     gamma(0.97f),
-    valueIters(8)
+    valueIters(16)
     {}
 
     // Create a sparse coding layer with random initialization

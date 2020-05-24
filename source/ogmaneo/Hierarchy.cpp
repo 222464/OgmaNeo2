@@ -255,9 +255,8 @@ void Hierarchy::step(
 
                 feedBackRewards = &pLayers[l + 1][ticksPerUpdate[l + 1] - 1 - ticks[l + 1]]->getHiddenActivations();
             }
-            else {
+            else
                 feedBackRewards = topRewards;
-            }
 
             scLayers[l].optimize(cs, feedBackRewards);
 
