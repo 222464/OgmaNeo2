@@ -136,7 +136,7 @@ public:
     :
     alpha(0.1f),
     beta(0.1f),
-    gamma(0.95f),
+    gamma(0.98f),
     valueIters(16)
     {}
 

@@ -129,7 +129,7 @@ void SparseCoder::valueIter(
         // Transition probability
         float prob = sigmoid(transitions.multiplyOHVs(hiddenCsRandom, hiddenIndex, hiddenSize.z) / hiddenSize.z);
 
-        float value = prob * ((*rewards)[hiddenIndex] + gamma * hiddenValues[hiddenIndex]);
+        float value = prob * hiddenValues[hiddenIndex];
 
         if (value > maxValue) {
             maxValue = value;
@@ -138,8 +138,10 @@ void SparseCoder::valueIter(
     }
     
     hiddenCsSelect[hiddenColumnIndex] = maxIndex;
+
+    int hiddenIndexRandom = address3(Int3(pos.x, pos.y, hiddenCsRandom[hiddenColumnIndex]), hiddenSize);
     
-    hiddenValues[address3(Int3(pos.x, pos.y, hiddenCsRandom[hiddenColumnIndex]), hiddenSize)] = maxValue;
+    hiddenValues[hiddenIndexRandom] = (*rewards)[hiddenIndexRandom] + gamma * maxValue;
 }
 
 void SparseCoder::initRandom(
@@ -177,7 +179,7 @@ void SparseCoder::initRandom(
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
     }
 
-    std::uniform_real_distribution<float> probDist(-1.0f, 1.0f);
+    std::uniform_real_distribution<float> probDist(-0.01f, 0.01f);
 
     initSMLocalRF(hiddenSize, hiddenSize, transitionRadius, transitions);
 
@@ -193,7 +195,7 @@ void SparseCoder::initRandom(
     hiddenCsRandom = IntBuffer(numHiddenColumns, 0);
     hiddenCsSelect = IntBuffer(numHiddenColumns, 0);
 
-    std::uniform_real_distribution<float> valueDist(0.0f, 0.001f);
+    std::uniform_real_distribution<float> valueDist(0.0f, 0.01f);
 
     hiddenValues = FloatBuffer(numHidden);
 
