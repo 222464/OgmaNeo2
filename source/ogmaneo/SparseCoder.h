@@ -135,8 +135,8 @@ public:
     SparseCoder()
     :
     alpha(0.1f),
-    beta(0.01f),
-    gamma(0.9f),
+    beta(0.1f),
+    gamma(0.95f),
     valueIters(16)
     {}
 

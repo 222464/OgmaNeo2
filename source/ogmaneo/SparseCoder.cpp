@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "SparseCoder.h"
-
+#include <iostream>
 using namespace ogmaneo;
 
 void SparseCoder::forward(
@@ -48,9 +48,15 @@ void SparseCoder::learnTransition(
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
     // Learn transitions
-    int hiddenIndexPrev = address3(Int3(pos.x, pos.y, hiddenCsPrev[hiddenColumnIndex]), hiddenSize);
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-    transitions.hebbOHVsT(hiddenCs, hiddenIndexPrev, hiddenSize.z, beta);
+        float sum = transitions.multiplyOHVs(hiddenCsPrev, hiddenIndex, hiddenSize.z) / hiddenSize.z;
+
+        float delta = beta * ((hc == hiddenCs[hiddenColumnIndex] ? 1.0f : 0.0f) - sigmoid(sum));
+
+        transitions.deltaOHVs(hiddenCsPrev, delta, hiddenIndex, hiddenSize.z);
+    }
 }
 
 void SparseCoder::learnFeedForward(
@@ -114,8 +120,6 @@ void SparseCoder::valueIter(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int randomC = hiddenCsRandom[hiddenColumnIndex];
-
     int maxIndex = 0;
     float maxValue = -999999.0f;
 
@@ -123,7 +127,7 @@ void SparseCoder::valueIter(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         // Transition probability
-        float prob = transitions.multiplyOHVs(hiddenCsRandom, hiddenIndex, hiddenSize.z) / hiddenSize.z;
+        float prob = sigmoid(transitions.multiplyOHVs(hiddenCsRandom, hiddenIndex, hiddenSize.z) / hiddenSize.z);
 
         float value = prob * ((*rewards)[hiddenIndex] + gamma * hiddenValues[hiddenIndex]);
 
@@ -134,7 +138,8 @@ void SparseCoder::valueIter(
     }
     
     hiddenCsSelect[hiddenColumnIndex] = maxIndex;
-    hiddenValues[address3(Int3(pos.x, pos.y, randomC), hiddenSize)] = maxValue;
+    
+    hiddenValues[address3(Int3(pos.x, pos.y, hiddenCsRandom[hiddenColumnIndex]), hiddenSize)] = maxValue;
 }
 
 void SparseCoder::initRandom(
@@ -166,19 +171,20 @@ void SparseCoder::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.weights);
 
+        vl.weights.initT();
+
         for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
-
-        // Generate transpose (needed for reconstruction)
-        vl.weights.initT();
     }
+
+    std::uniform_real_distribution<float> probDist(-1.0f, 1.0f);
 
     initSMLocalRF(hiddenSize, hiddenSize, transitionRadius, transitions);
 
-    for (int i = 0; i < transitions.nonZeroValues.size(); i++)
-        transitions.nonZeroValues[i] = 0.0f;
-
     transitions.initT();
+
+    for (int i = 0; i < transitions.nonZeroValues.size(); i++)
+        transitions.nonZeroValues[i] = probDist(cs.rng);
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
@@ -187,7 +193,12 @@ void SparseCoder::initRandom(
     hiddenCsRandom = IntBuffer(numHiddenColumns, 0);
     hiddenCsSelect = IntBuffer(numHiddenColumns, 0);
 
-    hiddenValues = FloatBuffer(numHidden, 0.0f);
+    std::uniform_real_distribution<float> valueDist(0.0f, 0.001f);
+
+    hiddenValues = FloatBuffer(numHidden);
+
+    for (int i = 0; i < hiddenValues.size(); i++)
+        hiddenValues[i] = valueDist(cs.rng);
 }
 
 void SparseCoder::step(
