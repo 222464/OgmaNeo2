@@ -91,7 +91,7 @@ void SparseCoder::learn(
 
     laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, 0.5f / (1.0f + beta * hiddenUsages[hiddenIndexMax]));
 
-    hiddenUsages[hiddenIndexMax] = std::min(99999, hiddenUsages[hiddenIndexMax] + 1);
+    hiddenUsages[hiddenIndexMax] = std::min(999999, hiddenUsages[hiddenIndexMax] + 1);
 }
 
 void SparseCoder::initRandom(
