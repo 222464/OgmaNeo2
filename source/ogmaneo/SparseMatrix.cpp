@@ -463,6 +463,27 @@ float SparseMatrix::multiplyChangedOHVsT(
 	return sum;
 }
 
+float SparseMatrix::multiplyNoDiagonalOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+		if (columnIndices[j] == row)
+			continue;
+
+		sum += nonZeroValues[j];
+	}
+
+	return sum;
+}
+
 void SparseMatrix::deltas(
 	const std::vector<float> &in,
 	float delta,
@@ -606,27 +627,6 @@ void SparseMatrix::deltaUsageOHVs(
 			int j = jj + nonZeroIndices[i];
 
 			nonZeroValues[j] += delta * usages[columnIndices[j]];
-		}
-	}
-}
-
-void SparseMatrix::deltaUsageOHVsT(
-	const std::vector<int> &nonZeroIndices,
-	const std::vector<int> &nonZeroIndicesPrev,
-	const std::vector<float> &usages,
-	float delta,
-	int column,
-	int oneHotSize
-) {
-	int nextIndex = column + 1;
-
-	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
-		int i = rowIndices[jj] / oneHotSize;
-
-		if (nonZeroIndices[i] != nonZeroIndicesPrev[i]) {
-			int j = jj + nonZeroIndices[i];
-
-			nonZeroValues[nonZeroValueIndices[j]] += delta * usages[rowIndices[j]];
 		}
 	}
 }

@@ -195,6 +195,12 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float multiplyNoDiagonalOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
 	// --- Delta Rules ---
 
 	void deltas(
@@ -261,15 +267,6 @@ struct SparseMatrix {
 		const std::vector<float> &usages,
 		float delta,
 		int row,
-		int oneHotSize
-	);
-
-	void deltaUsageOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		const std::vector<int> &nonZeroIndicesPrev,
-		const std::vector<float> &usages,
-		float delta,
-		int column,
 		int oneHotSize
 	);
 
