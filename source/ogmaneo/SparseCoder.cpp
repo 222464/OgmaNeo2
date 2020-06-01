@@ -86,12 +86,12 @@ void SparseCoder::learn(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, 0.5f / (1.0f + alpha * hiddenUsages[hiddenIndexMax]));
+        vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, hiddenRates[hiddenIndexMax]);
     }
 
-    laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, 0.5f / (1.0f + beta * hiddenUsages[hiddenIndexMax]));
+    laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, hiddenRates[hiddenIndexMax]);
 
-    hiddenUsages[hiddenIndexMax] = std::min(999999, hiddenUsages[hiddenIndexMax] + 1);
+    hiddenRates[hiddenIndexMax] -= alpha * hiddenRates[hiddenIndexMax];
 }
 
 void SparseCoder::initRandom(
@@ -134,7 +134,7 @@ void SparseCoder::initRandom(
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsTemp = IntBuffer(numHiddenColumns);
 
-    hiddenUsages = IntBuffer(numHidden, 0);
+    hiddenRates = FloatBuffer(numHidden, 1.0f);
 
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
@@ -178,10 +178,9 @@ void SparseCoder::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&explainIters), sizeof(int));
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&beta), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
-    writeBufferToStream(os, &hiddenUsages);
+    writeBufferToStream(os, &hiddenRates);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -209,10 +208,9 @@ void SparseCoder::readFromStream(
 
     is.read(reinterpret_cast<char*>(&explainIters), sizeof(int));
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&beta), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
-    readBufferFromStream(is, &hiddenUsages);
+    readBufferFromStream(is, &hiddenRates);
 
     hiddenStimuli = FloatBuffer(numHidden, 0.0f);
     hiddenActivations = FloatBuffer(numHidden, 0.0f);
