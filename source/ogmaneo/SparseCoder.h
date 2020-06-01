@@ -39,7 +39,7 @@ private:
     FloatBuffer hiddenStimuli;
     FloatBuffer hiddenActivations;
 
-    FloatBuffer hiddenUsages;
+    FloatBuffer hiddenResources;
 
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsTemp; // Temporaries for hidden state iteration
