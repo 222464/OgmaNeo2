@@ -30,7 +30,7 @@ void Actor::forward(
         value += vl.valueWeights.multiplyOHVs(*inputCs[vli], hiddenColumnIndex, vld.size.z);
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
-    
+
     assert(count > 0);
 
     hiddenValues[hiddenColumnIndex] = value / count;
@@ -211,7 +211,7 @@ void Actor::initRandom(
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.actionWeights);
 
         for (int i = 0; i < vl.valueWeights.nonZeroValues.size(); i++)
-            vl.valueWeights.nonZeroValues[i] = weightDist(cs.rng);
+            vl.valueWeights.nonZeroValues[i] = 0.0f;
 
         for (int i = 0; i < vl.actionWeights.nonZeroValues.size(); i++)
             vl.actionWeights.nonZeroValues[i] = weightDist(cs.rng);
@@ -285,7 +285,7 @@ void Actor::step(
 
     // Learn (if have sufficient samples)
     if (learnEnabled && historySize > minSteps + 1) {
-        std::uniform_int_distribution<int> historyDist(minSteps, historySize - 1);
+        std::uniform_int_distribution<int> historyDist(minSteps, historySize - 2);
 
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);
