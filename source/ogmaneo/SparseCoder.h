@@ -36,10 +36,15 @@ public:
 private:
     Int3 hiddenSize; // Size of hidden/output layer
 
-    IntBuffer hiddenCs; // Hidden states
-    IntBuffer hiddenCsPrev; // Previous hidden states
+    FloatBuffer hiddenStimuli;
+    FloatBuffer hiddenActivations;
 
-    FloatBuffer hiddenUsages; // Usage of hidden units decays over time
+    IntBuffer hiddenUsages;
+
+    IntBuffer hiddenCs; // Hidden states
+    IntBuffer hiddenCsTemp; // Temporaries for hidden state iteration
+
+    SparseMatrix laterals;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -50,50 +55,64 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void inhibit(
+        const Int2 &pos,
+        std::mt19937 &rng
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        sc->forward(pos, rng, inputCs);
+    }
+
+    static void inhibitKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc
+    ) {
+        sc->inhibit(pos, rng);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const IntBuffer* inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->learn(pos, rng, inputCs);
     }
 
 public:
-    float alpha; // Learning rate decay
+    int explainIters; // Explaining-away iterations
+    float alpha; // Learning decay
+    float beta; // Lateral learning rate
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.005f)
+    explainIters(16),
+    alpha(0.5f),
+    beta(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
+        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
@@ -138,14 +157,16 @@ public:
         return hiddenCs;
     }
 
-    // Get the previous tick hidden states
-    const IntBuffer &getHiddenCsPrev() const {
-        return hiddenCsPrev;
-    }
-
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
+    }
+
+    // Get the weights for a visible layer
+    const SparseMatrix &getWeights(
+        int i // Index of visible layer
+    ) const {
+        return visibleLayers[i].weights;
     }
 
     friend class Hierarchy;
