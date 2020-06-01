@@ -35,7 +35,7 @@ void SparseCoder::forward(
             count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
-        sum /= std::max(1, count);
+        sum /= count;
 
         hiddenStimuli[hiddenIndex] = sum;
         hiddenActivations[hiddenIndex] = sum;
