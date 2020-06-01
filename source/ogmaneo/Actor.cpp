@@ -30,6 +30,8 @@ void Actor::forward(
         value += vl.valueWeights.multiplyOHVs(*inputCs[vli], hiddenColumnIndex, vld.size.z);
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
+    
+    assert(count > 0);
 
     hiddenValues[hiddenColumnIndex] = value / count;
 

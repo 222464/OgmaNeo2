@@ -41,7 +41,9 @@ void ImageEncoder::forward(
             count += vl.weights.count(hiddenIndex);
         }
 
-        sum /= std::max(1, count);
+        assert(count > 0);
+        
+        sum /= count;
 
         hiddenActivations[hiddenIndex] = sum;
 

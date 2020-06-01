@@ -35,6 +35,8 @@ void SparseCoder::forward(
             count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
+        assert(count > 0);
+
         sum /= count;
 
         hiddenStimuli[hiddenIndex] = sum;
