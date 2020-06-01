@@ -24,19 +24,21 @@ void SparseCoder::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z) / std::max(1, vl.weights.count(hiddenIndex) / vld.size.z);
+            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
-        sum /= visibleLayers.size();
+        sum /= std::max(1, count);
 
         hiddenStimuli[hiddenIndex] = sum;
-        hiddenActivations[hiddenIndex] = 0.0f;
+        hiddenActivations[hiddenIndex] = sum;
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -86,12 +88,12 @@ void SparseCoder::learn(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, hiddenRates[hiddenIndexMax]);
+        vl.weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld.size.z, hiddenUsages[hiddenIndexMax]);
     }
 
-    laterals.hebbOHVs(hiddenCs, hiddenIndexMax, hiddenSize.z, hiddenRates[hiddenIndexMax]);
+    laterals.hebbOHVsT(hiddenCs, hiddenIndexMax, hiddenSize.z, hiddenUsages[hiddenIndexMax]);
 
-    hiddenRates[hiddenIndexMax] -= alpha * hiddenRates[hiddenIndexMax];
+    hiddenUsages[hiddenIndexMax] -= alpha * hiddenUsages[hiddenIndexMax];
 }
 
 void SparseCoder::initRandom(
@@ -134,7 +136,7 @@ void SparseCoder::initRandom(
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsTemp = IntBuffer(numHiddenColumns);
 
-    hiddenRates = FloatBuffer(numHidden, 1.0f);
+    hiddenUsages = FloatBuffer(numHidden, 0.5f);
 
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
@@ -143,7 +145,7 @@ void SparseCoder::initRandom(
     for (int i = 0; i < laterals.nonZeroValues.size(); i++)
         laterals.nonZeroValues[i] = lateralWeightDist(cs.rng);
 
-    //laterals.initT();
+    laterals.initT();
 }
 
 void SparseCoder::step(
@@ -180,7 +182,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
-    writeBufferToStream(os, &hiddenRates);
+    writeBufferToStream(os, &hiddenUsages);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -210,7 +212,7 @@ void SparseCoder::readFromStream(
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
-    readBufferFromStream(is, &hiddenRates);
+    readBufferFromStream(is, &hiddenUsages);
 
     hiddenStimuli = FloatBuffer(numHidden, 0.0f);
     hiddenActivations = FloatBuffer(numHidden, 0.0f);
