@@ -58,7 +58,7 @@ void ImageEncoder::forward(
         for (int i = 0; i < hiddenSize.z; i++) {
             int hiddenIndex = address3(Int3(pos.x, pos.y, activations[i].second), hiddenSize);
 
-            float strength = std::exp(-i * i * gamma / std::max(0.001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
+            float strength = std::exp(-i * i * gamma / std::max(0.0001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
 
             hiddenResources[hiddenIndex] -= alpha * strength;
 
@@ -108,7 +108,7 @@ void ImageEncoder::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
+    std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
