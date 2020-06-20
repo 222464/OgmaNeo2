@@ -267,7 +267,7 @@ void Hierarchy::step(
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : &histories[l].front()[p]);
+                        pLayers[l][p]->learn(cs, l == 0 ? &histories[l][p].front() : &histories[l].front()[p]);
 
                     pLayers[l][p]->activate(cs, feedBackCs);
                 }
@@ -277,7 +277,7 @@ void Hierarchy::step(
                 // Step actors
                 for (int p = 0; p < aLayers.size(); p++) {
                     if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled, mimic);
+                        aLayers[p]->step(cs, feedBackCs, &histories[l][p].front(), reward, learnEnabled, mimic);
                 }
             }
         }
