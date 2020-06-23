@@ -32,14 +32,15 @@ public:
     struct VisibleLayer {
         SparseMatrix weights; // Weight matrix
 
-        FloatBuffer reconstructions;
+        FloatBuffer errors;
     };
 
 private:
     Int3 hiddenSize; // Size of hidden/output layer
 
+    FloatBuffer hiddenActivations;
+
     IntBuffer hiddenCs; // Hidden states
-    IntBuffer hiddenCsPrev; // Previous hidden states
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -51,6 +52,13 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* inputCs,
+        int vli
     );
 
     void learn(
@@ -69,6 +77,16 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const IntBuffer* inputCs,
+        int vli
+    ) {
+        sc->backward(pos, rng, inputCs, vli);
+    }
+
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -81,11 +99,13 @@ private:
 
 public:
     float alpha; // Weight learning rate
+    int explainIters;
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.5f)
+    alpha(0.1f),
+    explainIters(8)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -134,11 +154,6 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return hiddenCs;
-    }
-
-    // Get the previous hidden states
-    const IntBuffer &getHiddenCsPrev() const {
-        return hiddenCsPrev;
     }
 
     // Get the hidden size
